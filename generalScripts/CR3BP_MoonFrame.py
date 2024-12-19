@@ -6,15 +6,12 @@ def CR3BP_MoonFrame(t, state_M, param):
 	with respect to a reference frame which is Synodic but centered about
 	the moon. For reference, see Franzini PhD thesis [T14].
 
-	-----------------------
-	Last Update: 18/12/2024
-	-----------------------
 	"""
 
 	# extraction of data
 	massRatio = param.massRatio
 	rem = np.array([-1, 0, 0])
-	rei = state_M[0:3] + rem
+	rei = state_M[0:3] + rem  # distance from Earth in Moon Frame
 	rmi = state_M[0:3]
 	vmi = state_M[3:6]
 
