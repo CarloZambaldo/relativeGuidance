@@ -1,5 +1,5 @@
 import numpy as np
-from CR3BP_MoonFrame import *
+from .CR3BP_MoonFrame import *
 
 def versorsLVLH(targetState_M, param):
 	"""
@@ -9,16 +9,12 @@ def versorsLVLH(targetState_M, param):
 	and its time derivatives. This function can be used to build the
 	rotation matrices to rotate from Moon-centered Synodic to LVLH and
 	vice versa.
-	
-	-----------------------
-	Last Update: 18/12/2024
-	-----------------------
 	"""
 
 	# Extract Moon-centered synodic values
-	rTM = targetState_M[0:3, :]
-	vTM = targetState_M[3:6, :]
-	dSt = CR3BP_MoonFrame(0, targetState_M[0:6, 0], param)
+	rTM = targetState_M[0:3]
+	vTM = targetState_M[3:6]
+	dSt = CR3BP_MoonFrame(0, targetState_M[0:6], param)
 	aTM = dSt[3:6]
 
 	# Compute other values
@@ -68,7 +64,7 @@ def rotate_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
     target_state_M = targetState_S - np.concatenate([rM, np.zeros(3)])
 
     # Rotating from Moon to Moon Synodic [T14]
-    FranziRot = np.array([[-1, 0, 0, 0, 0, 0],
+    FranziRot = np.block([[-1, 0, 0, 0, 0, 0],
                           [0, -1, 0, 0, 0, 0],
                           [0, 0, +1, 0, 0, 0],
                           [0, 0, 0, -1, 0, 0],
@@ -84,13 +80,17 @@ def rotate_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
 
 
 def rotate_M_to_LVLH(target_state_M, state_to_be_rotated, param):
+    """
+    this function rotates a state from M to LVLH
+     
+	"""
     # Compute LVLH versors from Moon centered synodic
     eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot = versorsLVLH(target_state_M, param)
 
     # Rotating matrices
     R = np.array([eR_x, eV_y, eH_z]).T  # 3x3 rotation matrix
     Rdot = np.array([eR_x_dot, eV_y_dot, eH_z_dot]).T  # 3x3 derivative of rotation matrix
-    Rtot = np.array([[R, np.zeros((3, 3))], [Rdot, R]])
+    Rtot = np.block([[R, np.zeros((3, 3))], [Rdot, R]])
 
     # Rotating frame
     rotated_state = Rtot @ state_to_be_rotated

@@ -1,7 +1,7 @@
 ## Configuration for the Physical Environment ##
 
 from dataclasses import dataclass, field
-from generalScripts import rotate_S_to_LVLH
+from generalScripts.ReferenceFrames import rotate_S_to_LVLH
 import numpy as np
 import scipy.io
 import random
@@ -23,7 +23,7 @@ class initialValueClass():
 	DeltaIC_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
 	relativeState_L : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
 	
-	def define_initialValues(self):
+	def define_initialValues(self,param):
 		## DETERMINISTIC
 		#targetState_S = np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07]) # this is obtained from PhD thesis 
 		#DeltaIC_S = np.array([0,0,0,0,0,0])
@@ -62,11 +62,11 @@ class initialValueClass():
 	# function to check the relative state consistency
 	def check_relative_state(self,param):
 		# Compute the norm of the difference
-		error_norm = np.linalg.norm(initialValue.DeltaIC_S - initialValue.DeltaIC_S)
-		DeltaIC_S = initialValue.DeltaIC_S
+		error_norm = np.linalg.norm(self.DeltaIC_S - self.DeltaIC_S)
+		DeltaIC_S = self.DeltaIC_S
 		if error_norm >= 1e-10:
 			print(f"value for DeltaIC_S: {DeltaIC_S} (norm: {np.linalg.norm(DeltaIC_S)})")
-			print(f"initialRelativeState: {initialValue.DeltaIC_S} (norm: {np.linalg.norm(initialValue.DeltaIC_S)})")
+			print(f"initialRelativeState: {self.DeltaIC_S} (norm: {np.linalg.norm(self.DeltaIC_S)})")
 			print(f"Error norm: {error_norm}")
 			raise ValueError("SOMETHING WENT WRONG IN THE COMPUTATION OF THE RELATIVE STATE!")
 		else:
@@ -81,7 +81,10 @@ class initialValueClass():
 
 
 # defining the parameters
-param = physParamClass()
-initialValue = initialValueClass()
-initialValue.define_initialValues()
-initialValue.check_relative_state(param)
+def get():
+	param = physParamClass()
+	initialValue = initialValueClass()
+	initialValue.define_initialValues(param)
+	initialValue.check_relative_state(param)
+
+	return param, initialValue
