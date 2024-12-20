@@ -1,5 +1,5 @@
 from gymnasium.envs.registration import register
-from RLEnvironment.RLenv import RLenv
+from RLEnvironment import *
 
 register(
     id="myEnv/RLenv-v0",

@@ -11,11 +11,6 @@ def sunPositionVersor(t, param):
     
     Returns:
         sunVersor (np.array): Unit vector pointing towards the Sun.
-        
-	-----------------------
-	Last Update: 18/12/2024
-	-----------------------
-
     """
     
     # Set the initial angle to zero if not provided

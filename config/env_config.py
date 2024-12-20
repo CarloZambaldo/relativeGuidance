@@ -16,7 +16,7 @@ class physParamClass:
 	massRatio : float = massMoon/(massEarth+massMoon)
 	Omega : float = 2*np.pi/2358720 # [rad/s]
 
-@dataclass(frozen=True)
+@dataclass()
 class initialValueClass():
 	targetState_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
 	chaserState_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
@@ -32,9 +32,9 @@ class initialValueClass():
 		#relativeState_L = rotate_S_to_M(relativeState_S,)
 
 		## RANDOM
-		seedValue = random.seed()
+		seedValue = random.seed(3458)
 		print(f"Using random initial conditions definition\n")
-		print(f" [seed =",seedValue,"]")
+		print(f" [ seed =",seedValue,"]")
 
 		# Extract the 'refTraj' structured array from the refTraj.mat file
 		mat_data  = scipy.io.loadmat('./refTraj.mat')
@@ -57,34 +57,28 @@ class initialValueClass():
 
 		relativeState_L = rotate_S_to_LVLH(targetState_S, DeltaIC_S, param)
 
-		return targetState_S, chaserState_S, DeltaIC_S, relativeState_L
-	
-	# function to check the relative state consistency
-	def check_relative_state(self,param):
-		# Compute the norm of the difference
-		error_norm = np.linalg.norm(self.DeltaIC_S - self.DeltaIC_S)
-		DeltaIC_S = self.DeltaIC_S
-		if error_norm >= 1e-10:
-			print(f"value for DeltaIC_S: {DeltaIC_S} (norm: {np.linalg.norm(DeltaIC_S)})")
-			print(f"initialRelativeState: {self.DeltaIC_S} (norm: {np.linalg.norm(self.DeltaIC_S)})")
-			print(f"Error norm: {error_norm}")
-			raise ValueError("SOMETHING WENT WRONG IN THE COMPUTATION OF THE RELATIVE STATE!")
-		else:
-			print(f"Correctly defined initial conditions:")
+		# assigning the values to the class
+		self.targetState_S = targetState_S
+		self.chaserState_S = chaserState_S
+		self.DeltaIC_S = DeltaIC_S
+		self.relativeState_L = relativeState_L
+
+		print(f"Correctly defined initial conditions:")
 
 		# Print initial distance and velocity between C and T
 		initial_distance = np.linalg.norm(DeltaIC_S[:3]) * param.xc
-		initial_velocity = np.linalg.norm(DeltaIC_S[3:]) * param.xc / param.tc
+		initial_velocity = np.linalg.norm(DeltaIC_S[3:]) * param.xc * 1e3 / param.tc
 		
 		print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]")
-		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [km/s]")
+		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
+
+		return self #targetState_S, chaserState_S, DeltaIC_S, relativeState_L
 
 
 # defining the parameters
 def get():
 	param = physParamClass()
 	initialValue = initialValueClass()
-	initialValue.define_initialValues(param)
-	initialValue.check_relative_state(param)
+	initialValue = initialValue.define_initialValues(param)
 
 	return param, initialValue

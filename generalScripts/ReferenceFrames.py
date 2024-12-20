@@ -19,18 +19,17 @@ def versorsLVLH(targetState_M, param):
 
 	# Compute other values
 	hTM = np.cross(rTM, vTM, axis=0)
-	h = np.linalg.norm(hTM, axis=0)
-	hdot = np.dot(np.cross(rTM, aTM, axis=0).T, hTM) / h
+	hTM_norm = np.linalg.norm(hTM, axis=0)
 
 	# Compute new reference frame axes (LVLH)
 	eR_x = rTM / np.linalg.norm(rTM, axis=0)
-	eH_z = np.cross(rTM, vTM, axis=0) / np.linalg.norm(hTM, axis=0)
+	eH_z = np.cross(rTM, vTM, axis=0) / hTM_norm
 	eV_y = np.cross(eH_z, eR_x, axis=0)
 
 	# Derivatives of the reference frame axes (LVLH)
 	eR_x_dot = (1 / np.linalg.norm(rTM, axis=0)) * (np.dot(vTM.T, eV_y) * eV_y)
-	eH_z_dot = -(np.linalg.norm(rTM, axis=0) / np.linalg.norm(hTM, axis=0)) * (np.dot(aTM.T, eH_z) * eV_y)
-	eV_y_dot = (np.linalg.norm(rTM, axis=0) / np.linalg.norm(hTM, axis=0)) * (np.dot(aTM.T, eH_z) * eH_z) - \
+	eH_z_dot = -(np.linalg.norm(rTM, axis=0) / hTM_norm) * (np.dot(aTM.T, eH_z) * eV_y)
+	eV_y_dot = (np.linalg.norm(rTM, axis=0) / hTM_norm) * (np.dot(aTM.T, eH_z) * eH_z) - \
 			   (1 / np.linalg.norm(rTM, axis=0)) * (np.dot(vTM.T, eV_y) * eR_x)
 
 	return eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot
@@ -64,17 +63,17 @@ def rotate_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
     target_state_M = targetState_S - np.concatenate([rM, np.zeros(3)])
 
     # Rotating from Moon to Moon Synodic [T14]
-    FranziRot = np.block([[-1, 0, 0, 0, 0, 0],
+    FranziRot = np.array([[-1, 0, 0, 0, 0, 0],
                           [0, -1, 0, 0, 0, 0],
                           [0, 0, +1, 0, 0, 0],
                           [0, 0, 0, -1, 0, 0],
                           [0, 0, 0, 0, -1, 0],
                           [0, 0, 0, 0, 0, +1]])
-    target_state_M = FranziRot.dot(target_state_M)
+    target_state_M = FranziRot @ target_state_M
     state_to_be_rotated_M = FranziRot @ stateToBeRotated_S
 
     # Rotating frame from M to LVLH
-    rotated_state = rotate_M_to_LVLH(target_state_M, state_to_be_rotated_M, param)
+    rotated_state, _ = rotate_M_to_LVLH(target_state_M, state_to_be_rotated_M, param)
     
     return rotated_state
 
@@ -88,11 +87,11 @@ def rotate_M_to_LVLH(target_state_M, state_to_be_rotated, param):
     eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot = versorsLVLH(target_state_M, param)
 
     # Rotating matrices
-    R = np.array([eR_x, eV_y, eH_z]).T  # 3x3 rotation matrix
-    Rdot = np.array([eR_x_dot, eV_y_dot, eH_z_dot]).T  # 3x3 derivative of rotation matrix
-    Rtot = np.block([[R, np.zeros((3, 3))], [Rdot, R]])
+    R = np.vstack([eR_x, eV_y, eH_z])  # 3x3 rotation matrix
+    Rdot = np.vstack([eR_x_dot, eV_y_dot, eH_z_dot]) # 3x3 derivative of rotation matrix
+    RTOT = np.block([[R, np.zeros((3, 3))], [Rdot, R]])
 
     # Rotating frame
-    rotated_state = Rtot @ state_to_be_rotated
+    rotated_state = (RTOT @ state_to_be_rotated).transpose()
     
-    return rotated_state, Rtot
+    return rotated_state, RTOT
