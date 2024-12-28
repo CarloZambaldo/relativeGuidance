@@ -3,15 +3,14 @@ from generalScripts.ReferenceFrames import rotate_M_to_LVLH
 
 def OBNavigation(targetState_S, chaserState_S, param):
 	"""
-	[targetState_M, chaserState_M, relativeState_L] = OBNavigation(targetState_S, chaserState_S, param)
-	
 	This function outputs the translation and rotation from Synodic to
 	Moon-centered synodic.
+
 	"""
 	# Physical values
 	rM = np.array([1 - param.massRatio, 0, 0])  # Position of the moon in Synodic frame
 
-	# Translating and rotating to Moon-centered Synodic
+	# Translating and rotating to Moon-centered Synodic [ex FranziRot]
 	targetState_M = np.array([
 		-targetState_S[0] + rM[0],
 		-targetState_S[1] + rM[1],

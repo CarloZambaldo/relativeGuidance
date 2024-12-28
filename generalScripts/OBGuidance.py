@@ -18,9 +18,15 @@ def OBGuidance(relativeState_L, targetState_M, param):
 	# OUTPUTS:
 	#   - controlAction: the control action to be applied to the chaser in LVLH frame
 
+	## RL agent decides if the first loop should be recomputed
+	if t == 0:
+		trigger = True
+	else:
+		trigger = False	
 
 	# First loop: ASRE algorithm
-	controlAction = loopOne(relativeState_L, targetState_M, param)
+	if trigger:  # Recompute loop 1
+		controlAction = loopOne(relativeState_L, targetState_M, param)
 
 	# Second loop: APF algorithm
 	controlAction = loopTwo()
@@ -31,7 +37,7 @@ def OBGuidance(relativeState_L, targetState_M, param):
 
 
 
-def loopOne(relativeState_L, rargetState_M, param):
+def loopOne(relativeState_L, targetState_M, param):
 	# This function implements the ASRE algorithm for the computation of an optimal trajectory
 	# that allows to minimize the control effort while reaching the target
 	# NOTE: this function does NOT consider any obstacle avoidance strategy / constraint
@@ -44,8 +50,18 @@ def loopOne(relativeState_L, rargetState_M, param):
 	# OUTPUTS:
 	#   - controlAction: the control action to be applied to the chaser in LVLH frame
 
+	
+	print("Computing Optimal Trajectory... ", end="")
+	import time
+	start_time = time.time()
+	
+	OBoptimalTrajectory = loopOne(relativeState_L, targetState_M, param)
+	OBoptimalTrajectory['ref'] = OBoptimalTrajectory['x']
+	
+	elapsed_time = time.time() - start_time
+	print(f"done. [Elapsed Time: {elapsed_time:.3f} sec]")
 
-	return controlAction
+	return OBoptimalTrajectory
 
 
 

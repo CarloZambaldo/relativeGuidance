@@ -1,13 +1,11 @@
-import config
-import generalScripts as gs
-import RLEnvironment as RLE
-import numpy as np
+from imports import *
 
 param, initialValue = config.env_config.get()
 #RLparam = config.agent_config.get()
 
 
-
+# loading RL environment
+RLenv = RLEenvironmnet.RLenv(param, initialValue)
 
 
 ## TRAINING ##
