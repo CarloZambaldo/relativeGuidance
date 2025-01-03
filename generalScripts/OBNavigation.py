@@ -33,4 +33,6 @@ def OBNavigation(targetState_S, chaserState_S, param):
 	relativeState_M = chaserState_M - targetState_M
 	relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
 
+
+	## ADD DISTURBANCES HERE ##
 	return targetState_M, chaserState_M, relativeState_L
