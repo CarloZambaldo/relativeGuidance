@@ -1,0 +1,39 @@
+Elenco del percorso delle cartelle
+Numero di serie del volume: 406B-2D5D
+C:.
+³   .gitignore
+³   .pre-commit-config.yaml
+³   folder_structure.txt
+³   LICENSE
+³   main.py
+³   pyproject.toml
+³   README.md
+³   
+ÃÄÄÄconfig
+³       env_config.py
+³       
+ÃÄÄÄdynamicModels
+³       CR3BP.py
+³       guidanceMain.py
+³       __init__.py
+³       
+ÃÄÄÄmyEnv
+³   ³   __init__.py
+³   ³   
+³   ÃÄÄÄenvs
+³   ³       CR3BP.py
+³   ³       grid_world.py
+³   ³       simEnv.py
+³   ³       __init__.py
+³   ³       
+³   ÀÄÄÄwrappers
+³           clip_reward.py
+³           discrete_actions.py
+³           reacher_weighted_reward.py
+³           relative_position.py
+³           __init__.py
+³           
+ÀÄÄÄscriptsRL
+        evaluateAgent.py
+        trainAgent.py
+        

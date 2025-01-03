@@ -18,12 +18,6 @@ def OBGuidance(relativeState_L, targetState_M, param):
 	# OUTPUTS:
 	#   - controlAction: the control action to be applied to the chaser in LVLH frame
 
-	## RL agent decides if the first loop should be recomputed
-	if t == 0:
-		trigger = True
-	else:
-		trigger = False	
-
 	# First loop: ASRE algorithm
 	if trigger:  # Recompute loop 1
 		controlAction = loopOne(relativeState_L, targetState_M, param)

@@ -1,5 +1,5 @@
 import numpy as np
-from generalScripts.ReferenceFrames import rotate_M_to_LVLH
+from generalScripts.ReferenceFrames import convert_M_to_LVLH
 
 def OBNavigation(targetState_S, chaserState_S, param):
 	"""
@@ -31,6 +31,6 @@ def OBNavigation(targetState_S, chaserState_S, param):
 
 	# Computing relative state in Moon-centered Synodic and rotating to LVLH
 	relativeState_M = chaserState_M - targetState_M
-	relativeState_L, _ = rotate_M_to_LVLH(targetState_M, relativeState_M, param)
+	relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
 
 	return targetState_M, chaserState_M, relativeState_L

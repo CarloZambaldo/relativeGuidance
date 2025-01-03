@@ -1,20 +1,46 @@
 ## Configuration for the Physical Environment ##
 
 from dataclasses import dataclass, field
-from generalScripts.ReferenceFrames import rotate_S_to_LVLH
+from generalScripts.ReferenceFrames import convert_S_to_LVLH
 import numpy as np
 import scipy.io
 import random
 
 @dataclass(frozen=True)
 class physParamClass:
+	# ENVIRONMENT PARAMETERS #
 	xc : float = 384400		      # units for adimensional space [km]
 	tc : float = 1/(2.661699e-6)  # units for adimensional time [s]
 
 	massEarth = 5.973698863559727e+24 # [kg]
 	massMoon  = 7.347673092457352e+22 # [kg]
+
 	massRatio : float = massMoon/(massEarth+massMoon)
 	Omega : float = 2*np.pi/2358720 # [rad/s]
+
+	SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
+
+	# SPACECRAFT PARAMETERS #
+	chaser: dict = field(default_factory= {
+		"mass": 15000,                  # [kg]
+		"Area": 18,                     # [m^2]
+		"reflCoeffSpecular": 0.5,       # [-]
+		"reflCoeffDiffuse": 0.1         # [-]
+	})
+
+	target: dict = field(default_factory=lambda: {
+		"mass":  63000, 				# [kg]
+		"Area":  110, 					# [m^2]
+		"reflCoeffSpecular":  .5,		# [-]
+		"reflCoeffDiffuse":  .1			# [-]
+	})
+
+	# SIMULATION PARAMETERS #
+	maxAdimThrust : float = (490/15000)*1e-3/xc*tc^2 	           # maximum adimensional acceleration [adimensional]
+	holdingState : float = np.array([0, -8/xc, 0, 0, 0, 0]) 		# [adimensional]
+	dockingState : float = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
+	freqGNC : float = 10											# [Hz] GNC upadate frequency
+
 
 @dataclass()
 class initialValueClass():
@@ -29,7 +55,7 @@ class initialValueClass():
 		#DeltaIC_S = np.array([0,0,0,0,0,0])
 		#chaserState_S = targetState_S + DeltaIC_S
 		#relativeState_S = chaserState_S-targetState_S
-		#relativeState_L = rotate_S_to_M(relativeState_S,)
+		#relativeState_L = convert_S_to_M(relativeState_S,)
 
 		## RANDOM
 		seedValue = random.seed(3458)
@@ -55,7 +81,7 @@ class initialValueClass():
 		DeltaIC_S = np.hstack([deltaR, deltaV])
 		chaserState_S = targetState_S + DeltaIC_S
 
-		relativeState_L = rotate_S_to_LVLH(targetState_S, DeltaIC_S, param)
+		relativeState_L = convert_S_to_LVLH(targetState_S, DeltaIC_S, param)
 
 		# assigning the values to the class
 		self.targetState_S = targetState_S
@@ -72,7 +98,7 @@ class initialValueClass():
 		print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]")
 		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
 
-		return self #targetState_S, chaserState_S, DeltaIC_S, relativeState_L
+		return self
 
 
 # defining the parameters

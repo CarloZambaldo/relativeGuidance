@@ -51,9 +51,9 @@ def computeRotationMatrixLVLH(target_state_M, param):
     return R, Rdot
 
 
-def rotate_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
+def convert_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
     """
-    rotate_S_to_LVLH rotates the stateToBeRotated_S from S to LVLH
+    convert_S_to_LVLH rotates the stateToBeRotated_S from S to LVLH
     To rotate from S to LVLH first a translation is needed,
     then it is possible to rotate from S to M and eventually rotate from M to LVLH
 	"""
@@ -73,12 +73,12 @@ def rotate_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
     state_to_be_rotated_M = FranziRot @ stateToBeRotated_S
 
     # Rotating frame from M to LVLH
-    rotated_state, _ = rotate_M_to_LVLH(target_state_M, state_to_be_rotated_M, param)
+    rotated_state, _ = convert_M_to_LVLH(target_state_M, state_to_be_rotated_M, param)
     
     return rotated_state
 
 
-def rotate_M_to_LVLH(target_state_M, state_to_be_rotated, param):
+def convert_M_to_LVLH(target_state_M, state_to_be_rotated, param):
     """
     this function rotates a state from M to LVLH
      

@@ -1,5 +1,5 @@
 import config
-import generalScripts
+import generalScripts as gs
 import RLEnvironment as RLE
 import numpy as np
 import gymnasium as gym

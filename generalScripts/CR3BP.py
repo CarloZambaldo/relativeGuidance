@@ -9,10 +9,6 @@ def CR3BP(t, state, param, controlAction=None, disturbAction=None):
 					massRatio = m2 / (m1 + m2)
 	controlAction : contains the adimensionalized control action to be added in the integration
 	disturbAction : contains the adimensionalized environmental disturbances to be added in the integration
-
-	-----------------------
-	Last Update: 18/12/2024
-	-----------------------
 	
 	"""
 	
