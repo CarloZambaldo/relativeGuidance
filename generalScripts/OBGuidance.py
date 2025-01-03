@@ -1,5 +1,5 @@
 import numpy as np
-import CR3BP_MoonFrame
+import dynamicsModel as dm
 import ReferenceFrames
 from scipy.integrate import odeint
 import time
@@ -211,7 +211,7 @@ def computeA(t, targetState_M, param):
 	RotMat_M_to_L = np.array([eR_x, eV_y, eH_z])
 
 	# computing aTM from the CR3BP from Franzini (Moon Centered)
-	dSt = CR3BP_MoonFrame(t, targetState_M, param)
+	dSt = dm.CR3BP_MoonFrame(t, targetState_M, param)
 	aTM = dSt[3:6]
 
 	# computation of angular momentum and derivatives
@@ -286,7 +286,7 @@ def compute_PHIT(PHIT, t, B, Q, R, param):
 	targetState_M = PHIT[144:150]
 
 	# Target state and system dynamics retrieval
-	dST = CR3BP_MoonFrame(t, targetState_M, param)
+	dST = dm.CR3BP_MoonFrame(t, targetState_M, param)
 	A = computeA(t, targetState_M, param)
 
 	# PHI computation

@@ -30,7 +30,7 @@ class SimEnv(gym.Env):
 	def step(self, AgentAction):
 		
 		# NAVIGATION #
-		OBStateTarget_M, OBStateChaser_M, OBStateRelative_L = gs.OBNavigation(self.stateChaser_M, self.stateTarget_M, self.stateRelative_L, self.param, self.trigger)
+		OBStateTarget_M, OBStateChaser_M, OBStateRelative_L = OBNavigation(self.stateChaser_M, self.stateTarget_M, self.stateRelative_L, self.param, self.trigger)
 		
 		# RL AGENT ACTION #
 		if AgentAction == 1:
@@ -39,10 +39,10 @@ class SimEnv(gym.Env):
 			self.trigger = False
 
 		# GUIDANCE ALGORITHM # relativeState_L, targetState_M, param
-		self.controlAction_L = gs.OBGuidance(OBStateRelative_L, , self.param, self.trigger)
+		self.controlAction_L = OBGuidance(OBStateRelative_L, , self.param, self.trigger)
 		
 		# CONTROL ACTION #
-		self.controlAction_S = gs.OBControl(self.stateTarget_M,self.controlAction_L)
+		self.controlAction_S = OBControl(self.stateTarget_M,self.controlAction_L)
 
 		# PHYSICAL ENVIRONMENT #
 		

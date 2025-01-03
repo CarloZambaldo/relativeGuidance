@@ -1,5 +1,5 @@
 import numpy as np
-from .CR3BP_MoonFrame import *
+from .dynamicsModel import *
 
 def versorsLVLH(targetState_M, param):
 	"""
@@ -92,6 +92,6 @@ def convert_M_to_LVLH(target_state_M, state_to_be_rotated, param):
     RTOT = np.block([[R, np.zeros((3, 3))], [Rdot, R]])
 
     # Rotating frame
-    rotated_state = (RTOT @ state_to_be_rotated).transpose()
+    rotated_state = (RTOT @ state_to_be_rotated).T
     
     return rotated_state, RTOT
