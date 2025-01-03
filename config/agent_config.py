@@ -1,7 +1,7 @@
 ## Configuration for the Reinforcement Learning ##
 
 from dataclasses import dataclass, field
-from generalScripts.ReferenceFrames import rotate_S_to_LVLH
+from generalScripts.ReferenceFrames import convert_S_to_LVLH
 import numpy as np
 import scipy.io
 import random

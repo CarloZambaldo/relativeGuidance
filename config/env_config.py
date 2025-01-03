@@ -21,7 +21,7 @@ class physParamClass:
 	SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
 
 	# SPACECRAFT PARAMETERS #
-	chaser: dict = field(default_factory= {
+	chaser: dict = field(default_factory=lambda: {
 		"mass": 15000,                  # [kg]
 		"Area": 18,                     # [m^2]
 		"reflCoeffSpecular": 0.5,       # [-]
@@ -36,9 +36,9 @@ class physParamClass:
 	})
 
 	# SIMULATION PARAMETERS #
-	maxAdimThrust : float = (490/15000)*1e-3/xc*tc^2 	           # maximum adimensional acceleration [adimensional]
-	holdingState : float = np.array([0, -8/xc, 0, 0, 0, 0]) 		# [adimensional]
-	dockingState : float = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
+	maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2 	           # maximum adimensional acceleration [adimensional]
+	holdingState = np.array([0, -8/xc, 0, 0, 0, 0]) 		# [adimensional]
+	dockingState = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
 	freqGNC : float = 10											# [Hz] GNC upadate frequency
 
 
