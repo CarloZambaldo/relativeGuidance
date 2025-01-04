@@ -14,8 +14,9 @@ class SimEnv(gym.Env):
 		# Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
 		self.observation_space = spaces.Dict(
 			{
-				"OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
-				"OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
+				# "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
+				# "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
+				# "repulsiveAPF": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float32),
 				"OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
 			}
 		)
@@ -30,7 +31,7 @@ class SimEnv(gym.Env):
 	def step(self, AgentAction):
 		
 		# NAVIGATION #
-		OBStateTarget_M, OBStateChaser_M, OBStateRelative_L = OBNavigation(self.stateChaser_M, self.stateTarget_M, self.stateRelative_L, self.param, self.trigger)
+		self.OBStateTarget_M, self.OBStateChaser_M, self.OBStateRelative_L = OBNavigation(self.stateChaser_M, self.stateTarget_M, self.stateRelative_L, self.param, self.trigger)
 		
 		# RL AGENT ACTION #
 		if AgentAction == 1:
@@ -39,7 +40,7 @@ class SimEnv(gym.Env):
 			self.trigger = False
 
 		# GUIDANCE ALGORITHM # relativeState_L, targetState_M, param
-		self.controlAction_L = OBGuidance(OBStateRelative_L, , self.param, self.trigger)
+		self.controlAction_L = OBGuidance(self.envTime,self.OBStateRelative_L,self.OBStateTarget_M,self.initialValue.phaseID,trigger,param):
 		
 		# CONTROL ACTION #
 		self.controlAction_S = OBControl(self.stateTarget_M,self.controlAction_L)
@@ -58,9 +59,17 @@ class SimEnv(gym.Env):
 	# The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
 	def reset(self, seed=None, options=None):
 		super().reset(seed=seed)
-		self.done = False
+		self.terminated = False
+		self.truncated = False
+		self.envTime = 0 # seconds
+		self.trigger = True
+
+		# Set the mission phase
+		if options is not None:
+			self.phaseID = options["phaseID"]
+
 		# Set the initial state of the pysical environment
 		self.param, self.initialValue = config.env_config.get()
 
 		
-		return self.observation
+		return self

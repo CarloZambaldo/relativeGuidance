@@ -1,7 +1,7 @@
 ## Configuration for the Physical Environment ##
 
 from dataclasses import dataclass, field
-from generalScripts.ReferenceFrames import convert_S_to_LVLH
+from generalScripts.ReferenceFrames import convert_S_to_LVLH, convert_LVLH_to_S
 import numpy as np
 import scipy.io
 import random
@@ -11,54 +11,48 @@ class physParamClass:
 	# ENVIRONMENT PARAMETERS #
 	xc : float = 384400		      # units for adimensional space [km]
 	tc : float = 1/(2.661699e-6)  # units for adimensional time [s]
-
 	massEarth = 5.973698863559727e+24 # [kg]
 	massMoon  = 7.347673092457352e+22 # [kg]
-
 	massRatio : float = massMoon/(massEarth+massMoon)
-	Omega : float = 2*np.pi/2358720 # [rad/s]
-
+	Omega : float = 2*np.pi/2358720    # [rad/s]
 	SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
+
+	# SIMULATION PARAMETERS #
+	maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2 	    # maximum adimensional acceleration [adimensional]
+	holdingState = np.array([0, -8/xc, 0, 0, 0, 0])  		# [adimensional]
+	dockingState = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
+	freqGNC : float = 10								    # [Hz] GNC upadate frequency
 
 	# SPACECRAFT PARAMETERS #
 	chaser: dict = field(default_factory=lambda: {
 		"mass": 15000,                  # [kg]
 		"Area": 18,                     # [m^2]
 		"reflCoeffSpecular": 0.5,       # [-]
-		"reflCoeffDiffuse": 0.1         # [-]
+		"reflCoeffDiffuse":  0.1        # [-]
 	})
 
 	target: dict = field(default_factory=lambda: {
-		"mass":  63000, 				# [kg]
-		"Area":  110, 					# [m^2]
-		"reflCoeffSpecular":  .5,		# [-]
-		"reflCoeffDiffuse":  .1			# [-]
+		"mass": 63000, 		 	        # [kg]
+		"Area": 110, 	 				# [m^2]
+		"reflCoeffSpecular": 0.5,		# [-]
+		"reflCoeffDiffuse":  0.1		# [-]
 	})
 
-	# SIMULATION PARAMETERS #
-	maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2 	           # maximum adimensional acceleration [adimensional]
-	holdingState = np.array([0, -8/xc, 0, 0, 0, 0]) 		# [adimensional]
-	dockingState = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
-	freqGNC : float = 10											# [Hz] GNC upadate frequency
 
-
+#### define the initial values ####
 @dataclass()
 class initialValueClass():
-	targetState_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
-	chaserState_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
-	DeltaIC_S : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
-	relativeState_L : np.ndarray = field(default_factory=lambda: np.zeros((6, 1)))
+	targetState_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
+	chaserState_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
+	DeltaIC_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
+	relativeState_L : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
 	
-	def define_initialValues(self,param):
-		## DETERMINISTIC
+	def define_initialValues(self,param,phaseID=1,seed=None):
+		# default initial conditions for target state
 		#targetState_S = np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07]) # this is obtained from PhD thesis 
-		#DeltaIC_S = np.array([0,0,0,0,0,0])
-		#chaserState_S = targetState_S + DeltaIC_S
-		#relativeState_S = chaserState_S-targetState_S
-		#relativeState_L = convert_S_to_M(relativeState_S,)
 
-		## RANDOM
-		seedValue = random.seed(3458)
+		# setting random seed
+		seedValue = random.seed(seed)
 		print(f"Using random initial conditions definition\n")
 		print(f" [ seed =",seedValue,"]")
 
@@ -71,16 +65,33 @@ class initialValueClass():
 		rndmnbr = random.randint(1,np.size(referenceStates,1)) # random position inside the reference trajectory
 		targetState_S = referenceStates[:,rndmnbr]
 
-		# defining the random initial relative distance
-		deltaR = np.random.ranf(3)
-		deltaR = 5/param.xc*deltaR/np.linalg.norm(deltaR) # maximum 5 km distance
-		# defining the random initial relative velocity 
-		deltaV = 0*np.random.ranf(3)
 
-		# stacking and defining the initial Delta IC
-		DeltaIC_S = np.hstack([deltaR, deltaV])
+		match phaseID:
+			case 1: # Apporaching Safe Holding Point
+				# defining the random initial relative state (IN SYNODYC!)
+				condSodd = False
+				tentativi = 0
+				while not condSodd:
+					rand_position = (-8+16*np.random.rand(3)) / param.xc 		 # position range [-8,+8] km
+					if np.linalg.norm(rand_position) > 200:
+						condSodd = True
+					tentativi += 1		
+					if tentativi > 50:
+						raise Exception("Maximum number of attempts reached for random initial conditions definition: the computed state violates the Keep Out Sphere.\nTry again with different seed value.")
+				rand_velocity = (-5+10*np.random.rand(3)) * 1e-3 / param.xc  # velocity range [-5,+5] m/s
+				DeltaIC_S = np.hstack([rand_position, rand_velocity])
+
+			case 2: # Docking
+				# defining the random initial relative state (IN LVLH!)
+				rand_position_L = np.array([(-8+6*np.random.rand(1)),(-8+6*np.random.rand(1)),(-8+6*np.random.rand(1))]) / param.xc 		 # position range along V-BAR [-8,-2] km
+				rand_velocity_L = (-5+10*np.random.rand(3)) * 1e-3 / param.xc  # velocity range [-1,+1] m/s
+				DeltaIC_S = convert_LVLH_to_S(targetState_S,np.hstack([rand_position_L, rand_velocity_L]),param)
+
+			case _:
+				raise Exception("PhaseID not recognized. Please select a valid phaseID.")
+			
+		# computing the relative state in LVLH
 		chaserState_S = targetState_S + DeltaIC_S
-
 		relativeState_L = convert_S_to_LVLH(targetState_S, DeltaIC_S, param)
 
 		# assigning the values to the class
@@ -102,9 +113,9 @@ class initialValueClass():
 
 
 # defining the parameters
-def get():
+def get(phaseID=None):
 	param = physParamClass()
 	initialValue = initialValueClass()
-	initialValue = initialValue.define_initialValues(param)
+	initialValue = initialValue.define_initialValues(param,phaseID)
 
 	return param, initialValue
