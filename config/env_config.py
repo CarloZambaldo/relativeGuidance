@@ -18,6 +18,7 @@ class physParamClass:
 	SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
 
 	# SIMULATION PARAMETERS #
+	tspan = np.array([0, 0.2])								# initial and final time for simulation	
 	maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2 	    # maximum adimensional acceleration [adimensional]
 	holdingState = np.array([0, -8/xc, 0, 0, 0, 0])  		# [adimensional]
 	dockingState = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
@@ -42,10 +43,10 @@ class physParamClass:
 #### define the initial values ####
 @dataclass()
 class initialValueClass():
-	targetState_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
-	chaserState_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
-	DeltaIC_S : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
-	relativeState_L : np.ndarray = field(default_factory=lambda: np.zeros(1,6))
+	targetState_S : np.ndarray = field(default_factory=lambda: np.zeros(6,))
+	chaserState_S : np.ndarray = field(default_factory=lambda: np.zeros(6,))
+	DeltaIC_S : np.ndarray = field(default_factory=lambda: np.zeros(6,))
+	relativeState_L : np.ndarray = field(default_factory=lambda: np.zeros(6,))
 	
 	def define_initialValues(self,param,phaseID=1,seed=None):
 		# default initial conditions for target state
@@ -57,7 +58,7 @@ class initialValueClass():
 		print(f" [ seed =",seedValue,"]")
 
 		# Extract the 'refTraj' structured array from the refTraj.mat file
-		mat_data  = scipy.io.loadmat('./refTraj.mat')
+		mat_data  = scipy.io.loadmat(r"./config/refTraj.mat")
 		refTraj = mat_data['refTraj']
 		# Access the trajectory within the structured array
 		referenceStates = refTraj['y'][0, 0]        # Main trajectory data
@@ -72,9 +73,11 @@ class initialValueClass():
 				condSodd = False
 				tentativi = 0
 				while not condSodd:
-					rand_position = (-8+16*np.random.rand(3)) / param.xc 		 # position range [-8,+8] km
-					if np.linalg.norm(rand_position) > 200:
+					rand_position = (-8+16*np.random.rand(3)) 		 # position range [-8,+8] km
+					# print(f"Random Position Generated: {rand_position}\n")
+					if np.linalg.norm(rand_position) > .2: # position must be greater than 200 meters
 						condSodd = True
+						rand_position /= param.xc # adimensionalize
 					tentativi += 1		
 					if tentativi > 50:
 						raise Exception("Maximum number of attempts reached for random initial conditions definition: the computed state violates the Keep Out Sphere.\nTry again with different seed value.")
@@ -99,7 +102,7 @@ class initialValueClass():
 		self.chaserState_S = chaserState_S
 		self.DeltaIC_S = DeltaIC_S
 		self.relativeState_L = relativeState_L
-
+		self.fullInitialState = np.hstack([targetState_S, chaserState_S])
 		print(f"Correctly defined initial conditions:")
 
 		# Print initial distance and velocity between C and T
@@ -113,9 +116,9 @@ class initialValueClass():
 
 
 # defining the parameters
-def get(phaseID=None):
+def get(seed=None,phaseID=None):
 	param = physParamClass()
 	initialValue = initialValueClass()
-	initialValue = initialValue.define_initialValues(param,phaseID)
+	initialValue = initialValue.define_initialValues(param,phaseID,seed)
 
 	return param, initialValue

@@ -1,17 +1,13 @@
 import numpy as np
-from dynamicsModel import *
-import ReferenceFrames
-from scipy.integrate import odeint
+from generalScripts import dynamicsModel, ReferenceFrames
+from scipy.integrate import solve_ivp
 import time
 
-global OBoptimalTrajectory
-
 ## OBGuidance ##################################################################################
-def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,trigger,param):
+def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,OBoptimalTrajectory=None):
 
+	# extract parameters
 	Umax = param.maxAdimThrust
-	rho = OBrelativeState[:3]
-	v_rho = OBrelativeState[3:]
 
 	# Define phase-specific constraints and target state
 	match phaseID:
@@ -30,7 +26,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,trigger,param):
 	if trigger: # if triggered, compute optimal trajectory
 		OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
 		trigger = 0
-		if OBoptimalTrajectory: # if trajectory is computed, check for constraint violation
+		if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
 			constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
 			if constraintViolationFlag:
 				print("Warning: Constraints could be violated with the given trajectory.\n")
@@ -44,20 +40,22 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,trigger,param):
 
 	# Compute control action (using ASRE+APF+SMC)
 	controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
-	return controlAction_L
+	return controlAction_L, OBoptimalTrajectory
 
 
 # Loop 1: Optimal Trajectory
 def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param):
 	print("Computing Optimal Trajectory... ", end='')
 	
-	TOF = np.linalg.norm(initialRelativeState_L[:3]) / (1e-3 / param['xc'] * param['tc']) * 1.1
+	TOF = np.linalg.norm(initialRelativeState_L[:3]) / (1e-3 / param.xc * param.tc) * 1.1
+	
+	### TODO: HERE CAN ADD A try catch block to handle the case where the optimal trajectory is not feasible
 	
 	if TOF > 0:
 		print(f"\n  Estimated TOF: {TOF} [-]")
-		optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
-		optimalTrajectory['envStartTime'] = envTime
-		print(f" done. [Elapsed Time: {optimalTrajectory.get('elapsedTime', 'N/A')} sec]")
+		exectime_start = time.time()
+		optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
+		print(f" done. [Elapsed Time: {time.time() - exectime_start} sec]")
 	else:
 		print("\n  Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
 		optimalTrajectory = None
@@ -67,44 +65,39 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
 
 # Loop 2: Surface Computation
 def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintType, param):
-	global trigger
 
 	if OBoptimalTrajectory: # if the optimal trajectory exists, use it to compute the closest optimal state
 		interpTime = envTime - OBoptimalTrajectory['envStartTime']
 		if interpTime < 0:
-			print("Warning: Error in time definition. Possibly due to numerical integrator")
-			interpTime = OBoptimalTrajectory['time'][-1]
-			raise RuntimeError("Could not proceed.") # this is a temporary solution
+			raise ValueError("Error in interpTime definition. Possibly due to numerical integrator.")
 	else:
 		interpTime = None
 	
-	if OBoptimalTrajectory and 'x' in OBoptimalTrajectory and OBoptimalTrajectory['time'][-1] >= interpTime:
+	if OBoptimalTrajectory and 'state' in OBoptimalTrajectory and interpTime <= OBoptimalTrajectory['time'][-1]:
 		closestOptimalState = np.array([
-			np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['state'][i])
+			np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['state'][:,i])
 			for i in range(6)
 		])
 		closestOptimalControl = np.array([
-			np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['controlAction'][i])
+			np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['controlAction'][:,i])
 			for i in range(3)
 		])
-		print(f"  [envTime {envTime}] closestOptimalState [dist = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param['xc']} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param['xc'] / param['tc']} m/s]")
-		trigger = 0
+		print(f"  [envTime {envTime}] closestOptimalState [dist = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
 	else:
 		closestOptimalState = aimAtState
 		closestOptimalControl = np.zeros(3)
-		print(f"  [envTime {envTime}] <info> Using aimAtState as convergence point [dist = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param['xc']} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param['xc'] / param['tc']} m/s]")
+		print(f"  [envTime {envTime}] <info> Using aimAtState as convergence point [dist = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
 
-	surface_L1_pos = (relativeState[:3] - closestOptimalState[:3]) * 1e3 * param['xc']
-	surface_L1_vel = (relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param['xc'] / param['tc']
+	surface_L1_pos = (relativeState[:3]  - closestOptimalState[:3])  * 1e3 * param.xc
+	surface_L1_vel = (relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc
 
 	_, surface_L2 = APF(relativeState, constraintType, param)
 	return closestOptimalControl, surface_L1_pos, surface_L1_vel, surface_L2
 
 
 
-
 ## ASRE ##################################################################################
-def ASRE(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phaseID, param):
+def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phaseID, param):
 	exectime_start = time.time()
 	
 	# PARAMETERS
@@ -139,7 +132,7 @@ def ASRE(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phase
 	x_guess = interpolate_trajectory(x_i, x_f, tvec)  # Linear initial guess
 
 	# iteration 0
-	A = computeA(1, initialStateTarget_M, param)
+	#A = computeA(1, initialStateTarget_M, param)
 	B = computeB()
 
 	phi_xx = np.eye(6)
@@ -149,7 +142,12 @@ def ASRE(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phase
 
 	PHI0 = np.block([[phi_xx, phi_xy], [phi_yx, phi_yy]])
 	initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
-	PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
+
+	## TODO : USE solve_ivp instead of odeint!!
+	
+	#PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
+	solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B, Q, R, param), t_eval=tvec, method='DOP853')
+	PHIT = solution.y.T
 	PHI = PHIT[-1, :144].reshape(12, 12)
 
 	lambdaCoeff_i = np.linalg.solve(PHI[:6, 6:], (x_f - PHI[:6, :6] @ x_i))
@@ -174,7 +172,8 @@ def ASRE(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phase
 	optimalTrajectory = {
 		"time": tvec,
 		"state": x_guess,
-		"controlAction": u_guess
+		"controlAction": u_guess,
+		"envStartTime": timeNow
 	}
 
 	# print the execution time of the simulation

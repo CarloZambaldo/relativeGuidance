@@ -3,14 +3,18 @@ import numpy as np
 ## CR3BP ## 
 def CR3BP(t, state, param, controlAction=None, disturbAction=None):
 	"""
-	dstate = CR3BP(t, state, param, controlAction)
+	dstate = CR3BP(t, state, param, controlAction, disturbAction)
 
-	state 	  : is the [x y z vx vy vz] of the satellite
-	param	  : is a dataclass that includes several simulation parameters among which
-					massRatio = m2 / (m1 + m2)
-	controlAction : contains the adimensionalized control action to be added in the integration
-	disturbAction : contains the adimensionalized environmental disturbances to be added in the integration
+	INPUTS:
+		state 	  : is the [x y z vx vy vz] of the satellite
+		param	  : is a dataclass that includes several simulation parameters among which
+						massRatio = m2 / (m1 + m2)
+		controlAction : contains the adimensionalized control action to be added in the integration
+		disturbAction : contains the adimensionalized environmental disturbances to be added in the integration
 	
+	OUTPUTS:
+		dstate	  : is the derivative of the state
+		
 	"""
 	
 	# If a control action is not present, set it to zero
@@ -72,3 +76,38 @@ def CR3BP_MoonFrame(t, state_M, param):
 	dRelState = np.hstack((vmi, ami))
 	
 	return dRelState
+
+## COMPUTE ENVIRONMENT DISTURBANCES ##
+def computeEnvironmentDisturbances(t,SCparam,param):
+	"""
+	This function computes the environmental disturbances acting on a satellite
+
+	INPUTS:
+		t: time
+		SCparam: dictionary containing the satellite parameters
+		param: dataclass containing the simulation parameters
+
+	OUTPUTS:
+		distAcceleration_S: adimensionalized acceleration due to environmental disturbances
+
+	"""
+	
+	# If the sunInitialAngle is not present, set it to zero radians
+	if 'sunInitialAngle' not in param.__dict__:
+		sunInitialAngle = 0
+	else:
+		sunInitialAngle = param.sunInitialAngle
+
+	# set Theta as constant (for now)
+	# NOTE: this is a simplification, since the simulation time is very short wrt the orbital period
+	Theta = sunInitialAngle # to add the time varying component, add +1.996437750711854e-07*t
+	sunVersor = np.array([np.cos(Theta), np.sin(Theta), 0])
+
+	# compute the acceleration due to solar radiation pressure
+	distAcceleration_S = (param.SolarFlux * SCparam["Area"] / SCparam["mass"] * 
+						(1 + SCparam["reflCoeffSpecular"] + 2/3 * SCparam["reflCoeffDiffuse"])) * sunVersor
+
+	# adimensionalize:
+	distAcceleration_S = distAcceleration_S * (1e-3) * param.tc**2 / param.xc
+	
+	return distAcceleration_S

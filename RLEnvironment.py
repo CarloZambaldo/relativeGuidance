@@ -2,74 +2,142 @@ from imports import *
 
 ## REINFORCEMENT LEARNING ENVIRONMENT ##
 class SimEnv(gym.Env):
-	# DO NOT FORGET TO ADD METADATA:
 	metadata = {"render_modes": ["none"]}
 
 	def __init__(self):
 		super(SimEnv,self).__init__()
 
 		## OBSERVATION SPACE
-		# observations shall provide information about the location of the agent and target 
-		# self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32)
-		# Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
 		self.observation_space = spaces.Dict(
 			{
 				# "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
 				# "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
-				# "repulsiveAPF": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float32),
+				# "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float32),
 				"OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
 			}
 		)
 
 		## ACTION SPACE
-		# 2 actions are present : OPTILOOP_COMP and OPTILOOP_SKIP 
-		self.action_space = spaces.Discrete(2) # spaces.MultiDiscrete([2,2])
-
+		# 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1]
+		self.action_space = spaces.Discrete(2)
 		self.trigger = True
+
 
 	## STEP ##
 	def step(self, AgentAction):
-		
-		# NAVIGATION #
-		self.OBStateTarget_M, self.OBStateChaser_M, self.OBStateRelative_L = OBNavigation(self.stateChaser_M, self.stateTarget_M, self.stateRelative_L, self.param, self.trigger)
-		
-		# RL AGENT ACTION #
-		if AgentAction == 1:
-			self.trigger = True
-		else:
-			self.trigger = False
 
-		# GUIDANCE ALGORITHM # relativeState_L, targetState_M, param
-		self.controlAction_L = OBGuidance(self.envTime,self.OBStateRelative_L,self.OBStateTarget_M,self.initialValue.phaseID,trigger,param):
+		# extract parameters for the current time step
+		timeNow = self.timeHistory[self.timeIndex]
+
+		# NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
+		# indeed, the NAVIGATION is required for the agent to determine its action
+		# self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+
+		# GUIDANCE ALGORITHM # 
+		# compute the control action and output the optimal trajectory (if re-computed)
+		executionTime_start = time.time()
+		controlAction_L, self.OBoptimalTrajectory = \
+								OBGuidance(self.envTime, self.OBStateRelative_L, self.OBStateTarget_M,
+									self.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)
 		
+		executionTime = time.time() - executionTime_start
+		print("  > Guidance Execution Time: ", executionTime)
+
 		# CONTROL ACTION #
-		self.controlAction_S = OBControl(self.stateTarget_M,self.controlAction_L)
+		# rotate the control action from the local frame to the synodic frame
+		controlAction_S = OBControl(self.targetState_S,controlAction_L)
 
 		# PHYSICAL ENVIRONMENT #
-		
+		# propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
+		distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(timeNow, self.param.chaser, self.param)
+		odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
+							  [timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S, method="DOP853", rtol=1e-9, atol=1e-9)
+		self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1]#ok
 
 		# REWARD COMPUTATION #
-		if collision_check(self.stateRelative_L):
-			self.terminated = True
-			self.reward = -10
-			
+		self.reward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param)
+
+		# PREPARE FOR NEXT TIME STEP #
+		self.timeIndex += 1
+		self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
+		self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
+		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+		self.observation = self.computeRLobservation()
+
+		self.info = {}
+
 		return self.observation, self.reward, self.terminated, self.truncated, self.info
 
 
 	# The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
 	def reset(self, seed=None, options=None):
 		super().reset(seed=seed)
+		# RL related parameters
+		self.reward = 0
 		self.terminated = False
 		self.truncated = False
+
+		# physical environment related parameters
 		self.envTime = 0 # seconds
+		self.timeIndex = 0
+
+		# guidance related parameters
+		self.OBoptimalTrajectory = {}
 		self.trigger = True
 
 		# Set the mission phase
 		if options is not None:
 			self.phaseID = options["phaseID"]
+		else:
+			self.phaseID = 1
+			raise Warning("phaseID not defined. Setting it to 1")
 
 		# Set the initial state of the pysical environment
-		self.param, self.initialValue = config.env_config.get()
+		self.param, self.initialValue = config.env_config.get(seed,self.phaseID)
 
-		
-		return self
+		# definition of the time vector with the GNC frequency
+		self.timeHistory = np.arange(self.param.tspan[0], self.param.tspan[-1], 1/(self.param.freqGNC * self.param.tc))
+
+		# INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
+		self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
+		self.fullStateHistory = np.zeros((len(self.timeHistory),12))
+
+		# extraction of the initial conditions
+		self.targetState_S = self.initialValue.fullInitialState[0:6]
+		self.chaserState_S = self.initialValue.fullInitialState[6:12]
+
+		# saving the initial states inside the fullStateHistory vector
+		self.fullStateHistory[0,:] = self.initialValue.fullInitialState
+
+		# integrate the dynamics of the target [for the whole simulation time]
+		distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(0,self.param.target,self.param)
+		odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, distAcceleration_S),
+								[self.timeHistory[0], self.timeHistory[-1]], self.targetState_S, t_eval=self.timeHistory,
+								method="DOP853", rtol=1e-9, atol=1e-9)
+		self.fullStateHistory[:, :6] = odesol.y[:,-1] #ok
+
+		## compute RL Agent Observation at time step 1
+		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+		return self.computeRLobservation()
+
+
+
+
+	def computeRLobservation(self):
+		return self.OBStateRelative_L
+
+	def computeReward(self,AgentAction,controlAction,param):
+		if (AgentAction == 1):
+			reward -= 1
+
+		# if check.collision(self.chaserState_S-self.targetState_S):
+		# 		terminated = True
+		# 		reward = -1000
+
+		if check.dockingSuccessful(self.chaserState_S-self.targetState_S, self.phaseID, self.param):
+			terminated = True
+			reward = 1000
+
+		reward -= np.linalg.norm(controlAction)*param.freqGNC
+
+		return reward, terminated
