@@ -10,10 +10,10 @@ class SimEnv(gym.Env):
 		## OBSERVATION SPACE
 		self.observation_space = spaces.Dict(
 			{
-				# "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
-				# "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
-				# "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float32),
-				"OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float32),
+				# "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+				# "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+				# "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
+				"OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
 			}
 		)
 
@@ -45,7 +45,7 @@ class SimEnv(gym.Env):
 
 		# CONTROL ACTION #
 		# rotate the control action from the local frame to the synodic frame
-		controlAction_S = OBControl(self.targetState_S,controlAction_L)
+		controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
 		# PHYSICAL ENVIRONMENT #
 		# propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
@@ -90,7 +90,7 @@ class SimEnv(gym.Env):
 			self.phaseID = options["phaseID"]
 		else:
 			self.phaseID = 1
-			raise Warning("phaseID not defined. Setting it to 1")
+			#raise Warning("phaseID not defined. Setting it to 1")
 
 		# Set the initial state of the pysical environment
 		self.param, self.initialValue = config.env_config.get(seed,self.phaseID)
@@ -118,13 +118,18 @@ class SimEnv(gym.Env):
 
 		## compute RL Agent Observation at time step 1
 		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
-		return self.computeRLobservation()
+		
+		info = {}
+		return self.computeRLobservation(), info
 
 
 
 
 	def computeRLobservation(self):
-		return self.OBStateRelative_L
+		observation: dict = {
+			"OBStateRelative_L" : self.OBStateRelative_L,
+		} 
+		return observation
 
 	def computeReward(self,AgentAction,controlAction,param):
 		if (AgentAction == 1):

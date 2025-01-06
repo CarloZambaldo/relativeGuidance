@@ -105,7 +105,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 	t_f = TOF                # Final time
 	N = 200                  # Number of time steps
 
-	# TIME GRID
+	# TIME GRID DEFINITON
 	tvec = np.linspace(t_i, t_f, N)
 	
 	# INITIAL AND FINAL STATES
@@ -143,10 +143,8 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 	PHI0 = np.block([[phi_xx, phi_xy], [phi_yx, phi_yy]])
 	initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
 
-	## TODO : USE solve_ivp instead of odeint!!
-	
 	#PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
-	solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B, Q, R, param), t_eval=tvec, method='DOP853')
+	solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='RK45')
 	PHIT = solution.y.T
 	PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -191,7 +189,7 @@ def interpolate_trajectory(x_i, x_f, tvec):
 def computeA(t, targetState_M, param):
 	# EXTRACTING VALUES FROM INPUT
 	# environment data [in Moon Synodic]
-	massRatio = param['massRatio']
+	massRatio = param.massRatio
 	omegaMI = np.array([0, 0, 1])
 	rem = np.array([-1, 0, 0])
 
@@ -206,7 +204,7 @@ def computeA(t, targetState_M, param):
 	rTEn = np.linalg.norm(rTE)
 
 	# LVLH versors (RVH convention) and Rotation Matrix
-	eR_x, eV_y, eH_z = ReferenceFrames.versorsLVLH(targetState_M, param)
+	eR_x, eV_y, eH_z, _, _, _ = ReferenceFrames.versorsLVLH(targetState_M, param)
 	RotMat_M_to_L = np.array([eR_x, eV_y, eH_z])
 
 	# computing aTM from the CR3BP from Franzini (Moon Centered)
@@ -280,12 +278,12 @@ def computeB():
 	B[3:, :] = np.eye(3)
 	return B
 
-def compute_PHIT(PHIT, t, B, Q, R, param):
+def compute_PHIT(t, PHIT, B, Q, R, param):
 	PHI = PHIT[:144].reshape(12, 12)
 	targetState_M = PHIT[144:150]
 
 	# Target state and system dynamics retrieval
-	dST = CR3BP_MoonFrame(t, targetState_M, param)
+	dST = dynamicsModel.CR3BP_MoonFrame(t, targetState_M, param)
 	A = computeA(t, targetState_M, param)
 
 	# PHI computation
@@ -293,7 +291,7 @@ def compute_PHIT(PHIT, t, B, Q, R, param):
 	DP = M @ PHI
 	DP = DP.flatten()
 
-	return np.concatenate([DP, dST])
+	return np.concatenate([DP, dST]).flatten() # TODO check if .flatten() is correct
 
 ## APF ##################################################################################
 def APF(relativeState_L, constraintType, param):

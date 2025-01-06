@@ -101,7 +101,16 @@ def convert_LVLH_to_S(targetState_S,stateToBeRotated_L,param):
 
     # translate from Synodic to Moon
     rM = np.array([1-param.massRatio,0,0]) # position of the moon in Synodic frame
-    targetState_M = targetState_S-np.hstack([rM,[0,0,0]])
+    target_state_SCM = targetState_S-np.hstack([rM,[0,0,0]])
+
+    # Rotating from Moon to Moon Synodic [T14]
+    FranziRot = np.array([[-1, 0, 0, 0, 0, 0],
+                          [0, -1, 0, 0, 0, 0],
+                          [0, 0, +1, 0, 0, 0],
+                          [0, 0, 0, -1, 0, 0],
+                          [0, 0, 0, 0, -1, 0],
+                          [0, 0, 0, 0, 0, +1]])
+    targetState_M = FranziRot @ target_state_SCM
 
     ## rotate from LVLH to M
     R, Rdot = computeRotationMatrixLVLH(targetState_M, param)
