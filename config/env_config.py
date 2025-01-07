@@ -33,7 +33,7 @@ class physParamClass:
 	})
 
 	target: dict = field(default_factory=lambda: {
-		"mass": 63000, 		 	        # [kg]
+		"mass": 40000, 		 	        # [kg]
 		"Area": 110, 	 				# [m^2]
 		"reflCoeffSpecular": 0.5,		# [-]
 		"reflCoeffDiffuse":  0.1		# [-]
@@ -81,13 +81,13 @@ class initialValueClass():
 					tentativi += 1		
 					if tentativi > 50:
 						raise Exception("Maximum number of attempts reached for random initial conditions definition: the computed state violates the Keep Out Sphere.\nTry again with different seed value.")
-				rand_velocity = (-5+10*np.random.rand(3)) * 1e-3 / param.xc  # velocity range [-5,+5] m/s
+				rand_velocity = (-5+10*np.random.rand(3)) * 1e-3 / param.xc * param.tc # velocity range [-5,+5] m/s
 				DeltaIC_S = np.hstack([rand_position, rand_velocity])
 
 			case 2: # Docking
 				# defining the random initial relative state (IN LVLH!)
 				rand_position_L = np.array([(-8+6*np.random.rand(1)),(-8+6*np.random.rand(1)),(-8+6*np.random.rand(1))]) / param.xc 		 # position range along V-BAR [-8,-2] km
-				rand_velocity_L = (-5+10*np.random.rand(3)) * 1e-3 / param.xc  # velocity range [-1,+1] m/s
+				rand_velocity_L = (-5+10*np.random.rand(3)) * 1e-3 / param.xc * param.tc # velocity range
 				DeltaIC_S = convert_LVLH_to_S(targetState_S,np.hstack([rand_position_L, rand_velocity_L]),param)
 
 			case _:
@@ -103,6 +103,8 @@ class initialValueClass():
 		self.DeltaIC_S = DeltaIC_S
 		self.relativeState_L = relativeState_L
 		self.fullInitialState = np.hstack([targetState_S, chaserState_S])
+
+		print("\n==============================================================\n")
 		print(f"Correctly defined initial conditions:")
 
 		# Print initial distance and velocity between C and T
@@ -111,7 +113,7 @@ class initialValueClass():
 		
 		print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]")
 		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
-
+		print("==============================================================\n\n")
 		return self
 
 

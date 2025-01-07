@@ -13,11 +13,7 @@ def OBControl(targetState_S,uToBeRotated_L,param):
     target_state_SCM = targetState_S - np.hstack([rM,[0,0,0]])
 
     # Rotating from Moon to Moon Synodic [T14]
-        # FranziRot = np.array([[-1, 0, 0],
-        #                       [0, -1, 0],
-        #                       [0, 0, +1]])
-        # targetState_M = FranziRot @ target_state_SCM
-    targetState_M = np.array([-target_state_SCM[0],-target_state_SCM[1],target_state_SCM[2]])
+    targetState_M = np.array([-target_state_SCM[0],-target_state_SCM[1],target_state_SCM[2],-target_state_SCM[3],-target_state_SCM[4],target_state_SCM[5]])
 
     # Rotating matrices
     R_M_to_L, _ = ReferenceFrames.computeRotationMatrixLVLH(targetState_M, param)

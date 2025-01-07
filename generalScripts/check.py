@@ -6,5 +6,5 @@ def collision():
     pass
 
 
-def dockingSuccessful():
+def dockingSuccessful(TRUE_relativeState_S, phaseID, param):
     pass
