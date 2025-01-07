@@ -41,14 +41,10 @@ class SimEnv(gym.Env):
 									self.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)		
 		executionTime = time.time() - executionTime_start
 		print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
-		print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
 
 		# CONTROL ACTION #
 		# rotate the control action from the local frame to the synodic frame
 		controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
-
-		print(f"control_L: {controlAction_L}")
-		print(f"control_S: {controlAction_S}\n")
 
 		# PHYSICAL ENVIRONMENT #
 		# propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)

@@ -36,7 +36,6 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
 
 	# Compute sliding surface
 	sigma = surface_L2 + 1e-3 * (1e3 * surface_L1_vel + surface_L1_pos)
-	print(f"sigma: {sigma}\n")
 
 	# Compute control action (using ASRE+APF+SMC)
 	controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
@@ -84,11 +83,11 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
 			np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['controlAction'][:,i])
 			for i in range(3)
 		])
-		print(f"  [envTime {envTime*param.tc/60} min] closestOptimalState [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
+		print(f"  [envTime {(envTime*param.tc/60):.4f} min] closestOptimalState [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
 	else:
 		closestOptimalState = aimAtState
 		closestOptimalControl = np.zeros(3)
-		print(f"  [envTime  {envTime*param.tc/60} min]  >> aimAtState <<  [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
+		print(f"  [envTime  {(envTime*param.tc/60):.4f} min]  >> aimAtState <<  [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
 	print(f"   goal distance: {np.linalg.norm(relativeState[:3] - aimAtState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - aimAtState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
 	surface_L1_pos = (relativeState[:3]  - closestOptimalState[:3])  * 1e3 * param.xc
 	surface_L1_vel = (relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc
