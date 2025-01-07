@@ -45,19 +45,19 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
 
 # Loop 1: Optimal Trajectory
 def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param):
-	print("Computing Optimal Trajectory... ", end='')
+	print("    Computing Optimal Trajectory... ", end='')
 	
 	TOF = np.linalg.norm(initialRelativeState_L[:3]) / (1e-3 / param.xc * param.tc) * 1.1
 	
 	### TODO: HERE CAN ADD A try catch block to handle the case where the optimal trajectory is not feasible
 	
 	if TOF > 0:
-		print(f"\n  Estimated TOF: {TOF} [-]")
+		print(f"\n     Estimated OBoptimalTrajectory TOF: {TOF} [-]")
 		exectime_start = time.time()
 		optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
-		print(f" done. [Elapsed Time: {time.time() - exectime_start} sec]")
+		print(f"     _ done. [Elapsed Computation Time: {time.time() - exectime_start} sec]")
 	else:
-		print("\n  Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
+		print("\n    >> Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
 		optimalTrajectory = None
 	
 	return optimalTrajectory
@@ -144,7 +144,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 	initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
 
 	#PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
-	solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='RK45')
+	solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='DOP853')
 	PHIT = solution.y.T
 	PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -169,14 +169,14 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 	# OUTPUT OPTIMAL TRAJECTORY
 	optimalTrajectory = {
 		"time": tvec,
-		"state": x_guess,
-		"controlAction": u_guess,
-		"envStartTime": timeNow
+		"state": x_guess.T,
+		"controlAction": u_guess.T,
+		"envStartTime": timeNow		# environment time when the trajectory has been computed
 	}
 
 	# print the execution time of the simulation
 	exectime = time.time() - exectime_start
-	print(f"ASRE Converged. [Execution time: {exectime:.2f} sec]")
+	print(f"     > ASRE Converged. [Execution time: {exectime:.2f} sec]")
 	return optimalTrajectory
 
 def interpolate_trajectory(x_i, x_f, tvec):
@@ -208,7 +208,7 @@ def computeA(t, targetState_M, param):
 	RotMat_M_to_L = np.array([eR_x, eV_y, eH_z])
 
 	# computing aTM from the CR3BP from Franzini (Moon Centered)
-	dSt = CR3BP_MoonFrame(t, targetState_M, param)
+	dSt = dynamicsModel.CR3BP_MoonFrame(t, targetState_M, param)
 	aTM = dSt[3:6]
 
 	# computation of angular momentum and derivatives
@@ -222,6 +222,10 @@ def computeA(t, targetState_M, param):
 		0,
 		1 / rTMn * np.dot(vTM, eV_y)
 	])
+	# define the "derivataStrana"
+	derivataStrana = lambda q: 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
+	# def derivataStrana(q):
+	# 	return 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
 
 	# compute jerk
 	JI = (-massRatio * derivataStrana(rTM) @ (vTM + np.cross(omegaMI, rTM))
@@ -266,10 +270,6 @@ def computeA(t, targetState_M, param):
 		[Xi - OMEGA_LI_dot - OMEGA_LI @ OMEGA_LI, -2 * OMEGA_LI]
 	])
 	
-	derivataStrana = lambda q: 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
-	# def derivataStrana(q):
-	# 	return 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
-
 	return Amat
 
 def computeB():

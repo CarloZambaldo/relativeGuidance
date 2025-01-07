@@ -41,7 +41,7 @@ class SimEnv(gym.Env):
 									self.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)
 		
 		executionTime = time.time() - executionTime_start
-		print("  > Guidance Execution Time: ", executionTime)
+		print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
 
 		# CONTROL ACTION #
 		# rotate the control action from the local frame to the synodic frame
@@ -123,8 +123,7 @@ class SimEnv(gym.Env):
 		return self.computeRLobservation(), info
 
 
-
-
+	## EXTRA METHODS ##
 	def computeRLobservation(self):
 		observation: dict = {
 			"OBStateRelative_L" : self.OBStateRelative_L,
@@ -133,7 +132,7 @@ class SimEnv(gym.Env):
 
 	def computeReward(self,AgentAction,controlAction,param):
 		if (AgentAction == 1):
-			reward -= 1
+			self.reward -= 1
 
 		# if check.collision(self.chaserState_S-self.targetState_S):
 		# 		terminated = True
@@ -141,8 +140,12 @@ class SimEnv(gym.Env):
 
 		if check.dockingSuccessful(self.chaserState_S-self.targetState_S, self.phaseID, self.param):
 			terminated = True
-			reward = 1000
+			self.reward = 1000
+		else:
+			terminated = False
 
-		reward -= np.linalg.norm(controlAction)*param.freqGNC
+		# reduce the reward of an amount proportional to the Guidance control effort
+		# (this strategy should reduce the computation of the that can lead to excessive control actions)
+		self.reward -= np.linalg.norm(controlAction)*param.freqGNC
 
-		return reward, terminated
+		return self.reward, terminated

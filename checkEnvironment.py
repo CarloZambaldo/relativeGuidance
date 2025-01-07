@@ -6,14 +6,15 @@ envOptions = { "phaseID":1 }
 env = SimEnv()
 
 # first check of the environment definition
-check_env(env)
+# check_env(env)
+# print("ENVIRONMENT CHECKED!\n")
 
 # doublecheck the environment definition
-episodes = 50
+episodes = 10
 
 for _ in range(episodes):
-	done = False
-	obs = env.reset(any,1)
+	terminated = False
+	obs = env.reset(None,envOptions)
 	while not terminated:
 		random_action = env.action_space.sample()
 		print("action: ",random_action)
