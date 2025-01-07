@@ -92,7 +92,15 @@ class initialValueClass():
 
 			case _:
 				raise Exception("PhaseID not recognized. Please select a valid phaseID.")
-			
+		
+		## BUG: TODO: BUGFIXING
+		targetState_S = np.array([ 1.01056035, -0.03617079, -0.13739958, -0.05186586, -0.05896856, 0.22699674])
+		chaserState_S = np.array([ 1.01054142, -0.03616771, -0.13740013, -0.0486426 , -0.05719729, 0.22417574])
+		DeltaIC_S = chaserState_S-targetState_S
+
+
+
+
 		# computing the relative state in LVLH
 		chaserState_S = targetState_S + DeltaIC_S
 		relativeState_L = convert_S_to_LVLH(targetState_S, DeltaIC_S, param)
@@ -111,8 +119,8 @@ class initialValueClass():
 		initial_distance = np.linalg.norm(DeltaIC_S[:3]) * param.xc
 		initial_velocity = np.linalg.norm(DeltaIC_S[3:]) * param.xc * 1e3 / param.tc
 		
-		print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]")
-		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
+		print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]\n")
+		print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]\n")
 		print("==============================================================\n\n")
 		return self
 

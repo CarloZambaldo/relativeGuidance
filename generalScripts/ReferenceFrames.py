@@ -58,6 +58,7 @@ def convert_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
     convert_S_to_LVLH rotates the stateToBeRotated_S from S to LVLH
     To rotate from S to LVLH first a translation is needed,
     then it is possible to rotate from S to M and eventually rotate from M to LVLH
+
 	"""
 
     # Translate from Synodic to Moon centered (still not Franzini RF)
@@ -72,25 +73,25 @@ def convert_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
                           [0, 0, 0, 0, -1, 0],
                           [0, 0, 0, 0, 0, +1]])
     target_state_M = FranziRot @ target_state_SCM
-
-    state_to_be_rotated_M = FranziRot @ stateToBeRotated_S
+    stateToBeRotated_M = FranziRot @ stateToBeRotated_S
 
     # Rotating frame from M to LVLH
-    rotated_state, _ = convert_M_to_LVLH(target_state_M, state_to_be_rotated_M, param)
+    rotated_state, _ = convert_M_to_LVLH(target_state_M, stateToBeRotated_M, param)
     
     return rotated_state
 
 
-def convert_M_to_LVLH(target_state_M, state_to_be_rotated, param):
+def convert_M_to_LVLH(target_state_M, stateToBeRotated_M, param):
     """
     this function rotates a state from M to LVLH
+
 	"""
 
-    R, Rdot = computeRotationMatrixLVLH(target_state_M, param)
-    RTOT = np.block([[R, np.zeros((3, 3))], [Rdot, R]])
+    R, Rdot = computeRotationMatrixLVLH(target_state_M, param)#okVV
+    RTOT = np.block([[R, np.zeros((3, 3))], [Rdot, R]])#okVV
 
     # Rotating frame
-    rotated_state = RTOT @ state_to_be_rotated
+    rotated_state = RTOT @ stateToBeRotated_M
     
     return rotated_state, RTOT
 

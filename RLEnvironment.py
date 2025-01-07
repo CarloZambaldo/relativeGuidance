@@ -31,15 +31,14 @@ class SimEnv(gym.Env):
 
 		# NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
 		# indeed, the NAVIGATION is required for the agent to determine its action
-		# self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+		# self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
 
 		# GUIDANCE ALGORITHM # 
 		# compute the control action and output the optimal trajectory (if re-computed)
 		executionTime_start = time.time()
 		controlAction_L, self.OBoptimalTrajectory = \
-								OBGuidance(self.envTime, self.OBStateRelative_L, self.OBStateTarget_M,
-									self.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)
-		
+								OBGuidance(timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
+									self.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)		
 		executionTime = time.time() - executionTime_start
 		print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
 
@@ -47,12 +46,15 @@ class SimEnv(gym.Env):
 		# rotate the control action from the local frame to the synodic frame
 		controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
+		print(f"control_L: {controlAction_L}")
+		print(f"control_S: {controlAction_S}\n")
+
 		# PHYSICAL ENVIRONMENT #
 		# propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
 		distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(timeNow, self.param.chaser, self.param)
 		odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
-							  [timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S, method="DOP853", rtol=1e-9, atol=1e-9)
-		self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1]#ok
+							  [timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S, method="DOP853", rtol=1e-11, atol=1e-11)
+		self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1] # extract following time step
 
 		# REWARD COMPUTATION #
 		self.reward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param)
@@ -61,12 +63,12 @@ class SimEnv(gym.Env):
 		self.timeIndex += 1
 		self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
 		self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
-		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
 		self.observation = self.computeRLobservation()
 
-		self.info = {}
+		info = {"param": self.param, "timeNow": timeNow}
 
-		return self.observation, self.reward, self.terminated, self.truncated, self.info
+		return self.observation, self.reward, self.terminated, self.truncated, info
 
 
 	# The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
@@ -78,7 +80,6 @@ class SimEnv(gym.Env):
 		self.truncated = False
 
 		# physical environment related parameters
-		self.envTime = 0 # seconds
 		self.timeIndex = 0
 
 		# guidance related parameters
@@ -110,17 +111,24 @@ class SimEnv(gym.Env):
 		self.fullStateHistory[0,:] = self.initialValue.fullInitialState
 
 		# integrate the dynamics of the target [for the whole simulation time]
-		distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(0,self.param.target,self.param)
+		distAcceleration_S = dynamicsModel.computeEnvironmentDisturbances(0,self.param.target,self.param)
 		odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, distAcceleration_S),
 								[self.timeHistory[0], self.timeHistory[-1]], self.targetState_S, t_eval=self.timeHistory,
-								method="DOP853", rtol=1e-9, atol=1e-9)
-		self.fullStateHistory[:, :6] = odesol.y[:,-1] #ok
+								method="DOP853", rtol=1e-11, atol=1e-11)
+		self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
 		## compute RL Agent Observation at time step 1
-		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.chaserState_S, self.targetState_S, self.param)
+		self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
 		
-		info = {}
+		info = {"param": self.param, "timeNow": self.param.tspan[0]}
 		return self.computeRLobservation(), info
+
+
+
+
+
+
+
 
 
 	## EXTRA METHODS ##

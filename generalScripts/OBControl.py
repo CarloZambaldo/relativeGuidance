@@ -9,11 +9,8 @@ def OBControl(targetState_S,uToBeRotated_L,param):
 
     # get the target state in Moon Centered Synodic
     # translate from Synodic to Moon
-    rM = np.array([1-param.massRatio,0,0]) # position of the moon in Synodic frame
-    target_state_SCM = targetState_S - np.hstack([rM,[0,0,0]])
-
     # Rotating from Moon to Moon Synodic [T14]
-    targetState_M = np.array([-target_state_SCM[0],-target_state_SCM[1],target_state_SCM[2],-target_state_SCM[3],-target_state_SCM[4],target_state_SCM[5]])
+    targetState_M = np.array([-targetState_S[0]+(1-param.massRatio),-targetState_S[1],targetState_S[2],-targetState_S[3],-targetState_S[4],targetState_S[5]])
 
     # Rotating matrices
     R_M_to_L, _ = ReferenceFrames.computeRotationMatrixLVLH(targetState_M, param)

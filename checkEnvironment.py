@@ -12,14 +12,21 @@ env = SimEnv()
 # doublecheck the environment definition
 episodes = 10
 
-for _ in range(episodes):
+for episode in range(episodes):
+	print(f"## RUN {episode+1} out of {episodes} ##\n")
 	terminated = False
-	obs = env.reset(None,envOptions)
-	while not terminated:
-		random_action = env.action_space.sample()
-		print("action: ",random_action)
+	truncated = False
+	obs, info = env.reset(None,envOptions)
+	while (not terminated and not truncated):
+		random_action = 0#env.action_space.sample()
+		print("Agent Action: ",random_action)
 		obs, reward, terminated, truncated, info = env.step(random_action)
-		print('reward: ',reward)
+		print('Reward: ',reward)
+
+		if info["timeNow"] > info["param"].tspan[-1]:
+			truncated = True
+
+	print("############\n\n")
 		
 
 ## TRAINING ##
