@@ -116,15 +116,15 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 
 	# COST MATRICES
 	match phaseID:
-		case 1:
+		case 1: # rendezvous phase
 			Q = np.eye(6)
 			R = np.eye(3)
-		case 2:
+		case 2: # safe approach and docking phase
 			Q = np.block([
-				[np.diag([1e12, 1e-5, 1e12]), np.zeros((3, 3))],
-				[np.zeros((3, 3)), np.diag([1, 1e-6, 1])]
+				[np.diag([1e10, 1e-5, 1e10]), np.zeros((3, 3))],
+				[np.zeros((3, 3)), np.diag([1e-2, 1e3, 1e-2])]
 			])
-			R = np.diag([0.9e-1, 1, 0.9e-1])
+			R = np.diag([2e1, 8e1, 2e1])
 		case _:
 			Q = np.eye(6)
 			R = np.eye(3)
