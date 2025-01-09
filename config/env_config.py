@@ -18,11 +18,12 @@ class physParamClass:
 	SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
 
 	# SIMULATION PARAMETERS #
-	tspan = np.array([0, 0.2])								# initial and final time for simulation	
+	tspan = np.array([0, 0.002])						    # initial and final time for simulation	[ADIMENSIONAL]
+
 	maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2 	    # maximum adimensional acceleration [adimensional]
 	holdingState = np.array([0, -8/xc, 0, 0, 0, 0])  		# [adimensional]
 	dockingState = np.array([0, 0, 0, 0, 0.06e-3*tc/xc, 0]) # Final relative state from Luca Thesis
-	freqGNC : float = 10								    # [Hz] GNC upadate frequency
+	freqGNC : float = 10 * tc	                            # [adimensional Hz] GNC upadate frequency
 
 	# SPACECRAFT PARAMETERS #
 	chaser: dict = field(default_factory=lambda: {
@@ -93,10 +94,10 @@ class initialValueClass():
 			case _:
 				raise Exception("PhaseID not recognized. Please select a valid phaseID.")
 		
-		## BUG: TODO: BUGFIXING
-		targetState_S = np.array([ 1.01056035, -0.03617079, -0.13739958, -0.05186586, -0.05896856, 0.22699674])
-		chaserState_S = np.array([ 1.01054142, -0.03616771, -0.13740013, -0.0486426 , -0.05719729, 0.22417574])
-		DeltaIC_S = chaserState_S-targetState_S
+		########### ## BUGFIXING CODE ##
+		########### targetState_S = np.array([ 1.01056035, -0.03617079, -0.13739958, -0.05186586, -0.05896856, 0.22699674])
+		########### chaserState_S = np.array([ 1.01054142, -0.03616771, -0.13740013, -0.0486426 , -0.05719729, 0.22417574])
+		########### DeltaIC_S = chaserState_S-targetState_S
 
 
 

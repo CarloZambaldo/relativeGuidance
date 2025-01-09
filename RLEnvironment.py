@@ -56,6 +56,9 @@ class SimEnv(gym.Env):
 		# REWARD COMPUTATION #
 		self.reward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param)
 
+		# END OF SIMULATION #
+		self.truncated = self.EOS(timeNow,self.param)
+		
 		# PREPARE FOR NEXT TIME STEP #
 		self.timeIndex += 1
 		self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
@@ -94,7 +97,7 @@ class SimEnv(gym.Env):
 		self.param, self.initialValue = config.env_config.get(seed,self.phaseID)
 
 		# definition of the time vector with the GNC frequency
-		self.timeHistory = np.arange(self.param.tspan[0], self.param.tspan[-1], 1/(self.param.freqGNC * self.param.tc))
+		self.timeHistory = np.arange(self.param.tspan[0], self.param.tspan[-1], 1/(self.param.freqGNC))
 
 		# INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
 		self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
@@ -155,3 +158,11 @@ class SimEnv(gym.Env):
 		self.reward -= np.linalg.norm(controlAction)*param.freqGNC
 
 		return self.reward, terminated
+	
+	def EOS(self,timeNow,param):
+		# determine if the simulation run out of time [reached final tspan]
+		if timeNow+param.freqGNC > param.tspan[-1]:
+			truncated = True
+		else:
+			truncated = False
+		return truncated
