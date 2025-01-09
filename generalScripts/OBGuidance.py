@@ -45,9 +45,8 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
 # Loop 1: Optimal Trajectory
 def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param):
 	print("    Computing Optimal Trajectory... ", end='')
-	print("    Computing Optimal Trajectory... ", end='')
 	
-	TOF = np.linalg.norm(initialRelativeState_L[:3]) / (1e-3 / param.xc * param.tc) * 1.1
+	TOF = computeTOF(initialRelativeState_L, aimAtState)
 	print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
 	### TODO: HERE CAN ADD A try catch block to handle the case where the optimal trajectory is not feasible
 	if TOF > 1:
@@ -57,7 +56,6 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
 		optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
 		print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
 	else:
-		print("\n    >> Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
 		print("\n    >> Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
 		optimalTrajectory = None
 	
@@ -355,7 +353,7 @@ def APF(relativeState_L, constraintType, param):
 
 ## CHECK CONTRAINTS VIOLATION ##################################################################################
 def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize):
-
+	pass
 	"""
 	function [violationFlag,violationPosition] = checkConstraintViolation(trajectory,contraintType,characteristicSize)
 		% 
@@ -406,3 +404,15 @@ def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristic
 
 	end
 	"""
+
+
+def computeTOF(relativeState, aimAtState):
+	ri = relativeState[:3]
+	vi = relativeState[3:6]
+	
+	delta = aimAtState[:3] - ri
+	vdelta = (np.dot(vi, delta) / np.dot(delta, delta)) * delta
+	
+	TOF = np.linalg.norm(delta) / np.linalg.norm(vdelta) * 5e-2
+	
+	return TOF

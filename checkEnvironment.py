@@ -1,6 +1,7 @@
 from stable_baselines3.common.env_checker import check_env
 from RLEnvironment import SimEnv
-
+import time
+import UserDataDisplay as UDD
 
 envOptions = { "phaseID":1 }
 env = SimEnv()
@@ -27,6 +28,8 @@ for episode in range(episodes):
 			truncated = True
 
 	print("############\n\n")
+	UDD.printSummary
+	time.sleep()
 		
 
 ## TRAINING ##
