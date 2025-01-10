@@ -18,8 +18,8 @@ class physParamClass:
     SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
 
     # SIMULATION PARAMETERS #
-    tspan = np.array([0, 0.0008])                            # initial and final time for simulation    [ADIMENSIONAL]
-    phaseID = 2
+    tspan = np.array([0, 0.008])                            # initial and final time for simulation    [ADIMENSIONAL]
+    phaseID = 1
 
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2         # maximum adimensional acceleration [adimensional]
     holdingState = np.array([0, -8/xc, 0, 0, 0, 0])          # [adimensional]

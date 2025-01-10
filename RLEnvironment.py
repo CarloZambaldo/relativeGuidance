@@ -48,7 +48,7 @@ class SimEnv(gym.Env):
         print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
 
         # CONTROL ACTION #
-        self.controlActionHistory_L[self.timeIndex+1,:] = self.controlActionHistory_L
+        self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
         # rotate the control action from the local frame to the synodic frame
         controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
@@ -100,7 +100,7 @@ class SimEnv(gym.Env):
         # INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
         self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
         self.fullStateHistory = np.zeros((len(self.timeHistory),12))
-        self.AgentActionHistory[:] = np.zeros((len(self.timeHistory),))
+        self.AgentActionHistory = np.zeros((len(self.timeHistory),3))
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]

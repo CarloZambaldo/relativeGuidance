@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from imports import *
-import seaborn as sns
+from generalScripts import *
+
+#import seaborn as sns
 
 def plotty(env):
 	# sns.set_theme(style="whitegrid")
@@ -47,19 +48,20 @@ def plotty(env):
 	ax.plot(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], 'b', linewidth=1.2, label="Actual Trajectory")
 	ax.plot(0, 0, 0, 'r*', linewidth=1)
 
-	DeltaIC_L = ReferenceFrames.convert_S_to_LVLH(initialStateTarget_S, DeltaIC_S, param)
-	DeltaICm = DeltaIC_L[0:3] * param.xc
-	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], color='k', linewidth=0.9) # arrow pointing to initial state
-	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', linewidth=.05)
-
-	ax.quiver(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], controlAction[:, 0], controlAction[:, 1], controlAction[:, 2], color='g', linewidth=0.8, label="Control Action")
+	# DeltaIC_L = ReferenceFrames.convert_S_to_LVLH(initialStateTarget_S, DeltaIC_S, param)
+	ax.quiver(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], controlAction[:, 0]/100, controlAction[:, 1]/100, controlAction[:, 2]/100, color='lightgreen', linewidth=0.8, label="Control Action")
 
 	ax.quiver(0, 0, 0, 1, 0, 0, color='r', linewidth=1)
 	ax.quiver(0, 0, 0, 0, 1, 0, color='r', linewidth=1)
 	ax.quiver(0, 0, 0, 0, 0, 1, color='r', linewidth=1)
 
+	# initial condition
+	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], color='k', linewidth=1) # arrow pointing to initial state
+	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', ms = 5, label="Initial Position")
+
+	# final condition
 	holdState = param.holdingState * param.xc
-	ax.plot(holdState[0], holdState[1], holdState[2], 'db', linewidth=1, label="Hold Position")
+	ax.plot(holdState[0], holdState[1], holdState[2], 'db', ms = 5, label="Hold Position")
 
 	if phaseID == 1:
 		plotConstraintsVisualization(1e3, 'SPHERE', 'yellow')
@@ -72,20 +74,18 @@ def plotty(env):
 	ax.legend(loc='best')
 	ax.set_title("Relative Dynamics [CONTROLLED]")
 	ax.grid(True)
-	#ax.set_box_aspect([1,1,1])  # Equal aspect ratio
-	plt.xlabel("R-BAR")
-	plt.ylabel("V-BAR")
-	plt.gca().set_zlabel("H-BAR")
+	ax.set_box_aspect([1,1,1])  # Equal aspect ratio
+	plt.xlabel("R-BAR [km]")
+	plt.ylabel("V-BAR [km]")
+	plt.gca().set_zlabel("H-BAR [km]")
 	plt.axis('equal')
-	plt.show()
-
 
 
 	################################################
 	## Plot control actions and relative dynamics ##
 	################################################
 	t = adimensionalSolution['x'] * param.tc / 60
-	fig, axs = plt.subplots(3, 1, figsize=(8, 12))
+	fig, axs = plt.subplots(3, 1) # , figsize=(8, 12)
 
 	axs[0].plot(t, controlAction, linewidth=1.1)
 	axs[0].grid(True)
@@ -101,12 +101,12 @@ def plotty(env):
 	axs[1].set_xlabel("Time [min]")
 	axs[1].set_ylabel("Position [km]")
 
-	axs[2].plot(t, relDynami_LVLH[:, 3:6], linewidth=1)
+	axs[2].plot(t, relDynami_LVLH[:, 3:6]*1e3, linewidth=1)
 	axs[2].set_title("Controlled Relative Velocity [LVLH]")
 	axs[2].legend(["R-BAR", "V-BAR", "H-BAR"], loc='best')
 	axs[2].grid(True)
 	axs[2].set_xlabel("Time [min]")
-	axs[2].set_ylabel("Velocity [km/s]")
+	axs[2].set_ylabel("Velocity [m/s]")
 
 	plt.tight_layout()
 	plt.show()
@@ -131,22 +131,16 @@ def plotConstraintsVisualization( DeltaIC_meters, type='CONE', colore=None):
 
 
 def plot_sphere(rsphere, colore='red'):
-	z = lambda RbarX, VbarX: np.real(np.sqrt(rsphere**2 - RbarX**2 - VbarX**2)) * 1e-3
-	pointsR = np.linspace(-rsphere, rsphere, 501)
-	pointsV = np.linspace(-rsphere, rsphere, 501)
-	X, Y = np.meshgrid(pointsR, pointsV)
+	rsphere*=1e-3
+	u, v = np.mgrid[0:2*np.pi:30j, 0:np.pi:30j]
+	x = rsphere*np.cos(u)*np.sin(v)
+	y = rsphere*np.sin(u)*np.sin(v)
+	z = rsphere*np.cos(v)
 
-	sferaz = z(X, Y)
-	for i in range(X.shape[0]):
-		for j in range(X.shape[1]):
-			if X[i, j]**2 + Y[i, j]**2 > (rsphere * 1.01)**2:
-				sferaz[i, j] = np.nan
-
-	#colore = colore if colore else 'red'
 	fig = plt.gcf()
 	ax = fig.axes[0]
-	ax.plot_surface(X * 1e-3, Y * 1e-3, sferaz, color=colore, alpha=0.5, edgecolor='none')
-	ax.plot_surface(X * 1e-3, Y * 1e-3, -sferaz, color=colore, alpha=0.5, edgecolor='none')
+	ax.plot_surface(x,y,z, color=colore, alpha=0.4, edgecolor='none')
+
 
 def plot_cone(DeltaIC_meters, acone, bcone, colore='none'):
 	z = lambda RbarX, VbarX: (acone**2 * bcone**3 - 3 * acone**2 * bcone**2 * VbarX + 3 * acone**2 * bcone * VbarX**2 - acone**2 * VbarX**3 - RbarX**2)
@@ -155,7 +149,7 @@ def plot_cone(DeltaIC_meters, acone, bcone, colore='none'):
 	X, Y = np.meshgrid(pointsR, pointsV)
 
 	halfCone = z(X, Y)  # [m]
-	toll = max(np.max(np.diff(pointsR)), np.max(np.diff(pointsV))) * 1
+	toll = max(np.max(np.diff(pointsR)), np.max(np.diff(pointsV)))
 	for i in range(X.shape[0]):
 		for j in range(X.shape[1]):
 			if halfCone[i,j] < 0:

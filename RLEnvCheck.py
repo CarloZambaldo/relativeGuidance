@@ -1,9 +1,7 @@
 from stable_baselines3.common.env_checker import check_env
 from RLEnvironment import SimEnv
 import time
-from UserDataDisplay.printSummary import printSummary
-from UserDataDisplay.plots import plotty
-
+from imports import *
 env = SimEnv()
 
 # first check of the environment definition
@@ -35,5 +33,6 @@ for episode in range(episodes):
 import pickle
 with open("savedEnvironmentTEST.pkl", "wb") as file:
 	pickle.dump(env, file)
+	print("SAVED env INTO A FILE.")
 
 ## TRAINING ##
