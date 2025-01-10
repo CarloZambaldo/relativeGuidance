@@ -27,3 +27,8 @@ while True:
     iters += 1
     model.learn(total_timesteps=TIMESTEPS, reset_num_timesteps=False, tb_log_name=f"PPO")
     model.save(f"{models_dir}/{TIMESTEPS*iters}")
+	
+
+    ###
+    models_dir = os.path.join("models","PPO_test")
+    model.save(models_dir)

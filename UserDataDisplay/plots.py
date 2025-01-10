@@ -50,7 +50,7 @@ def plotty(env):
 	DeltaIC_L = ReferenceFrames.convert_S_to_LVLH(initialStateTarget_S, DeltaIC_S, param)
 	DeltaICm = DeltaIC_L[0:3] * param.xc
 	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], color='k', linewidth=0.9) # arrow pointing to initial state
-	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', linewidth=.5)
+	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', linewidth=.05)
 
 	ax.quiver(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], controlAction[:, 0], controlAction[:, 1], controlAction[:, 2], color='g', linewidth=0.8, label="Control Action")
 
@@ -62,24 +62,28 @@ def plotty(env):
 	ax.plot(holdState[0], holdState[1], holdState[2], 'db', linewidth=1, label="Hold Position")
 
 	if phaseID == 1:
-		plotConstraintsVisualization(1e3, 'S', 'yellow')
-		plotConstraintsVisualization(200, 'S')
-		plotConstraintsVisualization(2.5e3, 'S', '#808080')
+		plotConstraintsVisualization(1e3, 'SPHERE', 'yellow')
+		plotConstraintsVisualization(200, 'SPHERE')
+		plotConstraintsVisualization(2.5e3, 'SPHERE', '#808080')
 	elif phaseID == 2:
-		plotConstraintsVisualization(1e3, 'C')
+		plotConstraintsVisualization(1e3, 'CONE')
 
 	ax = plt.gca()
 	ax.legend(loc='best')
 	ax.set_title("Relative Dynamics [CONTROLLED]")
 	ax.grid(True)
-	ax.set_box_aspect([1, 1, 1])  # Equal aspect ratio
+	#ax.set_box_aspect([1,1,1])  # Equal aspect ratio
 	plt.xlabel("R-BAR")
 	plt.ylabel("V-BAR")
 	plt.gca().set_zlabel("H-BAR")
 	plt.axis('equal')
 	plt.show()
 
+
+
+	################################################
 	## Plot control actions and relative dynamics ##
+	################################################
 	t = adimensionalSolution['x'] * param.tc / 60
 	fig, axs = plt.subplots(3, 1, figsize=(8, 12))
 
@@ -110,7 +114,7 @@ def plotty(env):
 
 #########################################################################
 
-def plotConstraintsVisualization( DeltaIC_meters, type='C', colore=None):
+def plotConstraintsVisualization( DeltaIC_meters, type='CONE', colore=None):
 	# coefficients definition
 	acone = 0.08
 	bcone = 5
@@ -120,13 +124,13 @@ def plotConstraintsVisualization( DeltaIC_meters, type='C', colore=None):
 	else:
 		rsphere = DeltaIC_meters
 
-	if type.upper() == 'S':
+	if type.upper() == 'SPHERE':
 		plot_sphere(rsphere, colore)
-	elif type.upper() == 'C':
-		plot_cone(DeltaIC_meters, colore, acone, bcone)
+	elif type.upper() == 'CONE':
+		plot_cone(DeltaIC_meters, acone, bcone, colore)
 
 
-def plot_sphere(rsphere, colore):
+def plot_sphere(rsphere, colore='red'):
 	z = lambda RbarX, VbarX: np.real(np.sqrt(rsphere**2 - RbarX**2 - VbarX**2)) * 1e-3
 	pointsR = np.linspace(-rsphere, rsphere, 501)
 	pointsV = np.linspace(-rsphere, rsphere, 501)
@@ -138,28 +142,31 @@ def plot_sphere(rsphere, colore):
 			if X[i, j]**2 + Y[i, j]**2 > (rsphere * 1.01)**2:
 				sferaz[i, j] = np.nan
 
-	colore = colore if colore else 'red'
+	#colore = colore if colore else 'red'
 	fig = plt.gcf()
 	ax = fig.axes[0]
 	ax.plot_surface(X * 1e-3, Y * 1e-3, sferaz, color=colore, alpha=0.5, edgecolor='none')
 	ax.plot_surface(X * 1e-3, Y * 1e-3, -sferaz, color=colore, alpha=0.5, edgecolor='none')
-	plt.show()
 
-def plot_cone(DeltaIC_meters, colore, acone, bcone):
-	z = lambda RbarX, VbarX: np.real(np.sqrt(acone**2 * bcone**3 - 3 * acone**2 * bcone**2 * VbarX + 3 * acone**2 * bcone * VbarX**2 - acone**2 * VbarX**3 - RbarX**2))
+def plot_cone(DeltaIC_meters, acone, bcone, colore='none'):
+	z = lambda RbarX, VbarX: (acone**2 * bcone**3 - 3 * acone**2 * bcone**2 * VbarX + 3 * acone**2 * bcone * VbarX**2 - acone**2 * VbarX**3 - RbarX**2)
 	pointsR = np.linspace(-3 * DeltaIC_meters, 3 * DeltaIC_meters, 1001)
 	pointsV = np.linspace(-DeltaIC_meters, 0, 1001)
 	X, Y = np.meshgrid(pointsR, pointsV)
 
 	halfCone = z(X, Y)  # [m]
-	toll = max(np.max(np.diff(pointsR)), np.max(np.diff(pointsV))) * 5
+	toll = max(np.max(np.diff(pointsR)), np.max(np.diff(pointsV))) * 1
 	for i in range(X.shape[0]):
 		for j in range(X.shape[1]):
-			if -(Y[i, j] + toll - bcone)**3 < (X[i, j]**2 / acone**2):
-				halfCone[i, j] = np.nan
+			if halfCone[i,j] < 0:
+				halfCone[i,j] = np.nan
+			else:
+				if -(Y[i, j] - toll - bcone)**3 > (X[i, j]**2 / acone**2) and -(Y[i, j] + toll - bcone)**3 < (X[i, j]**2 / acone**2):
+					halfCone[i, j] = 0
+				else:
+					halfCone[i,j] = np.sqrt(halfCone[i,j])
 
 	fig = plt.gcf()
 	ax = fig.axes[0]
-	ax.plot_surface(X * 1e-3, Y * 1e-3, halfCone * 1e-3, color='black', alpha=0.5, edgecolor='none')
-	ax.plot_surface(X * 1e-3, Y * 1e-3, -halfCone * 1e-3, color='black', alpha=0.5, edgecolor='none')
-	plt.show()
+	ax.plot_surface(X * 1e-3, Y * 1e-3, halfCone * 1e-3, color=colore, alpha=0.5, edgecolor='none')
+	ax.plot_surface(X * 1e-3, Y * 1e-3, -halfCone * 1e-3, color=colore, alpha=0.5, edgecolor='none')

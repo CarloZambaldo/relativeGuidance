@@ -2,7 +2,7 @@ from stable_baselines3.common.env_checker import check_env
 from RLEnvironment import SimEnv
 import time
 from UserDataDisplay.printSummary import printSummary
-from UserDataDisplay.plotty import plotty
+from UserDataDisplay.plots import plotty
 
 env = SimEnv()
 
@@ -29,8 +29,11 @@ for episode in range(episodes):
 
 	print("############\n\n")
 	printSummary(env)
-	plotty(env)
-	input("Press enter to continue...")
+	#plotty(env)
+	#input("Press enter to continue...")
 		
+import pickle
+with open("savedEnvironmentTEST.pkl", "wb") as file:
+	pickle.dump(env, file)
 
 ## TRAINING ##

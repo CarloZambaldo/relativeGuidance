@@ -1,4 +1,10 @@
-from imports import *
+import time
+import config
+import numpy as np
+from scipy.integrate import solve_ivp
+from generalScripts import *
+import gymnasium as gym
+from gymnasium import spaces
 
 ## REINFORCEMENT LEARNING ENVIRONMENT ##
 class SimEnv(gym.Env):
@@ -20,15 +26,14 @@ class SimEnv(gym.Env):
         ## ACTION SPACE
         # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1]
         self.action_space = spaces.Discrete(2)
-        self.trigger = True
-
 
     ## STEP ##
     def step(self, AgentAction):
 
         # extract parameters for the current time step
         timeNow = self.timeHistory[self.timeIndex]
-
+        self.AgentActionHistory[self.timeIndex] = AgentAction
+        
         # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
         # indeed, the NAVIGATION is required for the agent to determine its action
         # self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
@@ -43,6 +48,7 @@ class SimEnv(gym.Env):
         print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
 
         # CONTROL ACTION #
+        self.controlActionHistory_L[self.timeIndex+1,:] = self.controlActionHistory_L
         # rotate the control action from the local frame to the synodic frame
         controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
@@ -84,7 +90,6 @@ class SimEnv(gym.Env):
 
         # guidance related parameters
         self.OBoptimalTrajectory = {}
-        self.trigger = True
 
         # Set the initial state of the pysical environment
         self.param, self.initialValue = config.env_config.get(seed)
@@ -95,6 +100,7 @@ class SimEnv(gym.Env):
         # INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
         self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
         self.fullStateHistory = np.zeros((len(self.timeHistory),12))
+        self.AgentActionHistory[:] = np.zeros((len(self.timeHistory),))
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]
@@ -107,7 +113,7 @@ class SimEnv(gym.Env):
         distAcceleration_S = dynamicsModel.computeEnvironmentDisturbances(0,self.param.target,self.param)
         odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, distAcceleration_S),
                                 [self.timeHistory[0], self.timeHistory[-1]], self.targetState_S, t_eval=self.timeHistory,
-                                method="DOP853", rtol=1e-11, atol=1e-11)
+                                method="DOP853", rtol=1e-10, atol=1e-10)
         self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
         ## compute RL Agent Observation at time step 1

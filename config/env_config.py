@@ -18,7 +18,7 @@ class physParamClass:
     SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
 
     # SIMULATION PARAMETERS #
-    tspan = np.array([0, 0.0002])                            # initial and final time for simulation    [ADIMENSIONAL]
+    tspan = np.array([0, 0.0008])                            # initial and final time for simulation    [ADIMENSIONAL]
     phaseID = 2
 
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2         # maximum adimensional acceleration [adimensional]
@@ -88,12 +88,13 @@ class initialValueClass():
                 # defining the random initial relative state (IN LVLH!)
                 rand_position_L = np.array([(-8+6*np.random.rand()),(-8+6*np.random.rand()),(-8+6*np.random.rand())]) / param.xc          # position range along V-BAR [-8,-2] km
                 rand_velocity_L = (-5+10*np.random.rand(3)) * 1e-3 / param.xc * param.tc # velocity range
-                test_prima = np.hstack([rand_position_L, rand_velocity_L])
+                
                 DeltaIC_S = convert_LVLH_to_S(targetState_S,np.hstack([rand_position_L, rand_velocity_L]),param)
-                test_dopo = convert_S_to_LVLH(targetState_S, DeltaIC_S, param)
-                if abs(np.linalg.norm(DeltaIC_S)-np.linalg.norm(np.hstack([rand_position_L, rand_velocity_L]))) > 1e-5 \
-                   or abs(np.linalg.norm(test_dopo-test_prima)) > 1e-8:
-                    raise ArithmeticError("Rotation of the initial condition led to a wrong result")
+                ## DEBUG: test_prima = np.hstack([rand_position_L, rand_velocity_L])
+                ## DEBUG: test_dopo = convert_S_to_LVLH(targetState_S, DeltaIC_S, param)
+                ## DEBUG: if abs(np.linalg.norm(DeltaIC_S)-np.linalg.norm(np.hstack([rand_position_L, rand_velocity_L]))) > 1e-8 \
+                ## DEBUG:    or abs(np.linalg.norm(test_dopo-test_prima)) > 1e-8:
+                ## DEBUG:     raise ArithmeticError("Rotation of the initial condition led to a wrong result")
 
             case _:
                 raise Exception("PhaseID not recognized. Please select a valid phaseID.")
