@@ -20,30 +20,31 @@ def versorsLVLH(targetState_M, param):
 	aTM = dSt[3:6]
 
 	# Compute other values
-	hTM = np.cross(rTM, vTM, axis=0)
-	hTM_norm = np.linalg.norm(hTM, axis=0)
+	hTM = np.cross(rTM, vTM)
+	hTM_norm = np.linalg.norm(hTM)
 
 	# Compute new reference frame axes (LVLH)
-	eR_x = rTM / np.linalg.norm(rTM, axis=0)
-	eH_z = np.cross(rTM, vTM, axis=0) / hTM_norm
-	eV_y = np.cross(eH_z, eR_x, axis=0)
+	eR_x = rTM / np.linalg.norm(rTM)
+	eH_z = np.cross(rTM, vTM) / hTM_norm
+	eV_y = np.cross(eH_z, eR_x)
 
 	# Derivatives of the reference frame axes (LVLH)
-	eR_x_dot = (1 / np.linalg.norm(rTM, axis=0)) * (np.dot(vTM.T, eV_y) * eV_y)
-	eH_z_dot = -(np.linalg.norm(rTM, axis=0) / hTM_norm) * (np.dot(aTM.T, eH_z) * eV_y)
-	eV_y_dot = (np.linalg.norm(rTM, axis=0) / hTM_norm) * (np.dot(aTM.T, eH_z) * eH_z) - (1 / np.linalg.norm(rTM, axis=0)) * (np.dot(vTM.T, eV_y) * eR_x)
+	eR_x_dot = (1 / np.linalg.norm(rTM)) * (np.dot(vTM, eV_y) * eV_y)
+	eH_z_dot = -(np.linalg.norm(rTM) / hTM_norm) * (np.dot(aTM, eH_z) * eV_y)
+	eV_y_dot = np.cross(eH_z_dot,eR_x) + np.cross(eH_z,eR_x_dot) #(np.linalg.norm(rTM) / hTM_norm) * (np.dot(aTM.T, eH_z) * eH_z) - (1 / np.linalg.norm(rTM)) * (np.dot(vTM.T, eV_y) * eR_x)
 
 	return eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot
 
 
-def computeRotationMatrixLVLH(target_state_M, param):
+## 
+def computeRotationMatrixLVLH(targetState_M, param):
     """
 	This funciton computes the rotation matrix
     FROM moon centered synodic
 	TO the LVLH RF centered about the target
 	"""
     # computing new reference frame axis (LVLH)
-    eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot = versorsLVLH(target_state_M, param)
+    eR_x, eV_y, eH_z, eR_x_dot, eV_y_dot, eH_z_dot = versorsLVLH(targetState_M, param)
 
     # Rotational matrices
     R = np.vstack([eR_x.flatten(), eV_y.flatten(), eH_z.flatten()])
@@ -53,37 +54,37 @@ def computeRotationMatrixLVLH(target_state_M, param):
     return R, Rdot
 
 
-def convert_S_to_LVLH(targetState_S, stateToBeRotated_S, param):
+##
+def convert_S_to_LVLH(targetState_S, stateToBeRotated_SCM, param):
     """
     convert_S_to_LVLH rotates the stateToBeRotated_S from S to LVLH
     To rotate from S to LVLH first a translation is needed,
     then it is possible to rotate from S to M and eventually rotate from M to LVLH
 
+    NOTE: the stateToBeRotated_SCM is ONLY ROTATED NOT TRASLATED from the COG of Earth-Moon
+    to Moon center  
+
 	"""
 
     # Translate from Synodic to Moon centered (still not Franzini RF)
-    rM = np.array([1 - param.massRatio, 0, 0])  # Position of the moon in Synodic frame
-    target_state_SCM = targetState_S - np.concatenate([rM, np.zeros(3)])
-
-    # Rotating from Moon to Moon Synodic [T14]
-    FranziRot = np.array([[-1, 0, 0, 0, 0, 0],
-                          [0, -1, 0, 0, 0, 0],
-                          [0, 0, +1, 0, 0, 0],
-                          [0, 0, 0, -1, 0, 0],
-                          [0, 0, 0, 0, -1, 0],
-                          [0, 0, 0, 0, 0, +1]])
-    target_state_M = FranziRot @ target_state_SCM
-    stateToBeRotated_M = FranziRot @ stateToBeRotated_S
+    # Rotating from Moon to Moon Synodic [T14] (FranziRot)
+    targetState_M = np.array([-targetState_S[0]+(1-param.massRatio),-targetState_S[1],targetState_S[2],
+                              -targetState_S[3],-targetState_S[4],targetState_S[5]])
+    stateToBeRotated_M = np.array([-stateToBeRotated_SCM[0],-stateToBeRotated_SCM[1],stateToBeRotated_SCM[2],
+                                   -stateToBeRotated_SCM[3],-stateToBeRotated_SCM[4],stateToBeRotated_SCM[5]])
 
     # Rotating frame from M to LVLH
-    rotated_state, _ = convert_M_to_LVLH(target_state_M, stateToBeRotated_M, param)
+    rotated_state, _ = convert_M_to_LVLH(targetState_M, stateToBeRotated_M, param)
     
     return rotated_state
 
 
+##
 def convert_M_to_LVLH(target_state_M, stateToBeRotated_M, param):
     """
     this function rotates a state from M to LVLH
+
+    NOTE: the stateToBeRotated_M shall already be in the moon centered synodic frame M
 
 	"""
 
@@ -96,28 +97,33 @@ def convert_M_to_LVLH(target_state_M, stateToBeRotated_M, param):
     return rotated_state, RTOT
 
 
+##ok
 def convert_LVLH_to_S(targetState_S,stateToBeRotated_L,param):
-    # to rotate from S to LVLH first a translation is needed, then it is
-    # possible to rotate from S to M and eventually rotate from M to LVLH
+    """
+    convert_LVLH_to_S rotates the stateToBeRotated_L from LVLH to S
+    To rotate from LVLH to S : first a rotation from LVLH to M is needed, then it is
+    possible to rotate from M to S (FranziRot)
 
-    # translate from Synodic to Moon
-    rM = np.array([1-param.massRatio,0,0]) # position of the moon in Synodic frame
-    target_state_SCM = targetState_S-np.hstack([rM,[0,0,0]])
+    NOTE: targetState_S is given in S, therefore traslation and rotation to M are required 
 
-    # Rotating from Moon to Moon Synodic [T14]
-    FranziRot = np.array([[-1, 0, 0, 0, 0, 0],
-                          [0, -1, 0, 0, 0, 0],
-                          [0, 0, +1, 0, 0, 0],
-                          [0, 0, 0, -1, 0, 0],
-                          [0, 0, 0, 0, -1, 0],
-                          [0, 0, 0, 0, 0, +1]])
-    targetState_M = FranziRot @ target_state_SCM
+    NOTE: the stateToBeRotated_L is ONLY ROTATED NOT TRASLATED from MOON to the COG of Earth-Moon
+    ( since the function is used for the relative states and not absolute states )
+  
+    """
+
+    # translate from Synodic to Moon, Rotating from Moon to Moon Synodic [T14]
+    targetState_M = np.array([-targetState_S[0]+(1-param.massRatio),-targetState_S[1],targetState_S[2],
+                              -targetState_S[3],-targetState_S[4],targetState_S[5]])
 
     ## rotate from LVLH to M
     R, Rdot = computeRotationMatrixLVLH(targetState_M, param)
-    RTOT = np.block([[R, np.zeros((3, 3))], [Rdot, R]]).T # NOTE: this matrix must be the transposed!!!
+    RTOTMtoL = np.block([[R, np.zeros((3, 3))], [Rdot, R]]) # NOTE: this matrix must be inverted!!!
 
     # rotating frame
-    rotatedState = RTOT @ stateToBeRotated_L
+    rotatedState_M = np.linalg.solve(RTOTMtoL,np.eye(6)) @ stateToBeRotated_L
 
-    return rotatedState
+    # rotating from Moon to the Synodic (FranziRot)
+    rotatedState_S = np.array([-rotatedState_M[0],-rotatedState_M[1],rotatedState_M[2],
+                               -rotatedState_M[3],-rotatedState_M[4],rotatedState_M[5]])
+
+    return rotatedState_S

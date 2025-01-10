@@ -1,9 +1,9 @@
 from stable_baselines3.common.env_checker import check_env
 from RLEnvironment import SimEnv
 import time
-import UserDataDisplay as UDD
+from UserDataDisplay.printSummary import printSummary
+from UserDataDisplay.plotty import plotty
 
-envOptions = { "phaseID":1 }
 env = SimEnv()
 
 # first check of the environment definition
@@ -11,13 +11,13 @@ env = SimEnv()
 # print("ENVIRONMENT CHECKED!\n")
 
 # doublecheck the environment definition
-episodes = 10
+episodes = 1
 
 for episode in range(episodes):
 	print(f"## RUN {episode+1} out of {episodes} ##\n")
 	terminated = False
 	truncated = False
-	obs, info = env.reset(None,envOptions)
+	obs, info = env.reset(None)
 	while (not terminated and not truncated):
 		random_action = 0#env.action_space.sample()
 		print("Agent Action: ",random_action)
@@ -28,8 +28,9 @@ for episode in range(episodes):
 			truncated = True
 
 	print("############\n\n")
-	UDD.printSummary
-	time.sleep()
+	printSummary(env)
+	plotty(env)
+	input("Press enter to continue...")
 		
 
 ## TRAINING ##
