@@ -5,6 +5,7 @@ from scipy.integrate import solve_ivp
 from generalScripts import *
 import gymnasium as gym
 from gymnasium import spaces
+from gymnasium.envs.registration import register
 
 ## REINFORCEMENT LEARNING ENVIRONMENT ##
 class SimEnv(gym.Env):
@@ -14,14 +15,16 @@ class SimEnv(gym.Env):
         super(SimEnv,self).__init__()
 
         ## OBSERVATION SPACE
-        self.observation_space = spaces.Dict(
-            {
-                # "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-                # "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-                # "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
-                "OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-            }
-        )
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float64)
+
+        # spaces.Dict(
+        #     {
+        #         # "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+        #         # "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+        #         # "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
+        #         "OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+        #     }
+        # )
 
         ## ACTION SPACE
         # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1]
@@ -78,7 +81,7 @@ class SimEnv(gym.Env):
 
 
     # The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None):
         super().reset(seed=seed)
         # RL related parameters
         self.reward = 0
@@ -125,10 +128,10 @@ class SimEnv(gym.Env):
 
     ## EXTRA METHODS ##
     def computeRLobservation(self):
-        observation: dict = {
-            "OBStateRelative_L" : self.OBStateRelative_L,
-        } 
-        return observation
+        # observation: dict = {
+        #     "OBStateRelative_L" : self.OBStateRelative_L,
+        # } 
+        return self.OBStateRelative_L
 
     def computeReward(self,AgentAction,controlAction,phaseID,param):
         # if the agent computes the optimal trajectory penalize it
@@ -136,7 +139,7 @@ class SimEnv(gym.Env):
             self.reward -= 1
 
         # check constraints and terminal values
-        TRUE_relativeState_S = self.chaserState_S-self.targetState_S
+        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
         match phaseID:
             case 1:
                 constraintType = 'SPHERE'
@@ -149,8 +152,8 @@ class SimEnv(gym.Env):
             case _:
                 raise ValueError("Wrong phaseID")
             
-        constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,param)
-        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_S, aimAtState, self.param)
+        constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L,constraintType,characteristicSize,param)
+        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, aimAtState, self.param)
         
         # crash into the target
         if crashedBool:
@@ -186,3 +189,10 @@ class SimEnv(gym.Env):
             truncated = False
 
         return truncated
+    
+
+## REGISTER THE ENVIRONMENT ##
+register(
+    id="SimEnv-v0",
+    entry_point="RLEnvironment.envs:SimEnv",
+)

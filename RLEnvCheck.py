@@ -5,8 +5,8 @@ from imports import *
 env = SimEnv()
 
 # first check of the environment definition
-# check_env(env)
-# print("ENVIRONMENT CHECKED!\n")
+check_env(env)
+print("ENVIRONMENT CHECKED!\n")
 
 # doublecheck the environment definition
 episodes = 1
@@ -15,7 +15,7 @@ for episode in range(episodes):
 	print(f"## RUN {episode+1} out of {episodes} ##\n")
 	terminated = False
 	truncated = False
-	obs, info = env.reset(None)
+	obs, info = env.reset(seed=None,options={"phaseID":1})
 	while (not terminated and not truncated):
 		random_action = 0#env.action_space.sample()
 		print("Agent Action: ",random_action)

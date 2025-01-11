@@ -48,8 +48,11 @@ def plotty(env):
 	ax.plot(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], 'b', linewidth=1.2, label="Actual Trajectory")
 	ax.plot(0, 0, 0, 'r*', linewidth=1)
 
-	# DeltaIC_L = ReferenceFrames.convert_S_to_LVLH(initialStateTarget_S, DeltaIC_S, param)
-	ax.quiver(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], controlAction[:, 0]/100, controlAction[:, 1]/100, controlAction[:, 2]/100, color='lightgreen', linewidth=0.8, label="Control Action")
+	# ax.quiver(relDynami_LVLH[:, 0], relDynami_LVLH[:, 1], relDynami_LVLH[:, 2], controlAction[:, 0]/100, controlAction[:, 1]/100, controlAction[:, 2]/100, color='lightgreen', linewidth=0.8, arrow_length_ratio=0.08, label="Control Action")
+	# downsampled quiver
+	ce = int(len(relDynami_LVLH[:, 0])/500)
+	ax.quiver(relDynami_LVLH[::ce, 0], relDynami_LVLH[::ce, 1], relDynami_LVLH[::ce, 2],
+		   controlAction[::ce, 0]/10, controlAction[::ce, 1]/10, controlAction[::ce, 2]/10, color='#02e80a', linewidth=0.8, arrow_length_ratio=0.1, label="Control Action")
 
 	ax.quiver(0, 0, 0, 1, 0, 0, color='r', linewidth=1)
 	ax.quiver(0, 0, 0, 0, 1, 0, color='r', linewidth=1)
@@ -57,11 +60,11 @@ def plotty(env):
 
 	# initial condition
 	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], color='k', linewidth=1) # arrow pointing to initial state
-	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', ms = 5, label="Initial Position")
+	ax.plot(relDynami_LVLH[0, 0], relDynami_LVLH[0, 1], relDynami_LVLH[0, 2], 'ok', ms = 3.5, label="Initial Position")
 
 	# final condition
 	holdState = param.holdingState * param.xc
-	ax.plot(holdState[0], holdState[1], holdState[2], 'db', ms = 5, label="Hold Position")
+	ax.plot(holdState[0], holdState[1], holdState[2], 'db', ms = 3.5, label="Hold Position")
 
 	if phaseID == 1:
 		plotConstraintsVisualization(1e3, 'SPHERE', 'yellow')

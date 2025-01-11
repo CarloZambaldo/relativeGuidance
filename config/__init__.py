@@ -1,1 +1,1 @@
-from config import agent_config, env_config
+from config import RL_config, env_config

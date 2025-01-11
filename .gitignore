@@ -1,0 +1,35 @@
+# Ignore test code
+tests/
+
+# Ignore log files
+*.log
+
+# Ignore build directories
+dist/
+build/
+
+# Ignore environment variable files
+.env
+
+# Ignore temporary files
+*.tmp
+*.swp
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore Python compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+*.iml
+
+# Ignore pickle files
+*.pkl

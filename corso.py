@@ -73,6 +73,8 @@ for episode in range(1,episodes+1):
 env.close()
 
 
+
+
 ## VIEW THE TENSORBOARD LOGS ##
 
 # give a path
