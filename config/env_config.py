@@ -9,7 +9,7 @@ import random
 @dataclass(frozen=True)
 class physParamClass:
     # TUNABLE PARAMETERS
-    phaseID : int = 1
+    phaseID : int = 2
     tspan = np.array([0, 0.008])                            # initial and final time for simulation    [ADIMENSIONAL]
 
     # ENVIRONMENT PARAMETERS #

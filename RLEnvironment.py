@@ -133,7 +133,7 @@ class SimEnv(gym.Env):
         # } 
         return self.OBStateRelative_L
 
-    def computeReward(self,AgentAction,controlAction,phaseID,param):
+    def computeReward(self, AgentAction, controlAction, phaseID, param):
         # if the agent computes the optimal trajectory penalize it
         if (AgentAction == 1):
             self.reward -= 1
@@ -158,25 +158,25 @@ class SimEnv(gym.Env):
         # crash into the target
         if crashedBool:
             terminated = True
-            self.reward -= -1e5
+            self.reward -= 1000
         
         # constraint violation 
         if constraintViolationBool:
             terminated = True
-            self.reward -= -1e3*violationEntity
+            self.reward -= 10
         else:
-            self.reward += 10
+            self.reward += 0.01
 
         # reached goal :)
         if aimReachedBool:
             terminated = True
-            self.reward += 1e5
+            self.reward += 1000
         else:
             terminated = False
 
         # reduce the reward of an amount proportional to the Guidance control effort
         # (this strategy should reduce the computation of the that can lead to excessive control actions)
-        self.reward -= np.linalg.norm(controlAction)/param.freqGNC
+        #self.reward -= np.linalg.norm(controlAction)/param.freqGNC
 
         return self.reward, terminated
     

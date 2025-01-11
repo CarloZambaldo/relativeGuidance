@@ -27,8 +27,8 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
         OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
         if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
             constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
-            if constraintViolationFlag:
-                print("Warning: Constraints could be violated with the given trajectory.\n")
+            #if constraintViolationFlag:
+                #print("Warning: Constraints could be violated with the given trajectory.\n")
 
     # Loop 2: Surface Computation
     closestOptimalControl, surface_L1_pos, surface_L1_vel, surface_L2 = loopTwo(
@@ -45,7 +45,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
 
 # Loop 1: Optimal Trajectory
 def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param):
-    print("    Computing Optimal Trajectory... ", end='')
+    #print("    Computing Optimal Trajectory... ", end='')
     
     TOF = computeTOF(initialRelativeState_L, aimAtState, param)
     print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
@@ -55,7 +55,7 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
     elif TOF > 0:
         exectime_start = time.time()
         optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
-        print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
+        #print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
     else:
         print("\n    >> Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
         optimalTrajectory = None
@@ -82,12 +82,12 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
             np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['controlAction'][:,i])
             for i in range(3)
         ])
-        print(f"  [envTime {(envTime*param.tc/60):.4f} min] closestOptimalState [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
+        #print(f"  [envTime {(envTime*param.tc/60):.4f} min] closestOptimalState [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
     else:
         closestOptimalState = aimAtState
         closestOptimalControl = np.zeros(3)
-        print(f"  [envTime  {(envTime*param.tc/60):.4f} min]  >> aimAtState <<  [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
-    print(f"   goal distance: {np.linalg.norm(relativeState[:3] - aimAtState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - aimAtState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
+        #print(f"  [envTime  {(envTime*param.tc/60):.4f} min]  >> aimAtState <<  [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
+    #print(f"   goal distance: {np.linalg.norm(relativeState[:3] - aimAtState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - aimAtState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
     surface_L1_pos = (relativeState[:3]  - closestOptimalState[:3])  * 1e3 * param.xc
     surface_L1_vel = (relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc
 
@@ -178,7 +178,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 
     # print the execution time of the simulation
     exectime = time.time() - exectime_start
-    print(f"     > ASRE Converged. [Execution time: {exectime:.2f} sec]")
+    #print(f"     > ASRE Converged. [Execution time: {exectime:.2f} sec]")
     return optimalTrajectory
 
 def interpolate_trajectory(x_i, x_f, tvec):
@@ -417,8 +417,9 @@ def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristic
 
 
 def computeTOF(relativeState, aimAtState, param):
-    delta =  relativeState[:3]-aimAtState[:3]    
-    p_factor = (1 + 2*(0.5 + delta[2]/np.norm(delta)/2))
-    o_factor = 1.1-np.tanh(np.norm(delta)*param.xc/5)
-    TOF = np.norm(delta)/5e-4 * o_factor * p_factor
+    delta =  relativeState[:3]-aimAtState[:3]
+    deltanorm = np.linalg.norm(delta)   
+    p_factor = (1 + 2*(0.5 + delta[2]/deltanorm/2))
+    o_factor = 1.1-np.tanh(deltanorm*param.xc/5)
+    TOF = deltanorm/5e-4 * o_factor * p_factor
     return TOF
