@@ -1,5 +1,5 @@
-from RLEnvironment import SimEnv
-from imports import *
+from SimEnvRL import *
+from stable_baselines3 import PPO
 
 env = gym.make(SimEnv)  # this line creates the environment
 

@@ -1,5 +1,5 @@
 import numpy as np
-from generalScripts.ReferenceFrames import convert_M_to_LVLH
+from .ReferenceFrames import convert_M_to_LVLH
 
 def OBNavigation(targetState_S, chaserState_S, param):
 	"""

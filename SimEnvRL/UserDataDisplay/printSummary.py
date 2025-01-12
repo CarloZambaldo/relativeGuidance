@@ -1,4 +1,5 @@
-from imports import *
+from ..generalScripts import *
+import numpy as np
 
 def printSummary(env):
     param = env.param

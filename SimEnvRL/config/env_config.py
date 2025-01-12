@@ -1,7 +1,7 @@
 ## Configuration for the Physical Environment ##
 
 from dataclasses import dataclass, field
-from generalScripts.ReferenceFrames import convert_S_to_LVLH, convert_LVLH_to_S
+from ..generalScripts.ReferenceFrames import convert_S_to_LVLH, convert_LVLH_to_S
 import numpy as np
 import scipy.io
 import random

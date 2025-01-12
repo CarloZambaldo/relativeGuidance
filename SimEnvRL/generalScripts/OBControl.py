@@ -1,4 +1,4 @@
-from generalScripts import ReferenceFrames
+from . import ReferenceFrames
 import numpy as np
 
 def OBControl(targetState_S,uToBeRotated_L,param):

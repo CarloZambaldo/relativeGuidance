@@ -1,11 +1,10 @@
 import time
-import config
+from SimEnvRL.generalScripts import *
+from SimEnvRL import config
 import numpy as np
 from scipy.integrate import solve_ivp
-from generalScripts import *
 import gymnasium as gym
 from gymnasium import spaces
-from gymnasium.envs.registration import register
 
 ## REINFORCEMENT LEARNING ENVIRONMENT ##
 class SimEnv(gym.Env):
@@ -15,16 +14,15 @@ class SimEnv(gym.Env):
         super(SimEnv,self).__init__()
 
         ## OBSERVATION SPACE
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float64)
-
-        # spaces.Dict(
-        #     {
-        #         # "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-        #         # "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-        #         # "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
-        #         "OBStateRelative_L": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
-        #     }
-        # )
+        self.observation_space = spaces.Dict(
+            {
+                # "OBStateChaser_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+                # "OBStateTarget_M": spaces.Box(-np.inf, np.inf, shape=(6,), dtype=np.float64),
+                # "repulsiveAPFsurfaceValue": spaces.Box(-np.inf, np.inf, shape=(3,), dtype=np.float64),
+                "OBStateRelative_L": spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float64),
+                "OBoTAge": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float64)
+            }
+        )
 
         ## ACTION SPACE
         # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1]
@@ -59,7 +57,8 @@ class SimEnv(gym.Env):
         # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
         distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(timeNow, self.param.chaser, self.param)
         odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
-                              [timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S, method="DOP853", rtol=1e-11, atol=1e-11)
+                              [timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S,
+                              method="DOP853", rtol=1e-9, atol=1e-8)
         self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1] # extract following time step
 
         # REWARD COMPUTATION #
@@ -81,7 +80,7 @@ class SimEnv(gym.Env):
 
 
     # The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         # RL related parameters
         self.reward = 0
@@ -116,29 +115,31 @@ class SimEnv(gym.Env):
         distAcceleration_S = dynamicsModel.computeEnvironmentDisturbances(0,self.param.target,self.param)
         odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, distAcceleration_S),
                                 [self.timeHistory[0], self.timeHistory[-1]], self.targetState_S, t_eval=self.timeHistory,
-                                method="DOP853", rtol=1e-10, atol=1e-10)
+                                method="DOP853", rtol=1e-8, atol=1e-7)
         self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
         ## compute RL Agent Observation at time step 1
         self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
         
-        info = {"param": self.param, "timeNow": self.param.tspan[0]}
+        info = {}
         return self.computeRLobservation(), info
 
 
     ## EXTRA METHODS ##
     def computeRLobservation(self):
-        # observation: dict = {
-        #     "OBStateRelative_L" : self.OBStateRelative_L,
-        # } 
-        return self.OBStateRelative_L
+        observation: dict = {
+            "OBStateRelative_L" : self.OBStateRelative_L,  # relative State in L
+            "OBoTAge": self.OBoptimalTrajectory["envStartTime"] - self.timeNow # OB optimal Trajectory age
+        } 
+        return observation
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
-        # if the agent computes the optimal trajectory penalize it
-        if (AgentAction == 1):
-            self.reward -= 1
+        # reward tunable parameters 
+        K_trigger = 1
+        K_collisn = 1
+        K_control = 0
 
-        # check constraints and terminal values
+        # COMPUTE: check constraints and terminal values
         TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
         match phaseID:
             case 1:
@@ -155,28 +156,32 @@ class SimEnv(gym.Env):
         constraintViolationBool = check.constraintViolation(TRUE_relativeState_L,constraintType,characteristicSize,param)
         aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, aimAtState, self.param)
         
+
+
+        ## REWARD COMPUTATION ##
+
+        # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
+        self.reward -= K_trigger * AgentAction
+
+        # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
+        if constraintViolationBool:
+            self.reward -= K_collisn * 10
+
+        # Fuel Efficiency Reward - Penalize large control actions
+        # reduce the reward of an amount proportional to the Guidance control effort
+        # self.reward -= K_control * np.linalg.norm(controlAction)
+
         # crash into the target
         if crashedBool:
             terminated = True
             self.reward -= 1000
         
-        # constraint violation 
-        if constraintViolationBool:
-            #terminated = True
-            self.reward -= 10
-        #else:
-        #    self.reward += 0.01
-
         # reached goal :)
         if aimReachedBool:
             terminated = True
             self.reward += 1000
         else:
             terminated = False
-
-        # reduce the reward of an amount proportional to the Guidance control effort
-        # (this strategy should reduce the computation of the that can lead to excessive control actions)
-        #self.reward -= np.linalg.norm(controlAction)/param.freqGNC
 
         return self.reward, terminated
     
@@ -191,8 +196,3 @@ class SimEnv(gym.Env):
         return truncated
     
 
-## REGISTER THE ENVIRONMENT ##
-register(
-    id="SimEnv-v0",
-    entry_point="RLEnvironment.envs:SimEnv",
-)
