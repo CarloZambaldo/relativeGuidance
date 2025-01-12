@@ -152,7 +152,7 @@ class SimEnv(gym.Env):
             case _:
                 raise ValueError("Wrong phaseID")
             
-        constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L,constraintType,characteristicSize,param)
+        constraintViolationBool = check.constraintViolation(TRUE_relativeState_L,constraintType,characteristicSize,param)
         aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, aimAtState, self.param)
         
         # crash into the target
@@ -162,10 +162,10 @@ class SimEnv(gym.Env):
         
         # constraint violation 
         if constraintViolationBool:
-            terminated = True
+            #terminated = True
             self.reward -= 10
-        else:
-            self.reward += 0.01
+        #else:
+        #    self.reward += 0.01
 
         # reached goal :)
         if aimReachedBool:

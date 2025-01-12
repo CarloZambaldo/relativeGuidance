@@ -6,7 +6,7 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
     
     # default is no violation
     constraintViolationBool = False
-    violationEntity = 0 # percentage of the violation (wrt characteristic size)
+    #violationEntity = 0 # percentage of the violation (wrt characteristic size)
 
     # check collision with the constraints
     match constraintType:
@@ -15,8 +15,8 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
                   + TRUE_relativeState_S[3]**2 > (characteristicSize)**2:
                 # the constraint is violated
                 constraintViolationBool = True
-                violationEntity = 1-(np.sqrt(TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[2]**2 \
-                  + TRUE_relativeState_S[3]**2 - (characteristicSize)**2)/characteristicSize)
+                # violationEntity = 1-(np.sqrt(TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[2]**2 \
+                #   + TRUE_relativeState_S[3]**2 - (characteristicSize)**2)/characteristicSize)
 
         case "CONE":
             currentRadius = TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[3]**2
@@ -24,12 +24,12 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
             
             if  currentRadius-maxCurrentRadius > 0:
                 constraintViolationBool = True
-                violationEntity = abs((currentRadius-maxCurrentRadius)/(maxCurrentRadius))
-                violationEntity = max(violationEntity,10)
+                # violationEntity = abs((currentRadius-maxCurrentRadius)/(maxCurrentRadius))
+                # violationEntity = max(violationEntity,10)
         case _:
             raise ValueError("Constraint Type not defined correctly")
         
-    return constraintViolationBool, violationEntity
+    return constraintViolationBool #, violationEntity
 
 
 
@@ -51,11 +51,11 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
 
     """
 
+    crashedBool = False
+    aimReachedBool = False
+
     match param.phaseID:
         case 1: # HOLDING STATE CONDITION
-            crashedBool = False
-            aimReachedBool = False
-            
             if ( np.linalg.norm(TRUE_relativeState_L[0:3]-aimAtState[0:3]) <= 1.3007e-06 \
                 and np.linalg.norm(TRUE_relativeState_L[3:6]-aimAtState[3:6]) <= 9.7737e-04 ):
                 # under 500 m and 1 m/s

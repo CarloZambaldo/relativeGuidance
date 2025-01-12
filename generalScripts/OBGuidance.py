@@ -14,25 +14,32 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
         case 1:
             constraintType = 'SPHERE'
             aimAtState = param.holdingState
-            characteristicSize = 200
+            characteristicSize = 200 # meters
         case 2:
             constraintType = 'CONE'
             aimAtState = param.dockingState
-            characteristicSize = {'acone': 0.08, 'bcone': 5}
+            characteristicSize = {'acone': 0.08, 'bcone': 5} # defined for cone in meters
         case _:
             raise ValueError("Wrong phaseID")
 
     # Loop 1: Optimal Trajectory Computation
-    if trigger: # if triggered, compute optimal trajectory
-        OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
-        if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
-            constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
-            #if constraintViolationFlag:
-                #print("Warning: Constraints could be violated with the given trajectory.\n")
-
+    match trigger:
+        case 0: # if not triggered, skip optimal trajectory computation
+            pass
+        case 1: # if triggered, compute optimal trajectory
+            OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
+            #if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
+            #    constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
+            #    if constraintViolationFlag:
+            #       print("Warning: Constraints could be violated with the given trajectory.\n")
+        case 2: # for possible future implementation: DELETE OPTIMAL TRAJECTORY
+            pass
+        case _:
+            raise ValueError("Agent Action Not Defined.")
+        
     # Loop 2: Surface Computation
-    closestOptimalControl, surface_L1_pos, surface_L1_vel, surface_L2 = loopTwo(
-        envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
+    closestOptimalControl, surface_L1_pos, surface_L1_vel, surface_L2 =\
+        loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
     sigma = surface_L2 + (2 * surface_L1_vel + 5e-3 * surface_L1_pos)
@@ -49,15 +56,13 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
     
     TOF = computeTOF(initialRelativeState_L, aimAtState, param)
     print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
-    ### TODO: HERE CAN ADD A try catch block to handle the case where the optimal trajectory is not feasible
-    if TOF > 1:
-        raise ValueError("Estimated TOF is out of range.")
-    elif TOF > 0:
-        exectime_start = time.time()
+
+    if TOF > 0 and TOF < 1:
+        #exectime_start = time.time()
         optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
         #print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
     else:
-        print("\n    >> Estimated TOF is too small. OBoptimalTrajectory is set to empty.")
+        print("\n    >> Estimated TOF is out of bounds. OBoptimalTrajectory is set to empty.")
         optimalTrajectory = None
     
     return optimalTrajectory
@@ -65,7 +70,6 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
 
 # Loop 2: Surface Computation
 def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintType, param):
-
     if OBoptimalTrajectory: # if the optimal trajectory exists, use it to compute the closest optimal state
         interpTime = envTime - OBoptimalTrajectory['envStartTime']
         if interpTime < 0:
@@ -73,6 +77,7 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
     else:
         interpTime = None
     
+    # extract the optimal sliding state OR target the aimAtState
     if OBoptimalTrajectory and 'state' in OBoptimalTrajectory and interpTime <= OBoptimalTrajectory['time'][-1]:
         closestOptimalState = np.array([
             np.interp(interpTime, OBoptimalTrajectory['time'], OBoptimalTrajectory['state'][:,i])
@@ -103,7 +108,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
     # PARAMETERS
     t_i = 0                  # Initial time
     t_f = TOF                # Final time
-    N = 250                  # Number of time steps
+    N = 210                  # Number of time steps
 
     # TIME GRID DEFINITON
     tvec = np.linspace(t_i, t_f, N)
@@ -146,7 +151,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
     initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
 
     #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
-    solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='DOP853')
+    solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='RK45')
     PHIT = solution.y.T
     PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -225,10 +230,6 @@ def computeA(t, targetState_M, param):
         0,
         1 / rTMn * np.dot(vTM, eV_y)
     ])
-    # define the "derivataStrana"
-    derivataStrana = lambda q: 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
-    # def derivataStrana(q):
-    #     return 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
     # define the "derivataStrana"
     derivataStrana = lambda q: 1 / np.linalg.norm(q)**3 * (np.eye(3) - 3 * np.outer(q, q) / np.linalg.norm(q)**2)
     # def derivataStrana(q):
@@ -363,57 +364,44 @@ def APF(relativeState_L, constraintType, param):
 
 ## CHECK CONTRAINTS VIOLATION ##################################################################################
 def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize):
-    pass
-    """
-    function [violationFlag,violationPosition] = checkConstraintViolation(trajectory,contraintType,characteristicSize)
-        % 
-        violationFlag = false;
-        
-        if isfield(trajectory,"x")
-            if isfield(trajectory,"u")
-                controlAction = trajectory.u;
-                violationPosition = zeros(2,length(controlAction));
-                for idx = 1:length(controlAction)
-                    if norm(controlAction(:,idx)) > 1e-2
-                        violationFlag = true;
-                        violationPosition(2,idx) = 1;
-                        %warning("Violation of Thrust Constraint");
-                    end
-                end
-            end
-            trajectory = trajectory.x;
-        else
-            trajectory = trajectory.x;
-            violationPosition = zeros(1,size(trajectory,2));
-        end
-        if size(trajectory,1)>6
-            trajectory = trajectory';
-        end
-        switch upper(contraintType)
-            case 'SPHERE'
-                for idx=1:size(trajectory,2)
-                    if trajectory(1,idx)^2+trajectory(2,idx)^2+trajectory(3,idx)^2 <= characteristicSize^2
-                        violationFlag = true;
-                        violationPosition(1,idx) = 1;
-                    end
-                end
-            case 'CONE'
-                for idx=1:size(trajectory,2)
-                    if  characteristicSize.acone^2*(trajectory(2,idx)^2-characteristicSize.bcone)^3 + trajectory(1,idx)^2 + trajectory(3,idx)^2 > 0
-                        violationFlag = true;
-                        violationPosition(1,idx) = 1;
-                    end
-                end
-        end
-        
-        if violationFlag
-            warning("The computed Trajectory violates the constraints.");
-        else
-            fprintf("No violations of the constraints identified.\n");
-        end
+    violationFlag = False
+    violationPosition = []
+    
+    # if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
+    #     trajectory = OBoptimalTrajectory['state']
+    #     if 'controlAction' in OBoptimalTrajectory:
+    #         controlAction = OBoptimalTrajectory['controlAction']
+    #         for idx, control in enumerate(controlAction):
+    #             if np.linalg.norm(control) > 12:
+    #                 violationFlag = True
+    #                 violationPosition.append((2, idx))
+    #                 # warning("Violation of Thrust Constraint")
+    #     else:
+    #         violationPosition = [(1, idx) for idx in range(trajectory.shape[1])]
+    # else:
+    #     return violationFlag, violationPosition
+    if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
+        trajectory = OBoptimalTrajectory['state']
+        match constraintType:
+            case 'SPHERE':
+                for idx in range(trajectory.shape[1]):
+                    if np.sum(trajectory[:3, idx]**2) <= characteristicSize**2:
+                        violationFlag = True
+                        violationPosition.append((1, idx))
 
-    end
-    """
+            case 'CONE':
+                for idx in range(trajectory.shape[1]):
+                    if (characteristicSize['acone']**2 * (trajectory[1, idx] - characteristicSize['bcone'])**3 +
+                        trajectory[0, idx]**2 + trajectory[2, idx]**2) > 0:
+                        violationFlag = True
+                        violationPosition.append((1, idx))
+
+        # if violationFlag:
+        #     print("Warning: The computed Trajectory violates the constraints.")
+        # else:
+        #     print("No violations of the constraints identified.")
+
+    return violationFlag, violationPosition
 
 
 def computeTOF(relativeState, aimAtState, param):

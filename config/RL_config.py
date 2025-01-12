@@ -11,8 +11,9 @@ class RLParamClass():
     maxTimeSteps : int = 0
 
     def define(self,modelName):
-        self.models_dir = f"AgentModels/{modelName}/"
-        self.log_dir    = f"AgentModels/{modelName}/logs/{int(time.time())}/"
+        self.timeStamp = {int(time.time())}
+        self.models_dir = f"AgentModels/{modelName}/model/{self.timeStamp}"
+        self.log_dir    = f"AgentModels/{modelName}/logs/{self.timeStamp}"
         if not os.path.exists(self.models_dir):
             os.makedirs(self.models_dir)
         if not os.path.exists(self.log_dir):

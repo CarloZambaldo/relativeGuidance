@@ -3,7 +3,7 @@ from stable_baselines3 import PPO
 from RLEnvironment import SimEnv
 
 # definition of the learning parameters
-RLparam = config.RL_config.get("PPO_1_test_0")
+RLparam = config.RL_config.get("PPO_1_restricted_test")
 
 # create the environment
 env = SimEnv()
