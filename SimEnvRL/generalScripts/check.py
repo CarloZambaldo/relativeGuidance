@@ -11,18 +11,18 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
     # check collision with the constraints
     match constraintType:
         case "SPHERE":
-            if TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[2]**2 \
-                  + TRUE_relativeState_S[3]**2 > (characteristicSize)**2:
+            if TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[1]**2 \
+                  + TRUE_relativeState_S[2]**2 > (characteristicSize)**2:
                 # the constraint is violated
                 constraintViolationBool = True
                 # violationEntity = 1-(np.sqrt(TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[2]**2 \
                 #   + TRUE_relativeState_S[3]**2 - (characteristicSize)**2)/characteristicSize)
 
         case "CONE":
-            currentRadius = TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[3]**2
-            maxCurrentRadius = -(characteristicSize["acone"]**2*(TRUE_relativeState_S[2]-characteristicSize["bcone"])**3)
+            currentRadius = TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[2]**2
+            maxCurrentRadius = -(characteristicSize["acone"]**2*(TRUE_relativeState_S[1]-characteristicSize["bcone"])**3)
             
-            if  currentRadius-maxCurrentRadius > 0:
+            if  currentRadius - maxCurrentRadius > 0:
                 constraintViolationBool = True
                 # violationEntity = abs((currentRadius-maxCurrentRadius)/(maxCurrentRadius))
                 # violationEntity = max(violationEntity,10)

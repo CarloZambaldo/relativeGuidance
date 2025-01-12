@@ -33,3 +33,7 @@ __pycache__/
 
 # Ignore pickle files
 *.pkl
+
+# Ignore simulations storage
+Simulations/
+AgentModels/

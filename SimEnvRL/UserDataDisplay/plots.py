@@ -52,7 +52,7 @@ def plotty(env):
 	# downsampled quiver
 	ce = int(len(relDynami_LVLH[:, 0])/500)
 	ax.quiver(relDynami_LVLH[::ce, 0], relDynami_LVLH[::ce, 1], relDynami_LVLH[::ce, 2],
-		   controlAction[::ce, 0]/10, controlAction[::ce, 1]/10, controlAction[::ce, 2]/10, color='#02e80a', linewidth=0.8, arrow_length_ratio=0.1, label="Control Action")
+		   controlAction[::ce, 0]/10, controlAction[::ce, 1]/10, controlAction[::ce, 2]/10, color='#02e80a', alpha=0.5, linewidth=0.8, arrow_length_ratio=0.1, label="Control Action")
 
 	ax.quiver(0, 0, 0, 1, 0, 0, color='r', linewidth=1)
 	ax.quiver(0, 0, 0, 0, 1, 0, color='r', linewidth=1)
@@ -112,6 +112,26 @@ def plotty(env):
 	axs[2].set_ylabel("Velocity [m/s]")
 
 	plt.tight_layout()
+
+
+	# Plot Agent Action History
+	fig, axs = plt.subplots(2, 1, figsize=(8, 8))
+
+	axs[0].plot(t, env.AgentActionHistory, linewidth=1.1)
+	axs[0].grid(True)
+	axs[0].set_title("Agent Action History")
+	axs[0].set_xlabel("Time [min]")
+	axs[0].set_ylabel("Agent Action [-]")
+	axs[0].legend(["Agent Action"], loc='best')
+
+	axs[1].plot(t, env.constraintViolationHistory, linewidth=1.1, color='r')
+	axs[1].grid(True)
+	axs[1].set_title("Constraint Violation History")
+	axs[1].set_xlabel("Time [min]")
+	axs[1].set_ylabel("Constraint Violation [-]")
+	axs[1].legend(["Constraint Violation"], loc='best')
+
+	plt.tight_layout()
 	plt.show()
 
 
@@ -145,7 +165,7 @@ def plot_sphere(rsphere, colore='red'):
 	ax.plot_surface(x,y,z, color=colore, alpha=0.4, edgecolor='none')
 
 
-def plot_cone(DeltaIC_meters, acone, bcone, colore='none'):
+def plot_cone(DeltaIC_meters, acone, bcone, colore='gray'):
 	z = lambda RbarX, VbarX: (acone**2 * bcone**3 - 3 * acone**2 * bcone**2 * VbarX + 3 * acone**2 * bcone * VbarX**2 - acone**2 * VbarX**3 - RbarX**2)
 	pointsR = np.linspace(-3 * DeltaIC_meters, 3 * DeltaIC_meters, 1001)
 	pointsV = np.linspace(-DeltaIC_meters, 0, 1001)

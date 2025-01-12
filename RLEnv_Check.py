@@ -1,7 +1,5 @@
 from stable_baselines3.common.env_checker import check_env
-import gymnasium as gym
 from SimEnvRL import *
-import time
 
 env = gym.make('SimEnv-v0')
 

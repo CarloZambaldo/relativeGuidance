@@ -1,6 +1,5 @@
 import numpy as np
-from .dynamicsModel import *
-from .ReferenceFrames import *
+from . import dynamicsModel, ReferenceFrames
 from scipy.integrate import solve_ivp
 import time
 

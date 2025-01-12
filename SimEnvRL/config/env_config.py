@@ -60,7 +60,7 @@ class initialValueClass():
         self.seedValue = random.seed(seed)
 
         # Extract the 'refTraj' structured array from the refTraj.mat file
-        mat_data  = scipy.io.loadmat(r"./config/refTraj.mat")
+        mat_data  = scipy.io.loadmat(r"SimEnvRL/config/refTraj.mat")
         refTraj = mat_data['refTraj']
         # Access the trajectory within the structured array
         referenceStates = refTraj['y'][0, 0]        # Main trajectory data
