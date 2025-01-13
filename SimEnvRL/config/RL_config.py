@@ -34,9 +34,12 @@ class RLParamClass():
         
         latest_model =  max([int((f.split('.')[0]).strip('{}')) for f in model_files if f.endswith('.zip')])
 
-        self.models_dir = f"{model_dir}/{{{latest_model}}}.zip"
-        self.log_dir = f"AgentModels/{modelName}/logs/{{{latest_model}}}/"
-        
+        self.models_dir = f"{model_dir}/{latest_model}"
+        self.log_dir = f"AgentModels/{modelName}/logs/{latest_model}/"
+
+        os.makedirs(os.path.dirname(self.models_dir), exist_ok=True)
+        os.makedirs(os.path.dirname(self.log_dir), exist_ok=True)
+
         return self
 
     def open(self, modelName, modelNumber):
@@ -44,11 +47,11 @@ class RLParamClass():
         if not os.path.exists(model_dir):
             raise FileNotFoundError(f"No models found in directory: {model_dir}")
         
-        model_files = [int(f) for f in os.listdir(model_dir) if f.isdigit()]
+        model_files = [f for f in os.listdir(model_dir)]
         if not model_files:
             raise FileNotFoundError(f"No model files found in directory: {model_dir}")
 
-        self.models_dir = f"AgentModels/{modelName}/model/{modelNumber}/"
+        self.models_dir = f"AgentModels/{modelName}/model/{modelNumber}.zip/"
         self.log_dir = f"AgentModels/{modelName}/logs/{modelNumber}/"
         
         return self
@@ -57,8 +60,8 @@ class RLParamClass():
     def viewLogs(self):
         ## VIEW THE TENSORBOARD LOGS ##
         training_log_dir = os.path.join(self.log_dir)
-        os.system(f"tensorboard --logdir={training_log_dir} --host localhost --port 6006")
-
+        import subprocess
+        subprocess.Popen(['tensorboard', '--logdir', training_log_dir, '--host', 'localhost', '--port', '6006'])
 
 # defining the parameters
 def get(modelName):

@@ -7,7 +7,7 @@ import os
 env = gym.make("SimEnv-v0")  # this line creates the environment
 
 # load the model
-RLparam = config.RL_config.recall("PPO_1_restricted_test","latest")
+RLparam = config.RL_config.recall("PPO_PhaseID_2_RestrictedTest","latest")
 model = PPO.load(RLparam.models_dir, env=env)
 
 # run the episodes

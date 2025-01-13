@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from .ReferenceFrames import convert_M_to_LVLH
 
 def OBNavigation(targetState_S, chaserState_S, param):
@@ -34,5 +35,16 @@ def OBNavigation(targetState_S, chaserState_S, param):
 	relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
 
 
-	## ADD DISTURBANCES HERE ##
+	## ADD DISTURBANCES HERE #
+	# # Deviazione standard del rumore
+	# SD = np.array([10, 0.1, 0.01])
+	# 
+	# # Generazione del rumore gaussiano
+	# noise = np.random.normal(loc=0, scale=SD)
+	#
+	# targetState_M   = targetState_M + noise
+	# chaserState_M   = chaserState_M + noise 
+	# relativeState_L = relativeState_L + noise_relative
+
+
 	return targetState_M, chaserState_M, relativeState_L

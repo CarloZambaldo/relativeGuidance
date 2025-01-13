@@ -9,11 +9,11 @@ import random
 @dataclass(frozen=True)
 class physParamClass:
     # TUNABLE PARAMETERS
-    phaseID : int = 2
-    tspan = np.array([0, 0.008])                            # initial and final time for simulation    [ADIMENSIONAL]
+    phaseID : int = None               # default value
+    tspan : np.ndarray = field(default_factory=lambda: None) # default value initial and final time for simulation    [ADIMENSIONAL]
 
     # ENVIRONMENT PARAMETERS #
-    xc : float = 384400                # units for adimensional space [km]
+    xc : float = 384400.               # units for adimensional space [km]
     tc : float = 1/(2.661699e-6)       # units for adimensional time [s]
     massEarth = 5.973698863559727e+24  # [kg]
     massMoon  = 7.347673092457352e+22  # [kg]
@@ -24,7 +24,7 @@ class physParamClass:
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
-    dockingState = np.array([0, 0, 0, 0, 0.03e-3*tc/xc, 0])  # Final relative state from Luca Thesis
+    dockingState = np.array([0, 0, 0, 0, 0.03e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
     freqGNC : float = 10 * tc                                # [adimensional (from Hz)] GNC upadate frequency
 
     # SPACECRAFT PARAMETERS #
@@ -41,6 +41,14 @@ class physParamClass:
         "reflCoeffSpecular": 0.5,       # [-]
         "reflCoeffDiffuse":  0.1        # [-]
     })
+
+    # SETTING DEFAULTS
+    def __post_init__(self):
+         # Initialize tc if not provided (could also compute other variables)
+        if self.phaseID is None:
+            object.__setattr__(self, 'phaseID', 2)
+        if self.tspan is None:
+            object.__setattr__(self, 'tspan', np.array([0, 0.02]))
 
 
 #### define the initial values ####
@@ -121,12 +129,60 @@ class initialValueClass():
         print(f" [ seed =",self.seedValue,"]")
         print("==============================================================\n")
         return self
+    
+    def imporse_initialValues(self,param,values):
+        if not (values.get("targetState_S") and values.get("relativeState_L")):
+            raise RuntimeError("COULD NOT RETRIEVE THE INITIAL CONDITIONS")
+        
+        targetState_S = values["targetState_S"]
+        relativeState_L = values["relativeState_L"]
+
+        DeltaIC_S = convert_LVLH_to_S(targetState_S,relativeState_L,param)
+        chaserState_S = targetState_S + DeltaIC_S
+        
+        self.targetState_S = targetState_S
+        self.chaserState_S = chaserState_S
+        self.DeltaIC_S = DeltaIC_S
+        self.relativeState_L = relativeState_L
+        self.fullInitialState = np.hstack([targetState_S, chaserState_S])
+
+        print(f"CORRECTLY IMPOSED INITIAL CONDITIONS. relativeState_L = {relativeState_L:.3g}")
+
+        return self
 
 
 # defining the parameters
-def get(seed=None):
-    param = physParamClass()
-    initialValue = initialValueClass()
-    initialValue = initialValue.define_initialValues(param,seed)
+#### def get(seed=None):
+####     # DEPRECATED
+####     param = physParamClass()
+####     initialValue = initialValueClass()
+####     initialValue = initialValue.define_initialValues(param,seed)
+#### 
+####     return param, initialValue
 
-    return param, initialValue
+## NEW FUNCTIONS:
+def getParam(phaseID=None,tspan=None):
+    # define the environmental parameters (constant for the environment)
+    param = physParamClass(phaseID,tspan)
+
+    return param
+
+def getInitialValues(param,seed=None,values=None):
+    # define the dataclass (with no values)
+
+    initialValue = initialValueClass()
+    # fill the class with the values passed by the used
+    values = values or {}
+    if values: # if the initial conditions are passed define accordingly the initialValue parameter
+        values = {
+            "targetState_S" : None if values.get("targetState_S") else values["targetState_S"],
+            "relativeState_L" : None if values.get("relativeState_L") else values["relativeState_L"]
+        }
+        initialValue = initialValue.imporse_initialValues(param,values)
+        typeOfInitialConditions = "USER_DEFINED"
+
+    else: # otherwise use defaults
+        initialValue = initialValue.define_initialValues(param,seed)
+        typeOfInitialConditions = "DEFAULT"
+
+    return initialValue, typeOfInitialConditions

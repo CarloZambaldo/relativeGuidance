@@ -10,24 +10,53 @@ from gymnasium import spaces
 class SimEnv(gym.Env):
     metadata = {"render_modes": ["none"]}
 
-    def __init__(self):
+    def __init__(self, options=None):
         super(SimEnv,self).__init__()
+
+        # propreties are:
+        self.terminated: bool = False
+        self.truncated: bool = False
+        self.terminationCause: str = "None"
+
+        # simulation initialization dataclasses
+        self.initialValue: config.env_config.InitialValues = None
+
+        # physical environment
+        self.timeIndex: int = 0
+        self.timeNow: float = 0.
+        self.targetState_S: np.ndarray = None
+        self.chaserState_S: np.ndarray = None
+
+        # ON BOARD data
+        self.OBoptimalTrajectory: dict = {}
+        self.OBStateTarget_M: np.ndarray = None
+        self.OBStateRelative_L: np.ndarray = None
+        self.observation: np.ndarray = None
+
+        # Historical values of the simulation
+        self.timeHistory: np.ndarray = None
+        self.controlActionHistory_L: np.ndarray = None
+        self.fullStateHistory: np.ndarray = None
+        self.AgentActionHistory: np.ndarray = None
+        self.constraintViolationHistory: np.ndarray = None
+
+        # create the environment simulation parameters dataclass
+        options = options or {}
+        options = {
+                    "phaseID": None if not options.get("phaseID") else options["phaseID"],
+                    "tspan": None if not options.get("tspan") else options["tspan"],
+                   }
+        self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"])
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, the last one is OBoTAge)
         self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,-1]),
                                             high=np.array([1, 1, 1, 1, 1, 1, 5]),
                                             dtype=np.float64)
-        #self.observation_space = spaces.Dict(
-        #    {
-        #        "OBStateRelative_L": spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float64),
-        #        "OBoTAge": spaces.Box(low=-1, high=5, shape=(1), dtype=np.float64)
-        #    }
-        #)
 
         ## ACTION SPACE
-        # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1]
-        self.action_space = spaces.Discrete(2)
+        # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1] or 2 [delete OBoptimalTrajectory]
+        self.action_space = spaces.Discrete(3)
 
     ## STEP ##
     def step(self, AgentAction):
@@ -84,7 +113,6 @@ class SimEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         # RL related parameters
-        self.cumulativeReward = 0.
         self.terminated = False
         self.truncated = False
         self.terminationCause = "None"
@@ -96,8 +124,9 @@ class SimEnv(gym.Env):
         # guidance related parameters
         self.OBoptimalTrajectory = {}
 
-        # Set the initial state of the pysical environment
-        self.param, self.initialValue = config.env_config.get(seed)
+        # defining the initial values
+        ## ORIGINALLY WAS: self.param, self.initialValue = config.env_config.get(seed)
+        self.initialValue, typeOfInitialConditions = config.env_config.getInitialValues(self.param,seed,options)
 
         # definition of the time vector with the GNC frequency
         self.timeHistory = np.arange(self.param.tspan[0], self.param.tspan[-1], 1/(self.param.freqGNC))
@@ -105,7 +134,7 @@ class SimEnv(gym.Env):
         # INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
         self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
         self.fullStateHistory = np.zeros((len(self.timeHistory),12))
-        self.AgentActionHistory = np.zeros((len(self.timeHistory),3))
+        self.AgentActionHistory = np.zeros((len(self.timeHistory),))
         self.constraintViolationHistory = np.zeros((len(self.timeHistory),))
 
         # extraction of the initial conditions
@@ -124,9 +153,11 @@ class SimEnv(gym.Env):
 
         ## compute RL Agent Observation at time step 1
         self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
-        
-        info = {}
+
+        info = {"initialConditionsUsed": typeOfInitialConditions}
         return self.computeRLobservation(), info
+
+
 
 
     ## EXTRA METHODS ##
@@ -138,19 +169,16 @@ class SimEnv(gym.Env):
 
         observation = np.hstack([self.OBStateRelative_L, trajAGE])
 
-        # observation: dict = {
-        #     "OBStateRelative_L" : self.OBStateRelative_L,  # relative State in L
-        #     "OBoTAge": trajAGE # OB optimal Trajectory "age"
-        # } 
         return observation
 
 
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
         # reward tunable parameters 
-        K_trigger = .1
+        K_trigger = 0.1
+        K_deleted = 0.001
         K_collisn = 1
-        K_control = 0
+        K_control = 0.5
 
         # COMPUTE: check constraints and terminal values
         TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
@@ -158,7 +186,7 @@ class SimEnv(gym.Env):
             case 1:
                 constraintType = 'SPHERE'
                 aimAtState = self.param.holdingState
-                characteristicSize = 200
+                characteristicSize = 200    
             case 2:
                 constraintType = 'CONE'
                 aimAtState = self.param.dockingState
@@ -175,7 +203,19 @@ class SimEnv(gym.Env):
         stepReward = 0.
 
         # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
-        stepReward -= K_trigger * AgentAction
+        match AgentAction:
+            case 0: # no action means no reward nor penalization
+                pass
+            case 1: # in case of a trajectory recomputation, give a small negative reward
+                stepReward -= K_trigger # this is to disincentive a continuous computation of the optimal trajectory
+            case 2:
+                if self.OBoptimalTrajectory:
+                    # if the trajectory exists, the reward is reduced according to the age of the trajectory 
+                    stepReward -= K_deleted/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
+                else:
+                    stepReward -= 10
+            case _:
+                pass
 
         # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
         if constraintViolationBool:
@@ -183,7 +223,7 @@ class SimEnv(gym.Env):
 
         # Fuel Efficiency Reward - Penalize large control actions
         # reduce the reward of an amount proportional to the Guidance control effort
-        # stepReward -= K_control * np.linalg.norm(controlAction)
+        stepReward -= K_control * np.linalg.norm(controlAction)
 
         # crash into the target
         if crashedBool:
@@ -197,7 +237,7 @@ class SimEnv(gym.Env):
         # reached goal :)
         if aimReachedBool:
             print(" ################################## ")
-            print(" >>>>>>>>>>> SUCCESSFUL <<<<<<<<<<< ")
+            print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
             print(" ################################## ")
             terminated = True
             stepReward += 500
@@ -213,6 +253,7 @@ class SimEnv(gym.Env):
         if timeNow+1/param.freqGNC >= param.tspan[-1]:
             truncated = True
             self.terminationCause = "_OUT_OF_TIME_"
+            print(" <<<<<<<<<<<<<<< OUT OF TIME >>>>>>>>>>>>>>> ")
         else:
             truncated = False
 

@@ -25,15 +25,17 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
     # Loop 1: Optimal Trajectory Computation
     match trigger:
         case 0: # if not triggered, skip optimal trajectory computation
-            pass
+            print(" AgentAction = SKIP")
         case 1: # if triggered, compute optimal trajectory
+            print(" AgentAction = COMPUTE")
             OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
             #if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
             #    constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
             #    if constraintViolationFlag:
             #       print("Warning: Constraints could be violated with the given trajectory.\n")
-        case 2: # for possible future implementation: DELETE OPTIMAL TRAJECTORY
-            pass
+        case 2: # delete the optimal Trajectory
+            print(" AgentAction = DELETE")
+            OBoptimalTrajectory = None
         case _:
             raise ValueError("Agent Action Not Defined.")
         
@@ -58,9 +60,9 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
     print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
 
     if TOF > 0 and TOF < 1:
-        #exectime_start = time.time()
+        exectime_start = time.time()
         optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
-        #print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
+        print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
     else:
         print("\n    >> Estimated TOF is out of bounds. OBoptimalTrajectory is set to empty.")
         optimalTrajectory = None
@@ -319,7 +321,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_SS_inside = np.array([1e2, 5e3, 1e2])
-            K_SS_outside = np.array([1e5, 1e5, 1e5])
+            K_SS_outside = np.array([1e5, 5e5, 1e5])
             
             # potential field computation
             if np.linalg.norm(rho)**2 - SphereRadius_SS**2 <= 0:  # if constraint is violated
@@ -337,8 +339,8 @@ def APF(relativeState_L, constraintType, param):
             bcone = 5     # note: these are adimensional parameters to have 0.9m of radius at docking port
 
             # coefficients definition
-            K_C_inside = 1e-1
-            K_C_outside = 1e1
+            K_C_inside  = np.array([1, 2e-1, 1])
+            K_C_outside = np.array([1e1,1e1,1e1])
 
             # approach cone definition
             h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2

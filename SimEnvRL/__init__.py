@@ -13,7 +13,7 @@ from gymnasium.envs.registration import register
 
 ## REGISTER THE ENVIRONMENT ##
 register(
-    id="SimEnv-v0",
+    id="SimEnv-v1",
     entry_point="SimEnvRL.envs.RLEnvironment:SimEnv",
 )
 
