@@ -44,7 +44,7 @@ class SimEnv(gym.Env):
         options = options or {}
         options = {
                     "phaseID": None if not options.get("phaseID") else options["phaseID"],
-                    "tspan": None if not options.get("tspan") else options["tspan"],
+                    "tspan": None if "tspan" not in options or options["tspan"] is None or not isinstance(options["tspan"], np.ndarray) else options["tspan"]
                    }
         self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"])
 

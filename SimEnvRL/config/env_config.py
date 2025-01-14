@@ -42,6 +42,8 @@ class physParamClass:
         "reflCoeffDiffuse":  0.1        # [-]
     })
 
+    constraint : dict = None
+
     # SETTING DEFAULTS
     def __post_init__(self):
          # Initialize tc if not provided (could also compute other variables)
@@ -51,19 +53,24 @@ class physParamClass:
             object.__setattr__(self, 'tspan', np.array([0, 0.02]))
 
         # ENVIRONMENT CONSTRAINTS
+        
         match self.phaseID:
             case 1:
-                self.constraint = {
-                    "constraintType" : 'SPHERE',
-                    "aimAtState" : self.param.holdingState,
-                    "characteristicSize" : 200 
-                }
+                object.__setattr__(self,'constraint',
+                                    {
+                                        "constraintType" : 'SPHERE',
+                                        "aimAtState" : self.holdingState,
+                                        "characteristicSize" : 200 
+                                    }
+                )
             case 2:
-                self.constraint = {
-                    "constraintType" : 'CONE',
-                    "aimAtState" : self.param.dockingState,
-                    "characteristicSize" : {'acone': 0.04, 'bcone': 10}
-                }
+                object.__setattr__(self,'constraint',
+                                    {
+                                        "constraintType" : 'CONE',
+                                        "aimAtState" : self.dockingState,
+                                        "characteristicSize" : {'acone': 0.04, 'bcone': 10}
+                                    }
+                )
             case _:
                 raise ValueError("Phase ID not defined correctly")
 
