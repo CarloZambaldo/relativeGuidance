@@ -175,10 +175,10 @@ class SimEnv(gym.Env):
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
         # reward tunable parameters 
-        K_trigger = 0.001
+        K_trigger = 0#0.001
         K_deleted = 0.001
         K_collisn = 1
-        K_control = 0.5
+        K_control = 0 #0.5
 
         # COMPUTE: check constraints and terminal values
         TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
@@ -199,12 +199,12 @@ class SimEnv(gym.Env):
                 pass
             case 1: # in case of a trajectory recomputation, give a small negative reward
                 stepReward -= K_trigger # this is to disincentive a continuous computation of the optimal trajectory
-            case 2:
+            case 2: # if the agent deletes the optimal tarjectory
                 if self.OBoptimalTrajectory:
-                    # if the trajectory exists, the reward is reduced according to the age of the trajectory 
+                    # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
                     stepReward -= K_deleted/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
-                else:
-                    stepReward -= 10
+                else: # avoid "deleting" an inexistant trajectory
+                    stepReward -= 100
             case _:
                 pass
 

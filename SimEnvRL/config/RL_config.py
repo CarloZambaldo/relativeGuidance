@@ -61,7 +61,11 @@ class RLParamClass():
         ## VIEW THE TENSORBOARD LOGS ##
         training_log_dir = os.path.join(self.log_dir)
         import subprocess
-        subprocess.Popen(['tensorboard', '--logdir', training_log_dir, '--host', 'localhost', '--port', '6006'])
+        import multiprocessing
+        def run_tensorboard(logdir):
+            subprocess.Popen(['tensorboard', '--logdir', logdir, '--host', 'localhost', '--port', '6006'])
+        p = multiprocessing.Process(target=run_tensorboard, args=(training_log_dir,))
+        p.start()
 
 # defining the parameters
 def get(modelName):
