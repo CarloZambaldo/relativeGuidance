@@ -1,14 +1,18 @@
 # standard libraries imports
 import os
 
+# RL imports
+import gymnasium as gym
+from gymnasium.envs.registration import register
+
+# scientific imports
+import numpy as np
+
 # custom functions imports
 from SimEnvRL import config              # this allows to call config inside a script without importing it
 from SimEnvRL.UserDataDisplay.printSummary import printSummary
 from SimEnvRL.UserDataDisplay.plots import plotty
 
-# RL imports
-import gymnasium as gym
-from gymnasium.envs.registration import register
 
 
 ## REGISTER THE ENVIRONMENT ##

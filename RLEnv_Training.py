@@ -4,10 +4,10 @@ import gymnasium as gym
 
 ## CHANGE HERE ##
 trainingType = "TRAIN_NEW_MODEL"
-fileName     = "PPO_PhaseID_2_RestrictedTest"
+fileName     = "PPO_PhaseID_2_RestrictedTest_3rd_try"
 
 # create the environment
-env = gym.make('SimEnv-v1',options={"phaseID":2})
+env = gym.make('SimEnv-v1',options={"phaseID":2, "tspan": np.array([0, 0.025])})
 env.reset(seed=None)
 
 match trainingType:

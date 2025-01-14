@@ -50,8 +50,8 @@ class SimEnv(gym.Env):
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, the last one is OBoTAge)
-        self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,-1]),
-                                            high=np.array([1, 1, 1, 1, 1, 1, 5]),
+        self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,  -1]),
+                                            high=np.array([1, 1, 1, 1, 1, 1,   5]),
                                             dtype=np.float64)
 
         ## ACTION SPACE
@@ -175,27 +175,18 @@ class SimEnv(gym.Env):
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
         # reward tunable parameters 
-        K_trigger = 0.1
+        K_trigger = 0.001
         K_deleted = 0.001
         K_collisn = 1
         K_control = 0.5
 
         # COMPUTE: check constraints and terminal values
         TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
-        match phaseID:
-            case 1:
-                constraintType = 'SPHERE'
-                aimAtState = self.param.holdingState
-                characteristicSize = 200    
-            case 2:
-                constraintType = 'CONE'
-                aimAtState = self.param.dockingState
-                characteristicSize = {'acone': 0.08, 'bcone': 5}
-            case _:
-                raise ValueError("Wrong phaseID")
-            
-        constraintViolationBool = check.constraintViolation(TRUE_relativeState_L,constraintType,characteristicSize,param)
-        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, aimAtState, self.param)
+        constraintViolationBool = check.constraintViolation(TRUE_relativeState_L, 
+                                                            param.constraint["constraintType"],
+                                                            param.constraint["characteristicSize"], param)
+        
+        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
         
         self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
 

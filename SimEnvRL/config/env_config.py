@@ -50,6 +50,22 @@ class physParamClass:
         if self.tspan is None:
             object.__setattr__(self, 'tspan', np.array([0, 0.02]))
 
+        # ENVIRONMENT CONSTRAINTS
+        match self.phaseID:
+            case 1:
+                self.constraint = {
+                    "constraintType" : 'SPHERE',
+                    "aimAtState" : self.param.holdingState,
+                    "characteristicSize" : 200 
+                }
+            case 2:
+                self.constraint = {
+                    "constraintType" : 'CONE',
+                    "aimAtState" : self.param.dockingState,
+                    "characteristicSize" : {'acone': 0.04, 'bcone': 10}
+                }
+            case _:
+                raise ValueError("Phase ID not defined correctly")
 
 #### define the initial values ####
 @dataclass()

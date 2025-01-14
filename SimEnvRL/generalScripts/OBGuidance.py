@@ -10,17 +10,9 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
     Umax = param.maxAdimThrust
 
     # Define phase-specific constraints and target state
-    match phaseID:
-        case 1:
-            constraintType = 'SPHERE'
-            aimAtState = param.holdingState
-            characteristicSize = 200 # meters
-        case 2:
-            constraintType = 'CONE'
-            aimAtState = param.dockingState
-            characteristicSize = {'acone': 0.08, 'bcone': 5} # defined for cone in meters
-        case _:
-            raise ValueError("Wrong phaseID")
+    constraintType = param.constraint["constraintType"]
+    aimAtState = param.constraint["aimAtState"]
+    # characteristicSize = param.constraint["characteristicSize"]
 
     # Loop 1: Optimal Trajectory Computation
     match trigger:
@@ -44,7 +36,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
         loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
-    sigma = surface_L2 + (2 * surface_L1_vel + 5e-3 * surface_L1_pos)
+    sigma = surface_L2 + (3 * surface_L1_vel + 5e-3 * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
@@ -57,14 +49,14 @@ def loopOne(envTime, initialRelativeState_L, initialTargetState_M, aimAtState, p
     #print("    Computing Optimal Trajectory... ", end='')
     
     TOF = computeTOF(initialRelativeState_L, aimAtState, param)
-    print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
+    #print(f"\n     Estimated OBoptimalTrajectory TOF: {(TOF*param.tc/3600):.2f} [hours]")
 
     if TOF > 0 and TOF < 1:
         exectime_start = time.time()
         optimalTrajectory = ASRE(envTime, TOF, initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param)
-        print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
+        #print(f"     _ done. [Elapsed Computation Time: {(time.time() - exectime_start):.2f} sec]")
     else:
-        print("\n    >> Estimated TOF is out of bounds. OBoptimalTrajectory is set to empty.")
+        #print("\n    >> Estimated TOF is out of bounds. OBoptimalTrajectory is set to empty.")
         optimalTrajectory = None
     
     return optimalTrajectory
@@ -110,7 +102,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
     # PARAMETERS
     t_i = 0                  # Initial time
     t_f = TOF                # Final time
-    N = 210                  # Number of time steps
+    N = 250                  # Number of time steps
 
     # TIME GRID DEFINITON
     tvec = np.linspace(t_i, t_f, N)
@@ -128,7 +120,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
             
         case 2: # safe approach and docking phase
             Q = np.block([
-                [np.diag([5e5, 1e2, 5e5]), np.zeros((3, 3))],
+                [np.diag([8e5, 1e2, 8e5]), np.zeros((3, 3))],
                 [np.zeros((3, 3)), np.diag([5e6, 5e6, 5e6])]
             ])
             R = np.diag([2e1, 2e1, 2e1])
@@ -335,12 +327,13 @@ def APF(relativeState_L, constraintType, param):
 
         case 'CONE': # PHASE 2
             # constraints characteristic dimensions definition
-            acone = 0.08  # note: these are adimensional parameters to have 0.9m of radius at docking port
-            bcone = 5     # note: these are adimensional parameters to have 0.9m of radius at docking port
+            acone = 0.04  # note: these are adimensional parameters to have 0.4m of radius at docking port
+            bcone = 10    # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1, 2e-1, 1])
-            K_C_outside = np.array([1e1,1e1,1e1])
+            K_C_inside  = np.array([1.1e-2, 0, 1.1e-2]) + \
+                          np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
+            K_C_outside = np.array([1e1, 0, 1e1])
 
             # approach cone definition
             h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
