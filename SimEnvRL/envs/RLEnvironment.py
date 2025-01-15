@@ -217,6 +217,9 @@ class SimEnv(gym.Env):
 
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
+
+        terminated = False
+        
         match phaseID:
             case 1:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
@@ -281,7 +284,7 @@ class SimEnv(gym.Env):
                     print(" ################################### ")
                     print(" ############# CRASHED ############# ")
                     print(" ################################### ")
-                    self.terminated = True
+                    terminated = True
                     self.stepReward -= 100
                     self.terminationCause = "__CRASHED__"
                 
@@ -290,16 +293,14 @@ class SimEnv(gym.Env):
                     print(" ################################## ")
                     print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                     print(" ################################## ")
-                    self.terminated = True
+                    terminated = True
                     self.stepReward += 500
                     self.terminationCause = "_DOCKING_SUCCESSFUL_"
-                else:
-                    self.terminated = False
 
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
         
-        return self.stepReward, self.terminated
+        return self.stepReward, terminated
     
 
     def EOS(self,timeNow,param):

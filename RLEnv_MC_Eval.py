@@ -139,7 +139,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 # run the simulation until termination/truncation:
                 while ((not terminated) and (not truncated)):
                     action, _ = model.predict(obs) # predict the action using the agent
-                    obs, _, terminated, truncated, info = env.step(action) # step
+                    obs, reward, terminated, truncated, info = env.step(action) # step
+                    print(f"[sim: {sim_id}]",end='')
                     print(env.render())
 
                 # save the simulation data for future use:
