@@ -17,19 +17,16 @@ class RLagentParamClass():
     modelName  : str = ""
     model_dir : str = ""
     log_dir    : str = ""
-    maxTimeSteps : int = 0
+    maxTimeSteps : int = 110000 # about 3 hours of environmet time
 
     def define(self, modelName):
         self.timeStamp = int(time.time())
-        self.model_dir = f"AgentModels/{modelName}/model/{self.timeStamp}.zip"
+        self.model_dir = f"AgentModels/{modelName}/model/{self.timeStamp}"
         self.log_dir    = f"AgentModels/{modelName}/logs/{self.timeStamp}"
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-
-        self.maxTimeSteps = 110000 # about 3 hours of environmet time
-        
         return self
 
     def latest(self, modelName):
@@ -43,7 +40,7 @@ class RLagentParamClass():
         
         latest_model =  max([int((f.split('.')[0]).strip('{}')) for f in model_files if f.endswith('.zip')])
 
-        self.model_dir = f"{model_dir}/{latest_model}.zip"
+        self.model_dir = f"{model_dir}/{latest_model}"
         self.log_dir = f"AgentModels/{modelName}/logs/{latest_model}"
 
         os.makedirs(os.path.dirname(self.model_dir), exist_ok=True)
@@ -60,7 +57,7 @@ class RLagentParamClass():
         if not model_files:
             raise FileNotFoundError(f"No model files found in directory: {model_dir}")
 
-        self.model_dir = f"AgentModels/{modelName}/model/{modelNumber}.zip"
+        self.model_dir = f"AgentModels/{modelName}/model/{modelNumber}"
         self.log_dir = f"AgentModels/{modelName}/logs/{modelNumber}/"
         
         return self

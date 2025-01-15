@@ -62,8 +62,9 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                 aimReachedBool = True
                 # note that it is not possible to crash in phase 1... (the chaser is distant from the target!)
         case 2:
-            if (np.linalg.norm(TRUE_relativeState_L[1]-aimAtState[1]) <= 1.3007e-10):  # when below 5 cm along V-BAR check if converged:
-                if (np.linalg.norm(TRUE_relativeState_L[[0, 2]]-aimAtState[[0, 2]]) <= 2.6015e-10):  # stop when below 10 cm error (5cm = 1.3007e-10)
+            if (TRUE_relativeState_L[1] >= -1.3007e-10):  # when below 5 cm along V-BAR (from -5cm to in front of the target)
+                # check if converged:
+                if (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 2.6015e-10):  # stop when below 10 cm error (5cm = 1.3007e-10)
                     # if also the velocity converges
                     # docking standard: along R and H: max 0.04 m/s; along V: max 0.1 m/s
                     if (abs(TRUE_relativeState_L[3]-aimAtState[3]) <= 3.9095e-05 and
@@ -72,9 +73,8 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                         aimReachedBool = True
                     else:
                         crashedBool = True
-                elif (TRUE_relativeState_L[1]-aimAtState[1]) > 0:  # stop when in front of the target
+                else:
                     crashedBool = True
-
         case _:
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 

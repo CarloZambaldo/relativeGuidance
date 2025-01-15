@@ -5,18 +5,15 @@ function [] = MonteCarloPlots(data)
     timeHistory = data.timeHistory;
     trajectory = data.trajectory;
     fail = data.fail;
-    % success = data.success;
+    success = data.success;
 
 
 %%
     failRate = sum(fail)/(n_population)*100;
-
     fprintf("FAIL RATE: %.2f%%\n",failRate);
 
-    cic = toc;
-    fprintf("Monte Carlo analysis terminated in %g [min].\n",cic/60);
-
-
+    successRate = sum(success)/(n_population)*100;
+    fprintf("FAIL RATE: %.2f%%\n",successRate);
     %% PLOTTING RELATIVE DYNAMICS INSIDE LVLH FRAME
     fprintf("PLOTTING ...\n");
     % compute actual relative dynamics for each simulation
@@ -151,4 +148,5 @@ function [] = MonteCarloPlots(data)
     ylabel("V-BAR [m/s]");
     title("velocity")
 
+    fprintf("DONE. Press CTRL+C to close the plots...")
     pause();

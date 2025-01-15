@@ -46,9 +46,9 @@ class SimEnv(gym.Env):
         # create the selfronment simulation parameters dataclass
         options = options or {}
         options = {
-                    "phaseID": None if not options.get("phaseID") else options["phaseID"],
-                    "tspan": None if "tspan" not in options or options["tspan"] is None or not isinstance(options["tspan"], np.ndarray) else options["tspan"]
-                   }
+            "phaseID": options.get("phaseID"),
+            "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None
+        }
         self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"])
 
         ## OBSERVATION SPACE
@@ -94,9 +94,6 @@ class SimEnv(gym.Env):
                               method="DOP853", rtol=1e-9, atol=1e-8)
         self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1] # extract following time step
 
-        # REWARD COMPUTATION #
-        stepReward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param.phaseID,self.param)
-
         # PREPARE FOR NEXT TIME STEP #
         self.timeIndex += 1
         self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
@@ -104,14 +101,17 @@ class SimEnv(gym.Env):
         self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
         self.observation = self.computeRLobservation()
 
-        # END OF SIMULATION #
+        # END OF SIMULATION # (out of time)
         self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)
         
-        print(self.render())
+        # REWARD COMPUTATION #
+        self.stepReward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param.phaseID,self.param)
+
+        #print(self.render())
 
         info = {"param": self.param, "timeNow": self.timeNow}
 
-        return self.observation, stepReward, self.terminated, self.truncated, info
+        return self.observation, self.stepReward, self.terminated, self.truncated, info
 
 
     def render(self, mode='ansi'):
@@ -147,7 +147,7 @@ class SimEnv(gym.Env):
             raise ValueError("Agent Action Not Defined.")
         
         # Format the output string with color
-        ansi_output = f"{color}[envTime = {self.timeNow:.5f}] AgentAction = {action_text}{colors['reset']}"
+        ansi_output = f"[envTime = {self.timeNow:.5f}] AgentAction: {color}{action_text}{colors['reset']} (reward = {self.stepReward})"
 
         return ansi_output
 
@@ -160,6 +160,7 @@ class SimEnv(gym.Env):
         self.terminated = False
         self.truncated = False
         self.terminationCause = "Unknown"
+        self.stepReward = 0.
 
         # physical selfronment related parameters
         self.timeIndex = 0
@@ -202,8 +203,6 @@ class SimEnv(gym.Env):
         return self.computeRLobservation(), info
 
 
-
-
     ## EXTRA METHODS ##
     def computeRLobservation(self):
         if self.OBoptimalTrajectory and "envStartTime" in self.OBoptimalTrajectory:
@@ -224,12 +223,12 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 0.001
+                K_trigger = 0.0001
                 K_deleted = 0.001
-                K_collisn = 1
+                K_collisn = 1.5
                 K_control = 0 #0.5
                 K_precisn = 1
-                K_simtime = 0.001
+                K_simtime = 1 #0.005
 
                 # COMPUTE: check constraints and terminal values
                 TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
@@ -241,8 +240,14 @@ class SimEnv(gym.Env):
                 
                 self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
 
+                # compute the Age of the OB optimal Trajectory
+                if self.OBoptimalTrajectory:
+                    OBoTAge = (self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
+                else:
+                    OBoTAge = -1
+
                 ## REWARD COMPUTATION ##
-                stepReward = 0.
+                self.stepReward = 0.
 
                 # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
                 match AgentAction:
@@ -250,34 +255,34 @@ class SimEnv(gym.Env):
                         pass
                     case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
                          # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                         stepReward -= K_trigger/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
+                         self.stepReward -= K_trigger/(1+OBoTAge)
                     case 2: # if the agent deletes the optimal tarjectory
                         if self.OBoptimalTrajectory:
                             # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                            stepReward -= K_deleted/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
+                            self.stepReward -= K_deleted/(1+OBoTAge)
                         else: # avoid "deleting" an inexistant trajectory
-                            stepReward -= 100
+                            self.stepReward -= 100
                     case _:
                         pass
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
                 if constraintViolationBool:
-                    stepReward -= K_collisn * 10
+                    self.stepReward -= K_collisn * 10
 
                 # Time of Flight - penalize long time of flights
-                stepReward -= 1/param.freqGNC * K_simtime
+                self.stepReward -= 1/param.freqGNC * K_simtime
 
                 # Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                stepReward -= K_control * np.linalg.norm(controlAction)
+                self.stepReward -= K_control * np.linalg.norm(controlAction)
 
                 # crash into the target
                 if crashedBool:
                     print(" ################################### ")
                     print(" ############# CRASHED ############# ")
                     print(" ################################### ")
-                    terminated = True
-                    stepReward -= 100
+                    self.terminated = True
+                    self.stepReward -= 100
                     self.terminationCause = "__CRASHED__"
                 
                 # reached goal :)
@@ -285,16 +290,16 @@ class SimEnv(gym.Env):
                     print(" ################################## ")
                     print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                     print(" ################################## ")
-                    terminated = True
-                    stepReward += 500
+                    self.terminated = True
+                    self.stepReward += 500
                     self.terminationCause = "_DOCKING_SUCCESSFUL_"
                 else:
-                    terminated = False
+                    self.terminated = False
 
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
-            
-        return stepReward, terminated
+        
+        return self.stepReward, self.terminated
     
 
     def EOS(self,timeNow,param):
