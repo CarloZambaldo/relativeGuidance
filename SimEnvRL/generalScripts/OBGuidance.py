@@ -17,16 +17,17 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
     # Loop 1: Optimal Trajectory Computation
     match trigger:
         case 0: # if not triggered, skip optimal trajectory computation
-            print(" AgentAction = SKIP")
+            #print(" AgentAction = SKIP")
+            pass
         case 1: # if triggered, compute optimal trajectory
-            print(" AgentAction = COMPUTE")
+            #print(" AgentAction = COMPUTE")
             OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
             #if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
             #    constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
             #    if constraintViolationFlag:
             #       print("Warning: Constraints could be violated with the given trajectory.\n")
         case 2: # delete the optimal Trajectory
-            print(" AgentAction = DELETE")
+            #print(" AgentAction = DELETE")
             OBoptimalTrajectory = None
         case _:
             raise ValueError("Agent Action Not Defined.")

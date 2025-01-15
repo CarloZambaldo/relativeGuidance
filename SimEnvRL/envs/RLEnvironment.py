@@ -6,9 +6,12 @@ from scipy.integrate import solve_ivp
 import gymnasium as gym
 from gymnasium import spaces
 
-## REINFORCEMENT LEARNING ENVIRONMENT ##
+import colorama
+colorama.init()
+
+## REINFORCEMENT LEARNING selfRONMENT ##
 class SimEnv(gym.Env):
-    metadata = {"render_modes": ["none"]}
+    metadata = {"render_modes": ["ansi"]}
 
     def __init__(self, options=None):
         super(SimEnv,self).__init__()
@@ -21,7 +24,7 @@ class SimEnv(gym.Env):
         # simulation initialization dataclasses
         self.initialValue: config.env_config.InitialValues = None
 
-        # physical environment
+        # physical selfronment
         self.timeIndex: int = 0
         self.timeNow: float = 0.
         self.targetState_S: np.ndarray = None
@@ -40,7 +43,7 @@ class SimEnv(gym.Env):
         self.AgentActionHistory: np.ndarray = None
         self.constraintViolationHistory: np.ndarray = None
 
-        # create the environment simulation parameters dataclass
+        # create the selfronment simulation parameters dataclass
         options = options or {}
         options = {
                     "phaseID": None if not options.get("phaseID") else options["phaseID"],
@@ -83,7 +86,7 @@ class SimEnv(gym.Env):
         # rotate the control action from the local frame to the synodic frame
         controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
-        # PHYSICAL ENVIRONMENT #
+        # PHYSICAL selfRONMENT #
         # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
         distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(self.timeNow, self.param.chaser, self.param)
         odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
@@ -109,15 +112,54 @@ class SimEnv(gym.Env):
         return self.observation, stepReward, self.terminated, self.truncated, info
 
 
-    # The reset method should set the initial state of the environment (e.g., relative position and velocity) and return the initial observation.
+    def render(self, mode='ansi'):
+        if mode != 'ansi':
+            raise ValueError("Unsupported render mode. Supported mode: 'ansi'")
+        
+        if self.timeIndex == 0:
+            return "Environment just started. No actions yet."
+        
+        # Define colors using ANSI escape codes
+        colors = {
+            "yellow": "\033[93m",  # Yellow
+            "green": "\033[92m",   # Green
+            "red": "\033[91m",     # Red
+            "reset": "\033[0m"     # Reset to default
+        }
+        
+        # Determine the action and color based on conditions
+        action = self.AgentActionHistory[self.timeIndex - 1]
+        action_text = {0: "SKIP", 1: "COMPUTE", 2: "DELETE"}.get(action, "UNKNOWN")
+        color = colors["reset"]  # Default color
+
+        if action == 0:  # SKIP
+            if self.OBoptimalTrajectory is not None:
+                color = colors["green"]  # Green if optimal trajectory exists
+            else:
+                color = colors["red"]  # Red if optimal trajectory is None
+        elif action == 1:  # COMPUTE
+            color = colors["yellow"]  # Yellow for COMPUTE
+        elif action == 2:  # DELETE
+            color = colors["red"]  # Red for DELETE
+        else:
+            raise ValueError("Agent Action Not Defined.")
+        
+        # Format the output string with color
+        ansi_output = f"{color}[envTime = {self.timeNow:.5f}] AgentAction = {action_text}{colors['reset']}"
+
+        return ansi_output
+
+
+
+    # The reset method should set the initial state of the selfronment (e.g., relative position and velocity) and return the initial observation.
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         # RL related parameters
         self.terminated = False
         self.truncated = False
-        self.terminationCause = "None"
+        self.terminationCause = "Unknown"
 
-        # physical environment related parameters
+        # physical selfronment related parameters
         self.timeIndex = 0
         self.timeNow = 0.
 
@@ -174,68 +216,81 @@ class SimEnv(gym.Env):
 
 
     def computeReward(self, AgentAction, controlAction, phaseID, param):
-        # reward tunable parameters 
-        K_trigger = 0#0.001
-        K_deleted = 0.001
-        K_collisn = 1
-        K_control = 0 #0.5
+        match phaseID:
+            case 1:
+                raise ValueError("reward function for this phaseID has not been implemented yet")
+    
+            case 2: # APPROACH AND DOCKING
+                # reward tunable parameters 
+                K_trigger = 0#0.001
+                K_deleted = 0.001
+                K_collisn = 1
+                K_control = 0 #0.5
+                K_precisn = 1
+                K_simtime = 0.001
 
-        # COMPUTE: check constraints and terminal values
-        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
-        constraintViolationBool = check.constraintViolation(TRUE_relativeState_L, 
-                                                            param.constraint["constraintType"],
-                                                            param.constraint["characteristicSize"], param)
-        
-        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
-        
-        self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
+                # COMPUTE: check constraints and terminal values
+                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
+                constraintViolationBool = check.constraintViolation(TRUE_relativeState_L, 
+                                                                    param.constraint["constraintType"],
+                                                                    param.constraint["characteristicSize"], param)
+                
+                aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
+                
+                self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
 
-        ## REWARD COMPUTATION ##
-        stepReward = 0.
+                ## REWARD COMPUTATION ##
+                stepReward = 0.
 
-        # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
-        match AgentAction:
-            case 0: # no action means no reward nor penalization
-                pass
-            case 1: # in case of a trajectory recomputation, give a small negative reward
-                stepReward -= K_trigger # this is to disincentive a continuous computation of the optimal trajectory
-            case 2: # if the agent deletes the optimal tarjectory
-                if self.OBoptimalTrajectory:
-                    # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                    stepReward -= K_deleted/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
-                else: # avoid "deleting" an inexistant trajectory
+                # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
+                match AgentAction:
+                    case 0: # no action means no reward nor penalization
+                        pass
+                    case 1: # in case of a trajectory recomputation, give a small negative reward
+                        stepReward -= K_trigger # this is to disincentive a continuous computation of the optimal trajectory
+                    case 2: # if the agent deletes the optimal tarjectory
+                        if self.OBoptimalTrajectory:
+                            # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
+                            stepReward -= K_deleted/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
+                        else: # avoid "deleting" an inexistant trajectory
+                            stepReward -= 100
+                    case _:
+                        pass
+
+                # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
+                if constraintViolationBool:
+                    stepReward -= K_collisn * 10
+
+                # Time of Flight - penalize long time of flights
+                stepReward -= 1/param.freqGNC * K_simtime
+
+                # Fuel Efficiency Reward - Penalize large control actions
+                # reduce the reward of an amount proportional to the Guidance control effort
+                stepReward -= K_control * np.linalg.norm(controlAction)
+
+                # crash into the target
+                if crashedBool:
+                    print(" ################################### ")
+                    print(" ############# CRASHED ############# ")
+                    print(" ################################### ")
+                    terminated = True
                     stepReward -= 100
+                    self.terminationCause = "__CRASHED__"
+                
+                # reached goal :)
+                if aimReachedBool:
+                    print(" ################################## ")
+                    print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
+                    print(" ################################## ")
+                    terminated = True
+                    stepReward += 500
+                    self.terminationCause = "_DOCKING_SUCCESSFUL_"
+                else:
+                    terminated = False
+
             case _:
-                pass
-
-        # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
-        if constraintViolationBool:
-            stepReward -= K_collisn * 10
-
-        # Fuel Efficiency Reward - Penalize large control actions
-        # reduce the reward of an amount proportional to the Guidance control effort
-        stepReward -= K_control * np.linalg.norm(controlAction)
-
-        # crash into the target
-        if crashedBool:
-            print(" ################################### ")
-            print(" ############# CRASHED ############# ")
-            print(" ################################### ")
-            terminated = True
-            stepReward -= 100
-            self.terminationCause = "__CRASHED__"
-        
-        # reached goal :)
-        if aimReachedBool:
-            print(" ################################## ")
-            print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
-            print(" ################################## ")
-            terminated = True
-            stepReward += 500
-            self.terminationCause = "_DOCKING_SUCCESSFUL_"
-        else:
-            terminated = False
-
+                raise ValueError("reward function for this phaseID has not been implemented yet")
+            
         return stepReward, terminated
     
 
@@ -250,4 +305,26 @@ class SimEnv(gym.Env):
 
         return truncated
     
-
+    def getHistory(self):
+        savedDictionary = {
+            "phaseID": self.param.phaseID,
+            "timeHistory" : self.timeHistory[0:self.timeIndex],
+            "fullStateHistory" : self.fullStateHistory[0:self.timeIndex],
+            "controlActionHistory_L" : self.controlActionHistory_L[0:self.timeIndex],
+            "AgentActionHistory" : self.AgentActionHistory[0:self.timeIndex],
+            "constraintViolationHistory" : self.constraintViolationHistory[0:self.timeIndex],
+            "terminationCause" : self.terminationCause,
+            "param": {
+                "xc": self.param.xc,
+                "tc": self.param.tc,
+                "target" : self.param.target,
+                "chaser" : self.param.chaser,
+                "maxAdimThrust" : self.param.maxAdimThrust,
+                "holdingState" : self.param.holdingState,
+                "dockingState" : self.param.dockingState,
+                "freqGNC" : self.param.freqGNC,
+                "SolarFlux" : self.param.SolarFlux,
+                "massRatio" : self.param.massRatio
+            }
+        }
+        return savedDictionary

@@ -154,11 +154,17 @@ class initialValueClass():
         return self
     
     def imporse_initialValues(self,param,values):
-        if not (values.get("targetState_S") and values.get("relativeState_L")):
+        # Check if either 'targetState_S' or 'relativeState_L' is None or not a numpy array
+        if values["targetState_S"] is None \
+           or values["relativeState_L"] is None \
+           or not isinstance(values["targetState_S"], np.ndarray) \
+           or not isinstance(values["relativeState_L"], np.ndarray) \
+           or values["targetState_S"].size != 6 \
+           or values["relativeState_L"].size != 6:
             raise RuntimeError("COULD NOT RETRIEVE THE INITIAL CONDITIONS")
         
-        targetState_S = values["targetState_S"]
-        relativeState_L = values["relativeState_L"]
+        targetState_S = values["targetState_S"].flatten()
+        relativeState_L = values["relativeState_L"].flatten()
 
         DeltaIC_S = convert_LVLH_to_S(targetState_S,relativeState_L,param)
         chaserState_S = targetState_S + DeltaIC_S
@@ -169,7 +175,7 @@ class initialValueClass():
         self.relativeState_L = relativeState_L
         self.fullInitialState = np.hstack([targetState_S, chaserState_S])
 
-        print(f"CORRECTLY IMPOSED INITIAL CONDITIONS. relativeState_L = {relativeState_L:.3g}")
+        print(f"CORRECTLY IMPOSED INITIAL CONDITIONS. relativeState_L (adim) = {relativeState_L}")
 
         return self
 
@@ -180,13 +186,12 @@ class initialValueClass():
 ####     param = physParamClass()
 ####     initialValue = initialValueClass()
 ####     initialValue = initialValue.define_initialValues(param,seed)
-#### 
 ####     return param, initialValue
 
 ## NEW FUNCTIONS:
 def getParam(phaseID=None,tspan=None):
     # define the environmental parameters (constant for the environment)
-    param = physParamClass(phaseID,tspan)
+    param = physParamClass(phaseID=phaseID,tspan=tspan)
 
     return param
 
@@ -198,8 +203,8 @@ def getInitialValues(param,seed=None,values=None):
     values = values or {}
     if values: # if the initial conditions are passed define accordingly the initialValue parameter
         values = {
-            "targetState_S" : None if values.get("targetState_S") else values["targetState_S"],
-            "relativeState_L" : None if values.get("relativeState_L") else values["relativeState_L"]
+            "targetState_S": None if "targetState_S" not in values or values["targetState_S"] is None or not isinstance(values["targetState_S"], np.ndarray) else values["targetState_S"],
+            "relativeState_L": None if "relativeState_L" not in values or values["relativeState_L"] is None or not isinstance(values["relativeState_L"], np.ndarray) else values["relativeState_L"]
         }
         initialValue = initialValue.imporse_initialValues(param,values)
         typeOfInitialConditions = "USER_DEFINED"

@@ -1,14 +1,12 @@
 from SimEnvRL import *
 from stable_baselines3 import PPO
 import pickle
-import time 
-import os
 
-env = gym.make("SimEnv-v0")  # this line creates the environment
+env = gym.make("SimEnv-v1")  # this line creates the environment
 
 # load the model
-RLparam = config.RL_config.recall("PPO_PhaseID_2_RestrictedTest","latest")
-model = PPO.load(RLparam.models_dir, env=env)
+RLagent = config.RL_config.recall("PPO_PhaseID_2_RestrictedTest","latest")
+model = PPO.load(RLagent.models_dir, env=env)
 
 # run the episodes
 episodes = 1
@@ -26,7 +24,7 @@ for episode in range(episodes):
     print(f"Episode: {episode}, Total Reward: {reward}")
     print("############\n\n")
 
-    # Save the environment
+    # SAVE THE SIMULATION
     new_dir = "Simulations"
     if not os.path.exists(new_dir):
         os.makedirs(new_dir)
@@ -34,6 +32,8 @@ for episode in range(episodes):
 
     with open(file_path, 'wb') as f:
         pickle.dump(env, f)
+
+    scipy.io.savemat("Simulations/env.mat", {"env": env.saveToMAT()})
 
     if terminated:
         indicezeri = (env.fullStateHistory[:, 6:12] == 0)
@@ -44,8 +44,10 @@ for episode in range(episodes):
         env.controlActionHistory_L = env.controlActionHistory_L[indiceValori, :]
         env.timeHistory = env.timeHistory[indiceValori]
 
-    printSummary(env)
+    printSummary(env) # TypeError: Could not convert None (type <class 'NoneType'>) to array
     plotty(env)
+    
+
     input("Press enter to continue...")
 env.close()
 

@@ -2,9 +2,18 @@
 from dataclasses import dataclass, field
 import os
 import time
+import multiprocessing
+import subprocess
+
+
+# Define the function outside the class for multiprocessing compatibility
+def run_tensorboard(logdir):
+    """Runs TensorBoard in a subprocess."""
+    subprocess.Popen(['tensorboard', '--logdir', logdir, '--host', 'localhost', '--port', '6006'])
+
 
 @dataclass()
-class RLParamClass():
+class RLagentParamClass():
     modelName  : str = ""
     models_dir : str = ""
     log_dir    : str = ""
@@ -58,27 +67,28 @@ class RLParamClass():
 
 
     def viewLogs(self):
-        ## VIEW THE TENSORBOARD LOGS ##
-        training_log_dir = os.path.join(self.log_dir)
-        import subprocess
-        import multiprocessing
-        def run_tensorboard(logdir):
-            subprocess.Popen(['tensorboard', '--logdir', logdir, '--host', 'localhost', '--port', '6006'])
-        p = multiprocessing.Process(target=run_tensorboard, args=(training_log_dir,))
-        p.start()
+        ##"""Launches TensorBoard logs in a parallel process."""
+        ##training_log_dir = os.path.join(self.log_dir)
+        ### Use the external function for multiprocessing compatibility
+        ##p = multiprocessing.Process(target=run_tensorboard, args=(training_log_dir,))
+        ##p.start()
+
+
+        ## USE INSTEAD: tensorboard --logdir="AgentModels//" --host localhost --port 6006
+        pass
 
 # defining the parameters
 def get(modelName):
-    RLParam = RLParamClass()
-    RLParam = RLParam.define(modelName)
-    return RLParam
+    RLagent = RLagentParamClass()
+    RLagent = RLagent.define(modelName)
+    return RLagent
 
 # recalling previous model
 def recall(modelName,modelNumber):
-    RLParam = RLParamClass()
+    RLagent = RLagentParamClass()
     if modelNumber.upper() == 'LATEST':
-        RLParam = RLParam.latest(modelName)
+        RLagent = RLagent.latest(modelName)
     else:
-        RLParam = RLParam.open(modelName,modelNumber)
-        
-    return RLParam
+        RLagent = RLagent.open(modelName,modelNumber)
+
+    return RLagent
