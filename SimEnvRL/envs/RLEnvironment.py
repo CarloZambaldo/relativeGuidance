@@ -107,6 +107,8 @@ class SimEnv(gym.Env):
         # END OF SIMULATION #
         self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)
         
+        print(self.render())
+
         info = {"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, stepReward, self.terminated, self.truncated, info
@@ -222,7 +224,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 0#0.001
+                K_trigger = 0.001
                 K_deleted = 0.001
                 K_collisn = 1
                 K_control = 0 #0.5
@@ -246,8 +248,9 @@ class SimEnv(gym.Env):
                 match AgentAction:
                     case 0: # no action means no reward nor penalization
                         pass
-                    case 1: # in case of a trajectory recomputation, give a small negative reward
-                        stepReward -= K_trigger # this is to disincentive a continuous computation of the optimal trajectory
+                    case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
+                         # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
+                         stepReward -= K_trigger/(self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
                     case 2: # if the agent deletes the optimal tarjectory
                         if self.OBoptimalTrajectory:
                             # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)

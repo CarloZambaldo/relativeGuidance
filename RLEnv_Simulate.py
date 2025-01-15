@@ -6,7 +6,7 @@ env = gym.make("SimEnv-v1")  # this line creates the environment
 
 # load the model
 RLagent = config.RL_config.recall("PPO_PhaseID_2_RestrictedTest","latest")
-model = PPO.load(RLagent.models_dir, env=env)
+model = PPO.load(RLagent.model_dir, env=env)
 
 # run the episodes
 episodes = 1
@@ -21,6 +21,8 @@ for episode in range(episodes):
     while (not terminated and not truncated):
         action, _ = model.predict(obs)
         obs, reward, terminated, truncated, info = env.step(action)
+        env.render()
+
     print(f"Episode: {episode}, Total Reward: {reward}")
     print("############\n\n")
 

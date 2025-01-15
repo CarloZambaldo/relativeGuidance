@@ -7,10 +7,11 @@ packages = ["src/SimEnvRL"]
 
 [project]
 name = "SimEnvRL"
-version = "1.0.0"
+version = "1.5.0"
 dependencies = [
   "gymnasium",
   "pre-commit",
   "scipy",      # Scientific computing
   "numpy",      # Numerical computations
+  "colorama",   # for the rendering of the environment (use colors)
 ]

@@ -20,7 +20,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
 
         # load the model
         RLagent = config.RL_config.recall("PPO_PhaseID_2_RestrictedTest","latest")
-        model = PPO.load(RLagent.models_dir, env=env)
+        model = PPO.load(RLagent.model_dir, env=env)
 
         print("Generating a population for the simulations...")
         data : dict = {
