@@ -13,7 +13,7 @@ function [] = MonteCarloPlots(data)
     fprintf("FAIL RATE: %.2f%%\n",failRate);
 
     successRate = sum(success)/(n_population)*100;
-    fprintf("FAIL RATE: %.2f%%\n",successRate);
+    fprintf("SUCCESS RATE: %.2f%%\n",successRate);
     %% PLOTTING RELATIVE DYNAMICS INSIDE LVLH FRAME
     fprintf("PLOTTING ...\n");
     % compute actual relative dynamics for each simulation

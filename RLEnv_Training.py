@@ -3,8 +3,8 @@ from stable_baselines3 import PPO
 import gymnasium as gym
 
 ## CHANGE HERE ##
-trainingType = "CONTINUE_TRAINING_OLD_MODEL"
-modelName     = "PhaseID_2-PPO_4"
+trainingType = "TRAIN_NEW_MODEL"
+modelName     = "PhaseID_2-PPO_v5"
 
 # create the environment
 env = gym.make('SimEnv-v1',options={"phaseID":2, "tspan": np.array([0, 0.025])})
@@ -15,7 +15,7 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, verbose=1, tensorboard_log=RLagent.log_dir)
+        model = PPO('MlpPolicy', env=env, verbose=1, gamma = 0.992, tensorboard_log=RLagent.log_dir)
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters

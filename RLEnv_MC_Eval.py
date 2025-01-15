@@ -8,7 +8,7 @@ phaseID = 2
 tspan = [0, 0.015]
 
 #  MONTE CARLO PARAMETERS
-n_samples = 10   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simulation
@@ -18,8 +18,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         env = gym.make("SimEnv-v1", options={"phaseID":phaseID,"tspan":tspan})
 
         # load the model
-        RLagent = config.RL_config.recall("PhaseID_2-PPO_4","latest")
-        model = PPO.load(RLagent.model_dir, env=env)
+        RLagent = config.RL_config.recall("PhaseID_2-PPO_v5","latest")
+        model = PPO.load(f"{RLagent.model_dir}.zip", env=env)
 
         print("Generating a population for the simulations...")
         data : dict = {
@@ -128,7 +128,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
             initialStateTarget_S = initialStateTarget_S_batch[trgt_id,:]
 
             for sim_id in range(n_ICs): # for each initial condition
-                print(f" ## RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data["n_population"]} ##")
+                tstartcomptime = time.time()
+                print(f" ## RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data["n_population"]} ##", end='')
 
                 # resetting the initial conditions and the environment
                 terminated = False
@@ -140,14 +141,16 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 while ((not terminated) and (not truncated)):
                     action, _ = model.predict(obs) # predict the action using the agent
                     obs, reward, terminated, truncated, info = env.step(action) # step
-                    print(f"[sim: {sim_id}]",end='')
-                    print(env.render())
+                    print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
+                    #print(env.render())
 
+                tstartcomptime = time.time() - tstartcomptime
                 # save the simulation data for future use:
                 data["trajectory"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory
                 data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
                 data["success"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "_DOCKING_SUCCESSFUL_" else 0
 
+                print(f" done > Elapsed time: {tstartcomptime:.2f} [sec] ")
         print("SAVING THE MONTE CARLO SIMULATION: ",end='')
         # Save the Monte Carlo data to a .mat file
         scipy.io.savemat(f"Simulations/MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat", {"data": data})

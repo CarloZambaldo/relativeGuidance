@@ -107,7 +107,7 @@ class SimEnv(gym.Env):
         # REWARD COMPUTATION #
         self.stepReward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param.phaseID,self.param)
 
-        #print(self.render())
+        print(self.render())
 
         info = {"param": self.param, "timeNow": self.timeNow}
 
@@ -219,7 +219,7 @@ class SimEnv(gym.Env):
     def computeReward(self, AgentAction, controlAction, phaseID, param):
 
         terminated = False
-        
+
         match phaseID:
             case 1:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
@@ -229,7 +229,7 @@ class SimEnv(gym.Env):
                 K_trigger = 0.0001
                 K_deleted = 0.001
                 K_collisn = 1.5
-                K_control = 0 #0.5
+                K_control = 0.001
                 K_precisn = 1
                 K_simtime = 1 #0.005
 
