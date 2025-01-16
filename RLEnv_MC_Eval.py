@@ -7,6 +7,11 @@ from datetime import datetime
 phaseID = 2
 tspan = [0, 0.015]
 
+#if NEW_EVAL:
+agentName = "PhaseID_2-PPO_v6"
+# if LOAD:
+fileName = "MC_run_2025_01_15_11-22-14.mat"
+
 #  MONTE CARLO PARAMETERS
 n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
@@ -18,17 +23,17 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         env = gym.make("SimEnv-v1", options={"phaseID":phaseID,"tspan":tspan})
 
         # load the model
-        RLagent = config.RL_config.recall("PhaseID_2-PPO_v5","latest")
+        RLagent = config.RL_config.recall(agentName,"latest")
         model = PPO.load(f"{RLagent.model_dir}.zip", env=env)
 
         print("Generating a population for the simulations...")
         data : dict = {
                 "phaseID" : env.unwrapped.param.phaseID,
                 "param" : {
-                                    "xc": env.unwrapped.param.xc,
-                                    "tc": env.unwrapped.param.tc,
-                                    "massRatio": env.unwrapped.param.massRatio
-                                },
+                            "xc": env.unwrapped.param.xc,
+                            "tc": env.unwrapped.param.tc,
+                            "massRatio": env.unwrapped.param.massRatio
+                            },
                 "timeHistory" : None,
                 "trajectory" : None,
                 "terminalState" : None,
@@ -157,7 +162,6 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         print("DONE.")
 
     case "LOAD":
-        fileName = "MC_run_2025_01_15_11-22-14.mat"
         print(f"LOADING THE DATA FROM '{fileName}'")
         data = scipy.io.loadmat(f"Simulations/{fileName}")["data"]
 

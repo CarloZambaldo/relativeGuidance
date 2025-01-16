@@ -37,7 +37,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
         loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
-    sigma = surface_L2 + (3 * surface_L1_vel + 5e-3 * surface_L1_pos)
+    sigma = surface_L2 + (3 * surface_L1_vel + 6e-3 * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
@@ -84,6 +84,8 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
         ])
         #print(f"  [envTime {(envTime*param.tc/60):.4f} min] closestOptimalState [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(closestOptimalState[3:6] - relativeState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
     else:
+        # if the optimal trajectory is not available or the interpTime is grater that the last optimal trajectory time
+        OBoptimalTrajectory = None # this is to let the RL agent know that the trajectory is no longer available
         closestOptimalState = aimAtState
         closestOptimalControl = np.zeros(3)
         #print(f"  [envTime  {(envTime*param.tc/60):.4f} min]  >> aimAtState <<  [|deltaR| = {np.linalg.norm(relativeState[:3] - closestOptimalState[:3]) * 1e3 * param.xc} m; |deltaV| = {np.linalg.norm(relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc} m/s]")
@@ -332,7 +334,7 @@ def APF(relativeState_L, constraintType, param):
             bcone = 10    # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1.1e-2, 0, 1.1e-2]) + \
+            K_C_inside  = np.array([1.5e-2, 0, 1.5e-2]) + \
                           np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([1e1, 0, 1e1])
 

@@ -9,17 +9,18 @@ import random
 @dataclass(frozen=True)
 class physParamClass:
     # TUNABLE PARAMETERS
-    phaseID : int = None               # default value
+    phaseID : int = None                                     # default value set to none
     tspan : np.ndarray = field(default_factory=lambda: None) # default value initial and final time for simulation    [ADIMENSIONAL]
 
     # ENVIRONMENT PARAMETERS #
-    xc : float = 384400.               # units for adimensional space [km]
-    tc : float = 1/(2.661699e-6)       # units for adimensional time [s]
-    massEarth = 5.973698863559727e+24  # [kg]
-    massMoon  = 7.347673092457352e+22  # [kg]
-    massRatio : float = massMoon/(massEarth+massMoon)
-    Omega : float = 2*np.pi/2358720    # [rad/s]
-    SolarFlux : float = 1361/299792458 # [W/m^2 / (m/s)] Solar Flux at 1 AU
+    xc : float = 384400.                                     # units for adimensional space [km]
+    tc : float = 1/(2.661699e-6)                             # units for adimensional time [s]
+    massEarth = 5.973698863559727e+24                        # [kg]
+    massMoon  = 7.347673092457352e+22                        # [kg]
+    massRatio : float = massMoon/(massEarth+massMoon)        # mass ratio for for the given CR3BP
+    Omega : float = 2*np.pi/2358720                          # [rad/s]
+    SolarFlux : float = 1361/299792458                       # [W/m^2 / (m/s)] Solar Flux at 1 AU
+    sunInitialAngle : float = 2 * np.pi * np.random.rand()   # random initial angle of the sun
 
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
@@ -46,7 +47,7 @@ class physParamClass:
 
     # SETTING DEFAULTS
     def __post_init__(self):
-         # Initialize tc if not provided (could also compute other variables)
+        # Initialize tc if not provided (could also compute other variables)
         if self.phaseID is None:
             object.__setattr__(self, 'phaseID', 2)
         if self.tspan is None:

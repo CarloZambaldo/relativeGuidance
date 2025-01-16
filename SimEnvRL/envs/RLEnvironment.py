@@ -45,10 +45,13 @@ class SimEnv(gym.Env):
 
         # create the selfronment simulation parameters dataclass
         options = options or {}
-        options = {
-            "phaseID": options.get("phaseID"),
-            "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None
-        }
+        if options:
+            options = {
+                "phaseID": options.get("phaseID"),
+                "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None
+            }
+        else:
+            raise AttributeError("options are required to start the environment. Please check that 'phaseID' and 'tspan' are correctly defined.")
         self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"])
 
         ## OBSERVATION SPACE
@@ -226,11 +229,11 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 1 #0.000
+                K_trigger = 0.0001
                 K_deleted = 0.001
-                K_collisn = 1
-                K_control = 0.001
-                K_precisn = 5
+                K_cnstrnt = 0
+                K_control = 0 #.001
+                K_precisn = 10
                 K_simtime = 1 #0.005
 
                 # COMPUTE: check constraints and terminal values
@@ -250,7 +253,7 @@ class SimEnv(gym.Env):
                     OBoTAge = -1
 
 
-                ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
+                ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
                 self.stepReward = 0.
 
                 # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
@@ -270,13 +273,17 @@ class SimEnv(gym.Env):
                         pass
 
                 # Precision Reward - give a positive reward for good convergence
-                proximityFactor = np.exp(TRUE_relativeState_L[1]*3*self.param.xc) # the closer to the target on V BAR
+                if TRUE_relativeState_L[1] <= 0:
+                    proximityFactor = np.exp(TRUE_relativeState_L[1]*3*self.param.xc) # the closer to the target on V BAR
+                else:
+                    proximityFactor = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
+                    
                 precisionFactor = - violationEntity # observe that if a constraint is violated this reward turns to negative!
                 self.stepReward += K_precisn * precisionFactor * proximityFactor
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
                 if constraintViolationBool:
-                    self.stepReward -= K_collisn * 10
+                    self.stepReward -= K_cnstrnt * 10
 
                 # Time of Flight - penalize long time of flights
                 self.stepReward -= 1/param.freqGNC * K_simtime

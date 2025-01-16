@@ -4,7 +4,11 @@ import gymnasium as gym
 
 ## CHANGE HERE ##
 trainingType = "TRAIN_NEW_MODEL"
-modelName     = "PhaseID_2-PPO_v5"
+modelName     = "PhaseID_2-PPO_v6"
+
+# to run tensorboard use:
+# tensorboard --logdir="AgentModels//" --host localhost --port 6006
+
 
 # create the environment
 env = gym.make('SimEnv-v1',options={"phaseID":2, "tspan": np.array([0, 0.025])})
