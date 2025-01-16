@@ -334,8 +334,8 @@ def APF(relativeState_L, constraintType, param):
             bcone = 10    # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1.5e-2, 0, 1.5e-2]) + \
-                          np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
+            K_C_inside  = np.array([1.6e-2, 0, 1.6e-2]) + \
+                          np.array([1.1, 5e-1, 1.1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([1e1, 0, 1e1])
 
             # approach cone definition

@@ -13,7 +13,7 @@ agentName = "PhaseID_2-PPO_v6"
 fileName = "MC_run_2025_01_15_11-22-14.mat"
 
 #  MONTE CARLO PARAMETERS
-n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 15   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simulation
