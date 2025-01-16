@@ -24,12 +24,14 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
             
             if  currentRadius - maxCurrentRadius > 0:
                 constraintViolationBool = True
-                # violationEntity = abs((currentRadius-maxCurrentRadius)/(maxCurrentRadius))
                 # violationEntity = max(violationEntity,10)
+
+            # compute the relative position (normalized to 1 on the constraint)
+            violationEntity = (currentRadius - maxCurrentRadius)/(maxCurrentRadius)
         case _:
             raise ValueError("Constraint Type not defined correctly")
         
-    return constraintViolationBool #, violationEntity
+    return constraintViolationBool, violationEntity
 
 
 

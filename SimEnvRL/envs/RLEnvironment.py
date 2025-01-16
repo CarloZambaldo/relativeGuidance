@@ -226,16 +226,16 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 0.0001
+                K_trigger = 1 #0.000
                 K_deleted = 0.001
-                K_collisn = 1.5
+                K_collisn = 1
                 K_control = 0.001
-                K_precisn = 1
+                K_precisn = 5
                 K_simtime = 1 #0.005
 
                 # COMPUTE: check constraints and terminal values
                 TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
-                constraintViolationBool = check.constraintViolation(TRUE_relativeState_L, 
+                constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L, 
                                                                     param.constraint["constraintType"],
                                                                     param.constraint["characteristicSize"], param)
                 
@@ -249,7 +249,8 @@ class SimEnv(gym.Env):
                 else:
                     OBoTAge = -1
 
-                ## REWARD COMPUTATION ##
+
+                ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
                 self.stepReward = 0.
 
                 # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
@@ -257,16 +258,21 @@ class SimEnv(gym.Env):
                     case 0: # no action means no reward nor penalization
                         pass
                     case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
-                         # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                         self.stepReward -= K_trigger/(1+OBoTAge)
-                    case 2: # if the agent deletes the optimal tarjectory
+                        # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
+                        self.stepReward -= K_trigger/(1+1e4*OBoTAge)
+                    case 2: # if the agent deletes the optimal trajectory
                         if self.OBoptimalTrajectory:
                             # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                            self.stepReward -= K_deleted/(1+OBoTAge)
+                            self.stepReward -= K_deleted/(1+1e3*OBoTAge)
                         else: # avoid "deleting" an inexistant trajectory
                             self.stepReward -= 100
                     case _:
                         pass
+
+                # Precision Reward - give a positive reward for good convergence
+                proximityFactor = np.exp(TRUE_relativeState_L[1]*3*self.param.xc) # the closer to the target on V BAR
+                precisionFactor = - violationEntity # observe that if a constraint is violated this reward turns to negative!
+                self.stepReward += K_precisn * precisionFactor * proximityFactor
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
                 if constraintViolationBool:
@@ -279,7 +285,7 @@ class SimEnv(gym.Env):
                 # reduce the reward of an amount proportional to the Guidance control effort
                 self.stepReward -= K_control * np.linalg.norm(controlAction)
 
-                # crash into the target
+                # Crash Reward - crash into the target
                 if crashedBool:
                     print(" ################################### ")
                     print(" ############# CRASHED ############# ")
@@ -288,7 +294,7 @@ class SimEnv(gym.Env):
                     self.stepReward -= 100
                     self.terminationCause = "__CRASHED__"
                 
-                # reached goal :)
+                # Docking Successful - reached goal :)
                 if aimReachedBool:
                     print(" ################################## ")
                     print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")

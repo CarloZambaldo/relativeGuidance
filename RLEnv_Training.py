@@ -15,7 +15,7 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, verbose=1, gamma = 0.992, tensorboard_log=RLagent.log_dir)
+        model = PPO('MlpPolicy', env=env, verbose=1, gamma = 0.991, tensorboard_log=RLagent.log_dir)
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
