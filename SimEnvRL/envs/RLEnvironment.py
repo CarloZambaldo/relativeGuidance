@@ -77,6 +77,13 @@ class SimEnv(gym.Env):
 
         # GUIDANCE ALGORITHM # 
         # compute the control action and output the optimal trajectory (if re-computed)
+
+        # ompute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, before applying the AgentAction
+        if self.OBoptimalTrajectory:
+            OBoTAge = (self.timeNow - self.OBoptimalTrajectory["envStartTime"])
+        else:
+            OBoTAge = -1
+
         #executionTime_start = time.time()
         controlAction_L, self.OBoptimalTrajectory = \
                                 OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
@@ -108,7 +115,8 @@ class SimEnv(gym.Env):
         self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)
         
         # REWARD COMPUTATION #
-        self.stepReward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param.phaseID,self.param)
+        self.stepReward, self.terminated = self.computeReward(AgentAction, OBoTAge, controlAction_L,
+                                                              self.param.phaseID, self.param)
 
         print(self.render())
         info = {"param": self.param, "timeNow": self.timeNow}
@@ -208,7 +216,7 @@ class SimEnv(gym.Env):
     ## EXTRA METHODS ##
     def computeRLobservation(self):
         if self.OBoptimalTrajectory and "envStartTime" in self.OBoptimalTrajectory:
-            trajAGE = self.OBoptimalTrajectory["envStartTime"] - self.timeNow
+            trajAGE = self.timeNow - self.OBoptimalTrajectory["envStartTime"]
         else:
             trajAGE = -1 # setting to -1 if the optimal trajectory does not exist
 
@@ -218,7 +226,7 @@ class SimEnv(gym.Env):
 
 
 
-    def computeReward(self, AgentAction, controlAction, phaseID, param):
+    def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
 
         terminated = False
 
@@ -245,13 +253,6 @@ class SimEnv(gym.Env):
                 
                 self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
 
-                # compute the Age of the OB optimal Trajectory
-                if self.OBoptimalTrajectory:
-                    OBoTAge = (self.OBoptimalTrajectory["envStartTime"]-self.timeNow)
-                else:
-                    OBoTAge = -1
-
-
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
                 self.stepReward = 0.
 
@@ -263,7 +264,7 @@ class SimEnv(gym.Env):
                         # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
                         self.stepReward -= K_trigger/(1+1e4*OBoTAge)
                     case 2: # if the agent deletes the optimal trajectory
-                        if self.OBoptimalTrajectory:
+                        if OBoTAge>=0:
                             # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
                             self.stepReward -= K_deleted/(1+1e3*OBoTAge)
                         else: # avoid "deleting" an inexistant trajectory

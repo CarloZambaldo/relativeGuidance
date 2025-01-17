@@ -4,7 +4,7 @@ import gymnasium as gym
 
 ## CHANGE HERE ##
 trainingType = "TRAIN_NEW_MODEL"
-modelName     = "PhaseID_2-PPO_v7"
+modelName     = "Agent_P2-PPO-v1"
 
 # to run tensorboard use:
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
