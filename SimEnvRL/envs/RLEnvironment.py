@@ -31,7 +31,7 @@ class SimEnv(gym.Env):
         self.chaserState_S: np.ndarray = None
 
         # ON BOARD data
-        self.OBoptimalTrajectory: dict = {}
+        self.OBoptimalTrajectory: dict = None
         self.OBStateTarget_M: np.ndarray = None
         self.OBStateRelative_L: np.ndarray = None
         self.observation: np.ndarray = None
@@ -111,7 +111,6 @@ class SimEnv(gym.Env):
         self.stepReward, self.terminated = self.computeReward(AgentAction,controlAction_L,self.param.phaseID,self.param)
 
         print(self.render())
-
         info = {"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
@@ -170,7 +169,7 @@ class SimEnv(gym.Env):
         self.timeNow = 0.
 
         # guidance related parameters
-        self.OBoptimalTrajectory = {}
+        self.OBoptimalTrajectory = None
 
         # defining the initial values
         ## ORIGINALLY WAS: self.param, self.initialValue = config.env_config.get(seed)
@@ -298,7 +297,7 @@ class SimEnv(gym.Env):
                     print(" ############# CRASHED ############# ")
                     print(" ################################### ")
                     terminated = True
-                    self.stepReward -= 100
+                    self.stepReward -= 500
                     self.terminationCause = "__CRASHED__"
                 
                 # Docking Successful - reached goal :)

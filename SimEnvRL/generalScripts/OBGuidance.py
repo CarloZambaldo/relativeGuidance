@@ -4,7 +4,7 @@ from scipy.integrate import solve_ivp
 import time
 
 ## OBGuidance ##################################################################################
-def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,OBoptimalTrajectory=None):
+def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=None,OBoptimalTrajectory=None):
 
     # extract parameters
     Umax = param.maxAdimThrust
@@ -15,11 +15,11 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
     # characteristicSize = param.constraint["characteristicSize"]
 
     # Loop 1: Optimal Trajectory Computation
-    match trigger:
-        case 0: # if not triggered, skip optimal trajectory computation
+    match AgentAction:
+        case 0: # if not AgentActioned, skip optimal trajectory computation
             #print(" AgentAction = SKIP")
             pass
-        case 1: # if triggered, compute optimal trajectory
+        case 1: # if AgentActioned, compute optimal trajectory
             #print(" AgentAction = COMPUTE")
             OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
             #if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
@@ -42,6 +42,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,trigger=None,
     
     # Compute control action (using ASRE+APF+SMC)
     controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
+
     return controlAction_L, OBoptimalTrajectory
 
 
@@ -334,8 +335,8 @@ def APF(relativeState_L, constraintType, param):
             bcone = 10    # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1.6e-2, 0, 1.6e-2]) + \
-                          np.array([1.1, 5e-1, 1.1]) * (abs(rho[1])**3/(1e9))
+            K_C_inside  = np.array([1, 0, 1]) + \
+                          np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([1e1, 0, 1e1])
 
             # approach cone definition

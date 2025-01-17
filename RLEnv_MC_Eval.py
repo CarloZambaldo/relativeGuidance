@@ -8,7 +8,7 @@ phaseID = 2
 tspan = [0, 0.015]
 
 #if NEW_EVAL:
-agentName = "PhaseID_2-PPO_v6"
+agentName = "PhaseID_2-PPO_v7"
 # if LOAD:
 fileName = "MC_run_2025_01_15_11-22-14.mat"
 
@@ -36,11 +36,21 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                             },
                 "timeHistory" : None,
                 "trajectory" : None,
+                "AgentAction" : None,
+                "controlAction" : None,
                 "terminalState" : None,
                 "fail" : None,
                 "success" : None,
+                "n_population" : None
         }
+        
+        # uniform distribution for chaser position
+        if n_samples_speed:
+            n_ICs = n_samples * n_samples_speed
+        else:
+            n_ICs = n_samples
 
+        
         # target positions - see picture to understand the positions
         initialStateTarget_S_batch = np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])] # aposelene
                                                                                                         # before aposelene
@@ -48,15 +58,19 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                                                                                                         # before periselene
                                                                                                         # after periselene   
                                             )
-
-        # uniform distribution for chaser position
-        if n_samples_speed:
-            n_ICs = n_samples * n_samples_speed
-        else:
-            n_ICs = n_samples
-
+        
         n_targets_pos = initialStateTarget_S_batch.shape[0]
         data["n_population"] = n_ICs + n_targets_pos - 1
+
+        # Initialize the variables for "faster" exec time
+        data["timeHistory"] = np.arange(env.param.tspan[0], env.param.tspan[1] + (1/env.param.freqGNC), 1/env.param.freqGNC)
+        data["fail"] = np.zeros(data["n_population"])
+        data["success"] = np.zeros(data["n_population"])
+        data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
+        data["controlAction"] = np.zeros((len(data["timeHistory"]), 3, data["n_population"]))
+        data["terminalState"] = np.zeros((1, 6, data["n_population"]))
+        data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
+
 
         # Generate the population (states) - implemented 2 types of generation, the first one compares all the possible combinations
         match phaseID:
@@ -118,15 +132,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         # RUN THE SIMULATIONS
 
         # Adimensionalize the initial conditions
-        POP = POP / env.param.xc
-        POP[3:6, :] = POP[3:6, :] * env.param.tc
-
-        # Initialize the variables for "faster" exec time
-        data["timeHistory"] = np.arange(env.param.tspan[0], env.param.tspan[1] + (1/env.param.freqGNC), 1/env.param.freqGNC)
-        data["fail"] = np.zeros(data["n_population"])
-        data["success"] = np.zeros(data["n_population"])
-        data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
-        data["terminalState"] = np.zeros((1, 6, data["n_population"]))
+        POP = POP / env.unwrapped.param.xc
+        POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
 
         # run the simulation for all the generated population
         for trgt_id in range(n_targets_pos): # for each target position 
@@ -134,7 +141,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
 
             for sim_id in range(n_ICs): # for each initial condition
                 tstartcomptime = time.time()
-                print(f" ## RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data["n_population"]} ##", end='')
+                print(f" ## RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data["n_population"]} ##")
 
                 # resetting the initial conditions and the environment
                 terminated = False
@@ -146,12 +153,14 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 while ((not terminated) and (not truncated)):
                     action, _ = model.predict(obs) # predict the action using the agent
                     obs, reward, terminated, truncated, info = env.step(action) # step
-                    print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
+                    #print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
                     #print(env.render())
 
                 tstartcomptime = time.time() - tstartcomptime
                 # save the simulation data for future use:
                 data["trajectory"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory
+                data["controlAction"][:, :, sim_id + trgt_id] = env.unwrapped.controlActionHistory_L
+                data["AgentAction"][:, sim_id + trgt_id] = env.unwrapped.AgentActionHistory
                 data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
                 data["success"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "_DOCKING_SUCCESSFUL_" else 0
 
