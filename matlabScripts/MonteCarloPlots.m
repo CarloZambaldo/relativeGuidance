@@ -1,4 +1,6 @@
 function [] = MonteCarloPlots(data)
+close all
+
     phaseID = data.phaseID;
     param = data.param;
     n_population = data.n_population;
@@ -9,7 +11,6 @@ function [] = MonteCarloPlots(data)
     AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
     fail = data.fail;
     success = data.success;
-
 
 %%
     failRate = sum(fail)/(n_population)*100;
@@ -63,8 +64,6 @@ function [] = MonteCarloPlots(data)
     elseif phaseID == 2
         plotConstraintsVisualization(1e3,'C')
     end
-
-    fprintf("RENDERING ...\n\n");
     legend("Target LVLH","","","","","Initial Positions",'Location','best')
     axis equal
     xlabel("R-bar [km]")
@@ -108,8 +107,8 @@ function [] = MonteCarloPlots(data)
     yline(0,'Color','black')
     xlim([-11, 11])
     ylim([-11, 11])
-    xlabel("R-BAR [cm]");
-    ylabel("H-BAR [cm]");
+    xlabel("H-BAR [cm]");
+    ylabel("R-BAR [cm]");
     title("position")
 
     subplot(2,2,2)
@@ -119,8 +118,8 @@ function [] = MonteCarloPlots(data)
     yline(0,'Color','black')
     xlim([-11, 11])
     ylim([-11, 11])
-    xlabel("R-BAR [cm]");
-    ylabel("V-BAR [cm]");
+    xlabel("V-BAR [cm]");
+    ylabel("R-BAR [cm]");
     title("position")
 
     subplot(2,2,3)
@@ -130,8 +129,8 @@ function [] = MonteCarloPlots(data)
     yline(0,'Color','black')
     xlim([-.1, .1])
     ylim([-.1, .1])
-    xlabel("R-BAR [m/s]");
-    ylabel("H-BAR [m/s]");
+    xlabel("H-BAR [m/s]");
+    ylabel("R-BAR [m/s]");
     title("velocity")
 
     subplot(2,2,4)
@@ -141,13 +140,13 @@ function [] = MonteCarloPlots(data)
     yline(0,'Color','black')
     xlim([-.1, .1])
     ylim([-.1, .1])
-    xlabel("R-BAR [m/s]");
-    ylabel("V-BAR [m/s]");
+    xlabel("V-BAR [m/s]");
+    ylabel("R-BAR [m/s]");
     title("velocity")
 
 
 
-
+    fprintf("PLOTTING OTHER STUFF...")
     %% add a plot on the controlAction
     if isfield(data,"controlAction")
         % Supponiamo che data sia una struttura con i campi trajectory e controlAction.
@@ -200,11 +199,11 @@ function [] = MonteCarloPlots(data)
     
         % Plot della media della norma della control action rispetto alla norma della distanza
         figure;
-        plot(binCenters, average_controls, 'b-', 'LineWidth', 1.5);
+        plot(binCenters*param.xc, average_controls, 'b-', 'LineWidth', 1.5);
         grid on;
-        xlabel('Norma della distanza');
-        ylabel('Norma media della control action');
-        title('Norma media della control action rispetto alla norma della distanza');
+        xlabel('||\rho|| [km]');
+        ylabel('Mean of the norm of the control action [-]');
+        title('Mean Control Action');
     end
     
     %% add a plot on the AgentAction
@@ -262,21 +261,24 @@ function [] = MonteCarloPlots(data)
     % Plot della distribuzione delle azioni
     figure;
     subplot(2,2,[1 3])
-    bar(binCenters, action_distribution, 'stacked');
-    colormap([0.7 0.7 0.7; 0.4 0.4 0.8; 0.8 0.4 0.4]);  % Colori per azioni
+    b = bar(binCenters * param.xc, action_distribution, 'stacked');
+    b(1).FaceColor = [0.2 0.6 1.0]; % Blue
+    b(2).FaceColor = [1.0 1.0 0.4]; % Yellow
+    b(3).FaceColor = [1.0 0.2 0.2]; % Red
+
     grid on;
-    xlabel('Norma della distanza');
-    ylabel('Distribuzione delle azioni (%)');
+    xlabel('norm of relative distance ||\rho|| [km]');
+    ylabel('AgentAction distrubution [%]');
     title('Distribuzione delle azioni dell''agente rispetto alla norma della distanza');
-    legend('Azione 0', 'Azione 1', 'Azione 2', 'Location', 'best');
+    legend('SKIP (0)', 'COMPUTE (1)', 'DELETE (2)', 'Location', 'best');
 
     % Plot dell'azione predominante
     subplot(2,2,2)
-    plot(binCenters, predominant_action, 'b.-', 'LineWidth', 1.5);
+    plot(binCenters*param.xc, predominant_action, 'b.-', 'LineWidth', 1.5);
     grid on;
-    xlabel('Norma della distanza');
-    ylabel('Azione predominante');
-    title('Azione predominante rispetto alla norma della distanza');
+    xlabel('norm of relative distance ||\rho|| [km]');
+    ylabel('predominant AgentAction');
+    title('predominant AgentAction with respect to ||\rho||');
     ylim([-0.5, 2.5]);  % Per evidenziare i valori discreti 0, 1, 2
     yticks(0:2);
     
@@ -291,7 +293,7 @@ function [] = MonteCarloPlots(data)
         distances = vecnorm(positions, 2, 2);   % Norma euclidea
 
         % Flag di utilizzo della traiettoria ottimale
-        usage = OBoTUsageHistory(:, sim_id);
+        usage = OBoTUsage(:, sim_id);
 
         % Salva i dati
         norm_distances = [norm_distances; distances];
@@ -326,15 +328,80 @@ function [] = MonteCarloPlots(data)
 
     % Plot della frequenza d'uso della traiettoria ottimale rispetto alla norma della distanza
     subplot(2,2,4);
-    plot(binCenters, optimal_trajectory_usage, 'b-', 'LineWidth', 1.5);
+    plot(binCenters*param.xc, optimal_trajectory_usage, 'b-', 'LineWidth', 1.5);
     grid on;
-    xlabel('Norma della distanza');
-    ylabel('Uso della traiettoria ottimale (%)');
-    title('Frequenza d''uso della traiettoria ottimale rispetto alla norma della distanza');
+    xlabel('||\rho|| [km]');
+    ylabel('Usage of computed optimal Trajectory [%]');
+    title('Frequency of usage of the optimal trajectory');
+
+    %%
+    % Inizializza array per le metriche
+    distances_vbar = [];   % Distanza lungo V-BAR (velocità, componente y)
+    distances_rh = [];     % Distanza sul piano R-H (posizione, componenti x e z)
+    usage_flags = [];      % Flag di uso della traiettoria ottimale
+
+    % Calcolo delle metriche per ciascuna simulazione
+    for sim_id = 1:n_population
+        % Estrarre le componenti della posizione e della velocità
+        positions = trajectory(:, 1:3, sim_id); % Componenti di posizione (x, y, z)
+        velocities = trajectory(:, 4:6, sim_id); % Componenti di velocità (vx, vy, vz)
+
+        % Calcolare la distanza sul piano R-H e lungo V-BAR
+        distances_rh_sim = sqrt(positions(:, 1).^2 + positions(:, 3).^2); % rho_R^2 + rho_H^2
+        distances_vbar_sim = abs(velocities(:, 2)); % Norma lungo V-BAR (componente vy)
+
+        % Flag di uso della traiettoria ottimale
+        usage_sim = OBoTUsage(:, sim_id);
+
+        % Accumula i dati
+        distances_rh = [distances_rh; distances_rh_sim];
+        distances_vbar = [distances_vbar; distances_vbar_sim];
+        usage_flags = [usage_flags; usage_sim];
+    end
+
+    % Definizione dei bin per aggregare i dati
+    nBins = 50;  % Numero di bin
+    binEdges_rh = linspace(min(distances_rh), max(distances_rh), nBins+1);
+    binEdges_vbar = linspace(min(distances_vbar), max(distances_vbar), nBins+1);
+
+    % Inizializza matrice per la frequenza d'uso
+    usage_frequency = zeros(nBins, nBins);
+    % Centri dei bin
+    binCenters_rh = (binEdges_rh(1:end-1) + binEdges_rh(2:end)) / 2;
+    binCenters_vbar = (binEdges_vbar(1:end-1) + binEdges_vbar(2:end)) / 2;
+    
+    % Creazione della griglia per il plot
+    [X, Y] = meshgrid(binCenters_rh, binCenters_vbar);
+    
+    % Rimpiazza i NaN con 0 per evitare problemi con il plot
+    usage_frequency(isnan(usage_frequency)) = 0;
+    
+    % Plot 3D con bar3
+    figure;
+    hold on;
+    for i = 1:size(usage_frequency, 2) % Ciclo sui bin lungo R-H
+        h = bar3(binCenters_vbar, usage_frequency(:, i)); % Istogramma 3D
+        % Imposta la larghezza delle barre e il colore
+        % for k = 1:length(h)
+        %     h(k).FaceColor = 'flat'; % Consenti colori personalizzati
+        %     h(k).CData = repmat(i, size(h(k).ZData, 1), 1); % Gradient color per bin R-H
+        % end
+    end
+    hold off;
+    
+    % Personalizzazione del plot
+    colormap(jet);
+    colorbar;
+    xlabel('R-H-BAR distance sqrt(\rho_R^2 + \rho_H^2)');
+    ylabel('V-BAR distance ||\rho_V||');
+    zlabel('Usage of Optimal Trajectory [%]');
+    title('Optimal Trajectory Usage Frequency (3D Histogram)');
+    grid on;
 
     
     %%  for python use
-    fprintf("DONE. Press CTRL+C to close the plots...")
-    pause();
+    fprintf("RENDERING ...\n\n");
+    %fprintf("DONE. Press CTRL+C to close the plots...")
+    %pause();
 
 end

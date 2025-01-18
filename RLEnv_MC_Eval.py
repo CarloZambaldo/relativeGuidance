@@ -5,15 +5,17 @@ from datetime import datetime
 
 ## PARAMETERS THAT CAN BE CHANGED:
 phaseID = 2
-tspan = [0, 0.015]
+tspan = np.array([0, 0.02])
 
 #if NEW_EVAL:
-agentName = "Agent_P2-PPO-v3"
-# if LOAD:
+agentName = "Agent_P2-PPO-v4"
+plotWithMatlab = False
+
+# if LOAD: (note: it is recommended to plot the files using directly MATLAB)
 fileName = "MC_run_2025_01_15_11-22-14.mat"
 
 #  MONTE CARLO PARAMETERS
-n_samples = 2   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simulation
@@ -38,6 +40,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 "trajectory" : None,
                 "AgentAction" : None,
                 "controlAction" : None,
+                "constraintViolation" : None,
                 "terminalState" : None,
                 "fail" : None,
                 "success" : None,
@@ -70,6 +73,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         data["controlAction"] = np.zeros((len(data["timeHistory"]), 3, data["n_population"]))
         data["terminalState"] = np.zeros((1, 6, data["n_population"]))
         data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
+        data["OBoTUsage"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
+        data["constraintViolation"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 
 
         # Generate the population (states) - implemented 2 types of generation, the first one compares all the possible combinations
@@ -153,7 +158,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 while ((not terminated) and (not truncated)):
                     action, _ = model.predict(obs) # predict the action using the agent
                     obs, reward, terminated, truncated, info = env.step(action) # step
-                    #print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
+                    print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
                     #print(env.render())
 
                 tstartcomptime = time.time() - tstartcomptime
@@ -161,6 +166,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 data["trajectory"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory
                 data["controlAction"][:, :, sim_id + trgt_id] = env.unwrapped.controlActionHistory_L
                 data["AgentAction"][:, sim_id + trgt_id] = env.unwrapped.AgentActionHistory
+                data["OBoTUsage"][:, sim_id + trgt_id] = env.unwrapped.OBoTUsageHistory
+                data["constraintViolation"][:, sim_id + trgt_id] = env.unwrapped.constraintViolationHistory
                 data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
                 data["success"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "_DOCKING_SUCCESSFUL_" else 0
 
@@ -174,17 +181,20 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         print(f"LOADING THE DATA FROM '{fileName}'")
         data = scipy.io.loadmat(f"Simulations/{fileName}")["data"]
 
-# once the simulations are finished plot the results using matlab:
-print("################## Running MATLAB ##################")
+if plotWithMatlab:
+    # once the simulations are finished plot the results using matlab:
+    print("################## Running MATLAB ##################")
 
-## MATLAB ##
-# Start MATLAB engine
-eng = matlab.engine.start_matlab()
+    ## MATLAB ##
+    # Start MATLAB engine
+    eng = matlab.engine.start_matlab()
 
-# Run the MATLAB script
-eng.addpath('./matlabScripts', nargout=0)
-eng.MonteCarloPlots(data, nargout=0)
-# Add the directory containing the MATLAB scripts to the MATLAB path
+    # Run the MATLAB script
+    eng.addpath('./matlabScripts', nargout=0)
+    eng.MonteCarloPlots(data, nargout=0)
+    # Add the directory containing the MATLAB scripts to the MATLAB path
 
-# Stop MATLAB engine
-eng.quit()
+    # Stop MATLAB engine
+    eng.quit()
+else:
+    print("PLOTTING INHIBITED.")

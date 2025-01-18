@@ -406,7 +406,7 @@ def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristic
 def computeTOF(relativeState, aimAtState, param):
     delta =  relativeState[:3]-aimAtState[:3]
     deltanorm = np.linalg.norm(delta)   
-    p_factor = (1 + 2*(0.5 + delta[2]/deltanorm/2))
-    o_factor = 1.1-np.tanh(deltanorm*param.xc/5)
+    p_factor = (2 + delta[2]/deltanorm)
+    o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
     TOF = deltanorm/5e-4 * o_factor * p_factor
     return TOF

@@ -248,7 +248,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 0 #0.001
+                K_trigger = 1e-5
                 K_deleted = 0.1
                 K_cnstrnt = 0
                 K_control = 0.001
