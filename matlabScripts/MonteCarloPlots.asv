@@ -208,6 +208,10 @@ function [] = MonteCarloPlots(data)
     end
     
     %% add a plot on the AgentAction
+
+    % Numero di simulazioni
+    nTimeSteps = size(trajectory, 1);
+
     % Inizializza array per le norme delle distanze
     norm_distances = [];
     agent_actions = [];

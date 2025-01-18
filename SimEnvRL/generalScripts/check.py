@@ -19,15 +19,15 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
                 #   + TRUE_relativeState_S[3]**2 - (characteristicSize)**2)/characteristicSize)
 
         case "CONE":
-            currentRadius = TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[2]**2
-            maxCurrentRadius = -(characteristicSize["acone"]**2*(TRUE_relativeState_S[1]-characteristicSize["bcone"])**3)
+            currentRadius2 = TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[2]**2 # for a given V-BAR the cone is sliced on R-H plane
+            maxCurrentRadius2 = -(characteristicSize["acone"]**2 * (TRUE_relativeState_S[1] - characteristicSize["bcone"]))**3
             
-            if  currentRadius - maxCurrentRadius > 0:
+            if  currentRadius2 - maxCurrentRadius2 > 0:
                 constraintViolationBool = True
                 # violationEntity = max(violationEntity,10)
 
             # compute the relative position (normalized to 1 on the constraint)
-            violationEntity = (currentRadius - maxCurrentRadius)/(maxCurrentRadius)
+            violationEntity = (currentRadius2 - maxCurrentRadius2)/(maxCurrentRadius2)
         case _:
             raise ValueError("Constraint Type not defined correctly")
         

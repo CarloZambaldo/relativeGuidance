@@ -4,7 +4,7 @@ import gymnasium as gym
 
 ## CHANGE HERE ##
 trainingType = "TRAIN_NEW_MODEL"
-modelName     = "Agent_P2-PPO-v1"
+modelName     = "Agent_P2-PPO-v3"
 
 # to run tensorboard use:
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
@@ -35,4 +35,4 @@ iters = 0
 while True:
     iters += 1
     model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
-    model.save(RLagent.model_dir)
+    model.save(RLagent.modelFileNameDir)

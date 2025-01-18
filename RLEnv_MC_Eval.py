@@ -8,19 +8,19 @@ phaseID = 2
 tspan = [0, 0.015]
 
 #if NEW_EVAL:
-agentName = "PhaseID_2-PPO_v7"
+agentName = "Agent_P2-PPO-v3"
 # if LOAD:
 fileName = "MC_run_2025_01_15_11-22-14.mat"
 
 #  MONTE CARLO PARAMETERS
-n_samples = 15   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 2   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simulation
     case "NEW_EVAL":
         print("RUNNING A NEW MONTE CARLO SIMULATION ...")
         # initialization of the environment
-        env = gym.make("SimEnv-v1", options={"phaseID":phaseID,"tspan":tspan})
+        env = gym.make("SimEnv-v2", options={"phaseID":phaseID,"tspan":tspan})
 
         # load the model
         RLagent = config.RL_config.recall(agentName,"latest")

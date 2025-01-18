@@ -13,6 +13,7 @@ colorama.init()
 class SimEnv(gym.Env):
     metadata = {"render_modes": ["ansi"]}
 
+    ## INITIALIZATION ##
     def __init__(self, options=None):
         super(SimEnv,self).__init__()
 
@@ -25,26 +26,38 @@ class SimEnv(gym.Env):
         self.initialValue: config.env_config.InitialValues = None
 
         # physical selfronment
-        self.timeIndex: int = 0
-        self.timeNow: float = 0.
-        self.targetState_S: np.ndarray = None
-        self.chaserState_S: np.ndarray = None
+        self.timeIndex: int = 0                                 # current time step index
+        self.timeNow: float = 0.                                # current time
+        self.targetState_S: np.ndarray = None                   # target state in Synodic (for physical environment)
+        self.chaserState_S: np.ndarray = None                   # chaser state in Synodic (for physical environment)
 
         # ON BOARD data
-        self.OBoptimalTrajectory: dict = None
-        self.OBStateTarget_M: np.ndarray = None
-        self.OBStateRelative_L: np.ndarray = None
-        self.observation: np.ndarray = None
+        self.OBoptimalTrajectory: dict = None                   # current OB optimal Trajectory (latest)
+        self.OBStateTarget_M: np.ndarray = None                 # OB estimated Target State, in Moon Synodic [M]
+        self.OBStateRelative_L: np.ndarray = None               # OB estimated relative state in LVLH reference frame
+        self.observation: np.ndarray = None                     # Agent observation (see definition to know more)
 
         # Historical values of the simulation
-        self.timeHistory: np.ndarray = None
-        self.controlActionHistory_L: np.ndarray = None
-        self.fullStateHistory: np.ndarray = None
-        self.AgentActionHistory: np.ndarray = None
-        self.constraintViolationHistory: np.ndarray = None
+        self.timeHistory: np.ndarray = None                     # time stamp for each step
+        self.controlActionHistory_L: np.ndarray = None          # array containing the control action required (adimensional)
+        self.fullStateHistory: np.ndarray = None                # array containing the full state (target + chaser) in Synodic
+        self.AgentActionHistory: np.ndarray = None              # sequence of the AgentActions (0,1,2)
+        self.constraintViolationHistory: np.ndarray = None      # boolean if constraint violations occurred during the simulation
+        self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
 
         # create the selfronment simulation parameters dataclass
         options = options or {}
+
+        # check "phaseID"
+        if "phaseID" not in options:
+            raise AttributeError("The 'phaseID' key is required in the options to start the environment.")
+        # check "tspan"
+        if "tspan" not in options or options["tspan"] is None:
+            raise AttributeError("'tspan' is required but was not provided. Please set it explicitly.")
+        # check 'tspan' type is np.ndarray
+        elif not isinstance(options["tspan"], np.ndarray):
+            raise TypeError("'tspan' must be a numpy ndarray.")
+        
         if options:
             options = {
                 "phaseID": options.get("phaseID"),
@@ -87,9 +100,13 @@ class SimEnv(gym.Env):
         #executionTime_start = time.time()
         controlAction_L, self.OBoptimalTrajectory = \
                                 OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
-                                    self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)        
+                                    self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
         #executionTime = time.time() - executionTime_start
         #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
+        if self.OBoptimalTrajectory:
+            self.OBoTUsageHistory[self.timeIndex] = True
+        else:
+            self.OBoTUsageHistory[self.timeIndex] = False
 
         # CONTROL ACTION #
         self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
@@ -123,7 +140,7 @@ class SimEnv(gym.Env):
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
 
-
+    ## RENDER ##
     def render(self, mode='ansi'):
         if mode != 'ansi':
             raise ValueError("Unsupported render mode. Supported mode: 'ansi'")
@@ -161,9 +178,7 @@ class SimEnv(gym.Env):
 
         return ansi_output
 
-
-
-    # The reset method should set the initial state of the selfronment (e.g., relative position and velocity) and return the initial observation.
+    ## RESET ##
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         # RL related parameters
@@ -191,6 +206,7 @@ class SimEnv(gym.Env):
         self.fullStateHistory = np.zeros((len(self.timeHistory),12))
         self.AgentActionHistory = np.zeros((len(self.timeHistory),))
         self.constraintViolationHistory = np.zeros((len(self.timeHistory),))
+        self.OBoTUsageHistory = np.zeros((len(self.timeHistory),)).astype(bool)
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]
@@ -212,7 +228,6 @@ class SimEnv(gym.Env):
         info = {"initialConditionsUsed": typeOfInitialConditions}
         return self.computeRLobservation(), info
 
-
     ## EXTRA METHODS ##
     def computeRLobservation(self):
         if self.OBoptimalTrajectory and "envStartTime" in self.OBoptimalTrajectory:
@@ -224,10 +239,7 @@ class SimEnv(gym.Env):
 
         return observation
 
-
-
     def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
-
         terminated = False
 
         match phaseID:
@@ -236,12 +248,12 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 0.0001
-                K_deleted = 0.001
+                K_trigger = 0 #0.001
+                K_deleted = 0.1
                 K_cnstrnt = 0
-                K_control = 0 #.001
+                K_control = 0.001
                 K_precisn = 10
-                K_simtime = 1 #0.005
+                K_simtime = 0 #0.005
 
                 # COMPUTE: check constraints and terminal values
                 TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
@@ -307,7 +319,7 @@ class SimEnv(gym.Env):
                     print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                     print(" ################################## ")
                     terminated = True
-                    self.stepReward += 500
+                    self.stepReward += 1000
                     self.terminationCause = "_DOCKING_SUCCESSFUL_"
 
             case _:
@@ -315,7 +327,7 @@ class SimEnv(gym.Env):
         
         return self.stepReward, terminated
     
-
+    ## END OF SIMULATION ##
     def EOS(self,timeNow,param):
         # determine if the simulation run out of time [reached final tspan]
         if timeNow+1/param.freqGNC >= param.tspan[-1]:
@@ -327,6 +339,7 @@ class SimEnv(gym.Env):
 
         return truncated
     
+    ## GET THE HISTORY ##
     def getHistory(self):
         savedDictionary = {
             "phaseID": self.param.phaseID,
@@ -335,6 +348,7 @@ class SimEnv(gym.Env):
             "controlActionHistory_L" : self.controlActionHistory_L[0:self.timeIndex],
             "AgentActionHistory" : self.AgentActionHistory[0:self.timeIndex],
             "constraintViolationHistory" : self.constraintViolationHistory[0:self.timeIndex],
+            "OBoTUsageHistory" : self.OBoTUsageHistory[0:self.timeIndex],
             "terminationCause" : self.terminationCause,
             "param": {
                 "xc": self.param.xc,
