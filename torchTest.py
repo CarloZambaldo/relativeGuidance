@@ -1,11 +1,19 @@
+#import torch
+#
+## Check if CUDA is available
+#print("CUDA Available:", torch.cuda.is_available())
+#
+## Get GPU details
+#if torch.cuda.is_available():
+#    print("GPU Name:", torch.cuda.get_device_name(0))
+#    print("CUDA Version:", torch.version.cuda)
+#else:
+#    print("No GPU detected. Using CPU.")
+#
+
 import torch
+print(torch.cuda.is_available())  # Should return True
+print(torch.cuda.get_device_name(0))  # Should print your GPU name
 
-# Check if CUDA is available
-print("CUDA Available:", torch.cuda.is_available())
-
-# Get GPU details
-if torch.cuda.is_available():
-    print("GPU Name:", torch.cuda.get_device_name(0))
-    print("CUDA Version:", torch.version.cuda)
-else:
-    print("No GPU detected. Using CPU.")
+print(torch.cuda.memory_allocated(0))  # Memory allocated on GPU 0
+print(torch.cuda.memory_reserved(0))  # Memory reserved on GPU 0

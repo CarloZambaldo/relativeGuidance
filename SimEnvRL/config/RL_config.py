@@ -15,20 +15,22 @@ def run_tensorboard(logdir):
 @dataclass()
 class RLagentParamClass():
     modelName  : str = ""
+    modelNumber : str = ""
     modelFileNameDir : str = ""
     model_dir : str = ""
     log_dir    : str = ""
     maxTimeSteps : int = 110000 # about 3 hours of environmet time
 
     def define(self, modelName):
-        self.timeStamp = int(time.time())
-        self.model_dir = f"AgentModels/{modelName}/model/{self.timeStamp}"
-        self.modelFileNameDir = f"AgentModels/{modelName}/model/{self.timeStamp}.zip"
-        self.log_dir    = f"AgentModels/{modelName}/logs/{self.timeStamp}"
-        #if not os.path.exists(self.model_dir):
-        #    os.makedirs(self.model_dir)
-        #if not os.path.exists(self.log_dir):
-        #    os.makedirs(self.log_dir)
+        self.modelNumber = f"{int(time.time())}"
+        self.modelName = modelName
+        self.model_dir = f"AgentModels/{modelName}/model/"
+        self.modelFileNameDir = f"AgentModels/{modelName}/model/{self.modelNumber}.zip"
+        self.log_dir    = f"AgentModels/{modelName}/logs/{self.modelNumber}"
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
         return self
 
     def latest(self, modelName):
@@ -41,13 +43,7 @@ class RLagentParamClass():
             raise FileNotFoundError(f"No model files found in directory: {model_dir}")
         
         latest_model =  max([int((f.split('.')[0]).strip('{}')) for f in model_files if f.endswith('.zip')])
-
-        self.model_dir = f"{model_dir}/{latest_model}"
-        self.modelFileNameDir = f"{model_dir}/{latest_model}.zip"
-        self.log_dir = f"AgentModels/{modelName}/logs/{latest_model}"
-
-        #os.makedirs(os.path.dirname(self.model_dir), exist_ok=True)
-        #os.makedirs(os.path.dirname(self.log_dir), exist_ok=True)
+        self = self.open(modelName, latest_model)
 
         return self
 
@@ -59,10 +55,15 @@ class RLagentParamClass():
         model_files = [f for f in os.listdir(model_dir)]
         if not model_files:
             raise FileNotFoundError(f"No model files found in directory: {model_dir}")
-
-        self.model_dir = f"AgentModels/{modelName}/model/{modelNumber}"
+        
+        self.modelName = modelName
+        self.model_dir = f"AgentModels/{modelName}/model/"
+        self.modelNumber =  f"{modelNumber}"
         self.modelFileNameDir =  f"AgentModels/{modelName}/model/{modelNumber}.zip"
         self.log_dir = f"AgentModels/{modelName}/logs/{modelNumber}/"
+
+        os.makedirs(os.path.dirname(self.model_dir), exist_ok=True)
+        os.makedirs(os.path.dirname(self.log_dir), exist_ok=True)
         
         return self
 

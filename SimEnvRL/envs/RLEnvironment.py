@@ -135,7 +135,7 @@ class SimEnv(gym.Env):
         self.stepReward, self.terminated = self.computeReward(AgentAction, OBoTAge, controlAction_L,
                                                               self.param.phaseID, self.param)
 
-        print(self.render())
+        #print(self.render())
         info = {"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info

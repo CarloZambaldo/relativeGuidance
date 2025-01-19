@@ -31,9 +31,15 @@ __pycache__/
 .idea/
 *.iml
 
-# Ignore data files
+# ignore MATLAB autosaves
+*.asv
+
+# Ignore data files (could be particularly heavy)
 *.pkl
 *.mat
+
+# Ignore OLD matlab code
+old/
 
 # Ignore simulations storage
 Simulations/

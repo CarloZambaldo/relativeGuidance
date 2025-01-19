@@ -8,16 +8,19 @@ phaseID = 2
 tspan = np.array([0, 0.02])
 
 #if NEW_EVAL:
-agentName = "Agent_P2-PPO-v4"
+agentName = "Agent_P2-PPO-v5-CUDA"
 plotWithMatlab = False
+renderingBool  = True
 
 # if LOAD: (note: it is recommended to plot the files using directly MATLAB)
 fileName = "MC_run_2025_01_15_11-22-14.mat"
 
-#  MONTE CARLO PARAMETERS
+# MONTE CARLO PARAMETERS
 n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
+
+## SCRIPT STARTS HERE ##
 match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simulation
     case "NEW_EVAL":
         print("RUNNING A NEW MONTE CARLO SIMULATION ...")
@@ -26,7 +29,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
 
         # load the model
         RLagent = config.RL_config.recall(agentName,"latest")
-        model = PPO.load(f"{RLagent.model_dir}.zip", env=env)
+        model = PPO.load(f"{RLagent.model_dir}\\{RLagent.modelNumber}", env=env)
 
         print("Generating a population for the simulations...")
         data : dict = {
@@ -124,7 +127,6 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                     ])
             case 1:
                 raise ValueError("PHASE ID 1 NOT IMPLEMENTED YET")
-            
             case _:
                 raise ValueError("given phaseID not defined correctly")
             
@@ -132,7 +134,6 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         ## RUN THE MONTE CARLO SIMULATION
         print("Starting Monte Carlo analysis... (this operation can take several minutes)")
         start_time = time.time()
-
 
         # RUN THE SIMULATIONS
 
@@ -158,8 +159,9 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 while ((not terminated) and (not truncated)):
                     action, _ = model.predict(obs) # predict the action using the agent
                     obs, reward, terminated, truncated, info = env.step(action) # step
-                    print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
-                    #print(env.render())
+                    if renderingBool:
+                        print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
+                        print(env.render())
 
                 tstartcomptime = time.time() - tstartcomptime
                 # save the simulation data for future use:
