@@ -3,6 +3,7 @@ tests/
 
 # Ignore log files
 *.log
+log/
 
 # Ignore build directories
 dist/

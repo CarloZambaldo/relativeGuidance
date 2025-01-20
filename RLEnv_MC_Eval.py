@@ -8,7 +8,7 @@ phaseID = 2
 tspan = np.array([0, 0.02])
 
 #if NEW_EVAL:
-agentName = "Agent_P2-PPO-v5-CUDA"
+agentName = "Agent_P2-PPO-v6-CPU"
 plotWithMatlab = False
 renderingBool  = True
 
@@ -25,7 +25,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
     case "NEW_EVAL":
         print("RUNNING A NEW MONTE CARLO SIMULATION ...")
         # initialization of the environment
-        env = gym.make("SimEnv-v2", options={"phaseID":phaseID,"tspan":tspan})
+        env = gym.make("SimEnv-v3", options={"phaseID":phaseID,"tspan":tspan})
 
         # load the model
         RLagent = config.RL_config.recall(agentName,"latest")

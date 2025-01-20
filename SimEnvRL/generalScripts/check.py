@@ -2,8 +2,9 @@ import numpy as np
 
 def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,param):
     # translate to meters the relative state, since all the constraints are defined in meters
-    TRUE_relativeState_S *= param.xc*1e3
-    
+    TRUE_relativeState_S_meters = TRUE_relativeState_S*param.xc*1e3 # m
+    TRUE_relativeState_S_meters[3:6] /= param.tc # m/s
+
     # default is no violation
     constraintViolationBool = False
     violationEntity = 0 # percentage of the violation (wrt characteristic size)
@@ -11,23 +12,24 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
     # check collision with the constraints
     match constraintType:
         case "SPHERE":
-            if TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[1]**2 \
-                  + TRUE_relativeState_S[2]**2 > (characteristicSize)**2:
+            if TRUE_relativeState_S_meters[0]**2 + TRUE_relativeState_S_meters[1]**2 \
+                  + TRUE_relativeState_S_meters[2]**2 > (characteristicSize)**2:
                 # the constraint is violated
                 constraintViolationBool = True
-                # violationEntity = 1-(np.sqrt(TRUE_relativeState_S[1]**2 + TRUE_relativeState_S[2]**2 \
-                #   + TRUE_relativeState_S[3]**2 - (characteristicSize)**2)/characteristicSize)
+                # violationEntity = 1-(np.sqrt(TRUE_relativeState_S_meters[1]**2 + TRUE_relativeState_S_meters[2]**2 \
+                #   + TRUE_relativeState_S_meters[3]**2 - (characteristicSize)**2)/characteristicSize)
 
         case "CONE":
-            currentRadius2 = TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[2]**2 # for a given V-BAR the cone is sliced on R-H plane
-            maxCurrentRadius2 = characteristicSize["acone"]**2 * (TRUE_relativeState_S[1] - characteristicSize["bcone"])**3
+            currentRadius2 = TRUE_relativeState_S_meters[0]**2 + TRUE_relativeState_S_meters[2]**2 # for a given V-BAR the cone is sliced on R-H plane
+            maxCurrentRadius2 = characteristicSize["acone"]**2 * (TRUE_relativeState_S_meters[1] - characteristicSize["bcone"])**3
             
             if  currentRadius2 + maxCurrentRadius2 > 0:
                 constraintViolationBool = True
                 # violationEntity = max(violationEntity,10)
 
             # compute the relative position (normalized to 1 on the constraint)
-            violationEntity = (currentRadius2 + maxCurrentRadius2)/(maxCurrentRadius2)
+            # TODO: for a future me: check if this equation still holds when rho_V_bar > 0
+            violationEntity = (currentRadius2 + maxCurrentRadius2)/abs(maxCurrentRadius2)
         case _:
             raise ValueError("Constraint Type not defined correctly")
         
@@ -77,6 +79,8 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                         crashedBool = True
                 else:
                     crashedBool = True
+            else:
+                pass
         case _:
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 

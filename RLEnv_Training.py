@@ -5,14 +5,14 @@ from stable_baselines3.common.env_util import make_vec_env
 
 ## CHANGE HERE ##
 trainingType = "CONTINUE_TRAINING_OLD_MODEL"
-modelName     = "Agent_P2-PPO-v5-CUDA"
+modelName     = "Agent_P2-PPO-v6"
 
 # to run tensorboard use:
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
 
 # Create vectorized environments
 #env = make_vec_env('SimEnv-v2', n_envs=20, env_kwargs={"options":{"phaseID": 2, "tspan": np.array([0, 0.025])}})
-env = gym.make('SimEnv-v2',options={"phaseID":2, "tspan": np.array([0, 0.025])})
+env = gym.make('SimEnv-v3',options={"phaseID":2, "tspan": np.array([0, 0.025])})
 env.reset()
 
 match trainingType:
@@ -20,7 +20,8 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, device="cuda", verbose=1, gamma = 0.991, tensorboard_log=RLagent.log_dir)
+        model = PPO('MlpPolicy', env=env, device="cuda", verbose=1, gamma = 0.991, tensorboard_log=RLagent.log_dir) # USING GPU
+        #model = PPO('MlpPolicy', env=env, verbose=1, gamma = 0.991, tensorboard_log=RLagent.log_dir)
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
@@ -30,7 +31,7 @@ match trainingType:
     case _:
         raise Exception("training Type not defined.")
 
-
+model.save(RLagent.modelFileNameDir)
 ## TRAINING ##
 iters = 0
 while True:

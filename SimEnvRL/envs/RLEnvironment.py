@@ -249,7 +249,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 1e-4
+                K_trigger = 5e-5
                 K_deleted = 0.1
                 K_cnstrnt = 0
                 K_control = 0.001
@@ -291,7 +291,7 @@ class SimEnv(gym.Env):
                 else:
                     proximityFactor = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
                     
-                precisionFactor = - violationEntity # observe that if a constraint is violated this reward turns to negative!
+                precisionFactor = -violationEntity # observe that if a constraint is violated this reward turns to negative!
                 self.stepReward += K_precisn * precisionFactor * proximityFactor
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)

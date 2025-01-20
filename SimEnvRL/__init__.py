@@ -19,7 +19,7 @@ from SimEnvRL.UserDataDisplay.plots import plotty
 
 ## REGISTER THE ENVIRONMENT ##
 register(
-    id="SimEnv-v2",
+    id="SimEnv-v3",
     entry_point="SimEnvRL.envs.RLEnvironment:SimEnv",
 )
 
