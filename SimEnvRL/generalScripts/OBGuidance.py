@@ -149,7 +149,8 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
     initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
 
     #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
-    solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,param), t_eval=tvec, method='RK45')
+    M12 = -B @ np.linalg.solve(R, B.T)
+    solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='RK45')
     PHIT = solution.y.T
     PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -285,7 +286,7 @@ def computeB():
     B[3:, :] = np.eye(3)
     return B
 
-def compute_PHIT(t, PHIT, B, Q, R, param):
+def compute_PHIT(t, PHIT, B, Q, R, M12, param):
     PHI = PHIT[:144].reshape(12, 12)
     targetState_M = PHIT[144:150]
 
@@ -294,7 +295,10 @@ def compute_PHIT(t, PHIT, B, Q, R, param):
     A = computeA(t, targetState_M, param)
 
     # PHI computation
-    M = np.block([[A, -B @ np.linalg.solve(R, B.T)], [-Q, -A]])
+    # M = np.block([[A, -B @ np.linalg.solve(R, B.T)], [-Q, -A]])
+    # but since the element in 1,2 is constant, i will pass it
+    M = np.block([[A, M12], [-Q, -A]])
+
     DP = M @ PHI
     DP = DP.flatten()
 
@@ -331,8 +335,8 @@ def APF(relativeState_L, constraintType, param):
 
         case 'CONE': # PHASE 2
             # constraints characteristic dimensions definition
-            acone = 0.04  # note: these are adimensional parameters to have 0.4m of radius at docking port
-            bcone = 10    # note: these are adimensional parameters to have 0.4m of radius at docking port
+            acone = param.constraint["characteristicSize"]["acone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
+            bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
             K_C_inside  = np.array([1, 0, 1]) + \
@@ -340,17 +344,19 @@ def APF(relativeState_L, constraintType, param):
             K_C_outside = np.array([1e1, 0, 1e1])
 
             # approach cone definition
-            h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
+            #h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
+            h_eval_rho =  rho[0]**2 + acone**2 * (rho[1] - bcone)**3 + rho[2]**2
 
             # computation of the nablas
-            Nablah = lambda r: np.array([2 * r[0], 3 * acone**2 * (r[1] - bcone)**2, 2 * r[2]])
+            #Nablah = lambda r: np.array([2 * r[0], 3 * acone**2 * (r[1] - bcone)**2, 2 * r[2]])
+            Nablah_eval_rho = np.array([2 * rho[0], 3 * acone**2 * (rho[1] - bcone)**2, 2 * rho[2]])
 
             # potential fields computation (if contract is violated a constant repulsive field is applied),
             # otherwise the repulsive field is computed as the gradient of the repulsive potential
-            if rho[0]**2 + rho[2]**2 >= -(acone**2 * (rho[1] - bcone)**3):  # if constraint is violated
+            if h_eval_rho >= 0: #rho[0]**2 + rho[2]**2 + acone**2 * (rho[1] - bcone)**3 >= 0:  # if constraint is violated
                 NablaU_APF = K_C_outside * np.array([1, 0, 1]) * (rho / np.linalg.norm(rho))
             else:
-                NablaU_APF = K_C_inside * (rho / h(rho)**2 - (rho.T @ rho) * Nablah(rho) / h(rho)**3)
+                NablaU_APF = K_C_inside * (rho / h_eval_rho**2 - (rho.T @ rho) * Nablah_eval_rho / h_eval_rho**3)
 
         case _:
             raise ValueError("Constraint not defined properly.")
@@ -360,47 +366,6 @@ def APF(relativeState_L, constraintType, param):
     controlAction = -Umax * np.tanh(sigma)
 
     return controlAction, sigma
-
-## CHECK CONTRAINTS VIOLATION ##################################################################################
-def checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize):
-    violationFlag = False
-    violationPosition = []
-    
-    # if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
-    #     trajectory = OBoptimalTrajectory['state']
-    #     if 'controlAction' in OBoptimalTrajectory:
-    #         controlAction = OBoptimalTrajectory['controlAction']
-    #         for idx, control in enumerate(controlAction):
-    #             if np.linalg.norm(control) > 12:
-    #                 violationFlag = True
-    #                 violationPosition.append((2, idx))
-    #                 # warning("Violation of Thrust Constraint")
-    #     else:
-    #         violationPosition = [(1, idx) for idx in range(trajectory.shape[1])]
-    # else:
-    #     return violationFlag, violationPosition
-    if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
-        trajectory = OBoptimalTrajectory['state']
-        match constraintType:
-            case 'SPHERE':
-                for idx in range(trajectory.shape[1]):
-                    if np.sum(trajectory[:3, idx]**2) <= characteristicSize**2:
-                        violationFlag = True
-                        violationPosition.append((1, idx))
-
-            case 'CONE':
-                for idx in range(trajectory.shape[1]):
-                    if (characteristicSize['acone']**2 * (trajectory[1, idx] - characteristicSize['bcone'])**3 +
-                        trajectory[0, idx]**2 + trajectory[2, idx]**2) > 0:
-                        violationFlag = True
-                        violationPosition.append((1, idx))
-
-        # if violationFlag:
-        #     print("Warning: The computed Trajectory violates the constraints.")
-        # else:
-        #     print("No violations of the constraints identified.")
-
-    return violationFlag, violationPosition
 
 
 def computeTOF(relativeState, aimAtState, param):

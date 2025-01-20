@@ -13,7 +13,7 @@ plotWithMatlab = False
 renderingBool  = True
 
 # if LOAD: (note: it is recommended to plot the files using directly MATLAB)
-fileName = "MC_run_2025_01_15_11-22-14.mat"
+fileName = "MC_run_2025_01_20_17-38-53.mat"
 
 # MONTE CARLO PARAMETERS
 n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -29,7 +29,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
 
         # load the model
         RLagent = config.RL_config.recall(agentName,"latest")
-        model = PPO.load(f"{RLagent.model_dir}\\{RLagent.modelNumber}", env=env)
+        model = PPO.load(f"{RLagent.model_dir}\\{RLagent.modelNumber}", env=env, device="cpu")
 
         print("Generating a population for the simulations...")
         data : dict = {
@@ -74,7 +74,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         data["success"] = np.zeros(data["n_population"])
         data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
         data["controlAction"] = np.zeros((len(data["timeHistory"]), 3, data["n_population"]))
-        data["terminalState"] = np.zeros((1, 6, data["n_population"]))
+        data["terminalState"] = np.zeros((6, data["n_population"]))
         data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
         data["OBoTUsage"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
         data["constraintViolation"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
@@ -141,6 +141,8 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         POP = POP / env.unwrapped.param.xc
         POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
 
+        fileNameSave = f"Simulations/MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat"
+
         # run the simulation for all the generated population
         for trgt_id in range(n_targets_pos): # for each target position 
             initialStateTarget_S = initialStateTarget_S_batch[trgt_id,:]
@@ -157,7 +159,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
 
                 # run the simulation until termination/truncation:
                 while ((not terminated) and (not truncated)):
-                    action, _ = model.predict(obs) # predict the action using the agent
+                    action, _ = model.predict(obs, deterministic=True) # predict the action using the agent
                     obs, reward, terminated, truncated, info = env.step(action) # step
                     if renderingBool:
                         print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
@@ -170,14 +172,17 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 data["AgentAction"][:, sim_id + trgt_id] = env.unwrapped.AgentActionHistory
                 data["OBoTUsage"][:, sim_id + trgt_id] = env.unwrapped.OBoTUsageHistory
                 data["constraintViolation"][:, sim_id + trgt_id] = env.unwrapped.constraintViolationHistory
+                data["terminalState"][:, sim_id + trgt_id] = env.unwrapped.terminalState
                 data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
                 data["success"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "_DOCKING_SUCCESSFUL_" else 0
 
                 print(f" done > Elapsed time: {tstartcomptime:.2f} [sec] ")
-        print("SAVING THE MONTE CARLO SIMULATION: ",end='')
-        # Save the Monte Carlo data to a .mat file
-        scipy.io.savemat(f"Simulations/MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat", {"data": data})
-        print("DONE.")
+
+                # saving at each time step not to lose any of the simulation (in case of crash)
+                print("SAVING THE MONTE CARLO SIMULATION: ",end='')
+                # Save the Monte Carlo data to a .mat file
+                scipy.io.savemat(fileNameSave, {"data": data})
+                print("DONE.")
 
     case "LOAD":
         print(f"LOADING THE DATA FROM '{fileName}'")

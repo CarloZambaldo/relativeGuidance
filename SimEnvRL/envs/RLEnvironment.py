@@ -40,7 +40,8 @@ class SimEnv(gym.Env):
         # Historical values of the simulation
         self.timeHistory: np.ndarray = None                     # time stamp for each step
         self.controlActionHistory_L: np.ndarray = None          # array containing the control action required (adimensional)
-        self.fullStateHistory: np.ndarray = None                # array containing the full state (target + chaser) in Synodic
+        self.fullStateHistory: np.ndarray = None                # array containing the full state history (target + chaser) in Synodic
+        self.terminalState: np.ndarray = None                   # array containing the terminal state of chaser in LVLH (real state not OB!)
         self.AgentActionHistory: np.ndarray = None              # sequence of the AgentActions (0,1,2)
         self.constraintViolationHistory: np.ndarray = None      # boolean if constraint violations occurred during the simulation
         self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
@@ -103,7 +104,7 @@ class SimEnv(gym.Env):
                                     self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
         #executionTime = time.time() - executionTime_start
         #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
-        if self.OBoptimalTrajectory:
+        if self.OBoptimalTrajectory: # save if for the current time step the optimal trajectory was used
             self.OBoTUsageHistory[self.timeIndex] = True
         else:
             self.OBoTUsageHistory[self.timeIndex] = False
@@ -136,7 +137,7 @@ class SimEnv(gym.Env):
                                                               self.param.phaseID, self.param)
 
         #print(self.render())
-        info = {"param": self.param, "timeNow": self.timeNow}
+        info = {} #{"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
 
@@ -248,7 +249,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 1e-5
+                K_trigger = 1e-4
                 K_deleted = 0.1
                 K_cnstrnt = 0
                 K_control = 0.001
@@ -256,7 +257,7 @@ class SimEnv(gym.Env):
                 K_simtime = 0 #0.005
 
                 # COMPUTE: check constraints and terminal values
-                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,self.chaserState_S-self.targetState_S,param)
+                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,(self.chaserState_S-self.targetState_S),param)
                 constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L, 
                                                                     param.constraint["constraintType"],
                                                                     param.constraint["characteristicSize"], param)
@@ -304,15 +305,6 @@ class SimEnv(gym.Env):
                 # reduce the reward of an amount proportional to the Guidance control effort
                 self.stepReward -= K_control * np.linalg.norm(controlAction)
 
-                # Crash Reward - crash into the target
-                if crashedBool:
-                    print(" ################################### ")
-                    print(" ############# CRASHED ############# ")
-                    print(" ################################### ")
-                    terminated = True
-                    self.stepReward -= 500
-                    self.terminationCause = "__CRASHED__"
-                
                 # Docking Successful - reached goal :)
                 if aimReachedBool:
                     print(" ################################## ")
@@ -321,6 +313,18 @@ class SimEnv(gym.Env):
                     terminated = True
                     self.stepReward += 1000
                     self.terminationCause = "_DOCKING_SUCCESSFUL_"
+                    self.terminalState = TRUE_relativeState_L
+
+                # Crash Reward - crash into the target
+                elif crashedBool:
+                    print(" ################################### ")
+                    print(" ############# CRASHED ############# ")
+                    print(" ################################### ")
+                    terminated = True
+                    self.stepReward -= 500
+                    self.terminationCause = "__CRASHED__"
+                    self.terminalState = TRUE_relativeState_L
+
 
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")

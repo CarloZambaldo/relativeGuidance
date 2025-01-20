@@ -6,7 +6,7 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
     
     # default is no violation
     constraintViolationBool = False
-    #violationEntity = 0 # percentage of the violation (wrt characteristic size)
+    violationEntity = 0 # percentage of the violation (wrt characteristic size)
 
     # check collision with the constraints
     match constraintType:
@@ -20,14 +20,14 @@ def constraintViolation(TRUE_relativeState_S,constraintType,characteristicSize,p
 
         case "CONE":
             currentRadius2 = TRUE_relativeState_S[0]**2 + TRUE_relativeState_S[2]**2 # for a given V-BAR the cone is sliced on R-H plane
-            maxCurrentRadius2 = -(characteristicSize["acone"]**2 * (TRUE_relativeState_S[1] - characteristicSize["bcone"]))**3
+            maxCurrentRadius2 = characteristicSize["acone"]**2 * (TRUE_relativeState_S[1] - characteristicSize["bcone"])**3
             
-            if  currentRadius2 - maxCurrentRadius2 > 0:
+            if  currentRadius2 + maxCurrentRadius2 > 0:
                 constraintViolationBool = True
                 # violationEntity = max(violationEntity,10)
 
             # compute the relative position (normalized to 1 on the constraint)
-            violationEntity = (currentRadius2 - maxCurrentRadius2)/(maxCurrentRadius2)
+            violationEntity = (currentRadius2 + maxCurrentRadius2)/(maxCurrentRadius2)
         case _:
             raise ValueError("Constraint Type not defined correctly")
         
@@ -64,9 +64,9 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                 aimReachedBool = True
                 # note that it is not possible to crash in phase 1... (the chaser is distant from the target!)
         case 2:
-            if (TRUE_relativeState_L[1] >= -1.3007e-10):  # when below 5 cm along V-BAR (from -5cm to in front of the target)
-                # check if converged:
-                if (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 2.6015e-10):  # stop when below 10 cm error (5cm = 1.3007e-10)
+            if (TRUE_relativeState_L[1] - aimAtState[1] >= -1.3007e-11):  # when below 5 mm along V-BAR (from -5cm to in front of the target)
+                # check if converged on R and H:
+                if (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 2.6015e-10):  # when below 10 cm error (5cm = 1.3007e-10)
                     # if also the velocity converges
                     # docking standard: along R and H: max 0.04 m/s; along V: max 0.1 m/s
                     if (abs(TRUE_relativeState_L[3]-aimAtState[3]) <= 3.9095e-05 and
@@ -81,3 +81,47 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 
     return aimReachedBool, crashedBool
+
+
+
+
+## CHECK CONTRAINTS VIOLATION ##################################################################################
+def OBoTviolations(OBoptimalTrajectory, constraintType, characteristicSize):
+    violationFlag = False
+    violationPosition = []
+    
+    # if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
+    #     trajectory = OBoptimalTrajectory['state']
+    #     if 'controlAction' in OBoptimalTrajectory:
+    #         controlAction = OBoptimalTrajectory['controlAction']
+    #         for idx, control in enumerate(controlAction):
+    #             if np.linalg.norm(control) > 12:
+    #                 violationFlag = True
+    #                 violationPosition.append((2, idx))
+    #                 # warning("Violation of Thrust Constraint")
+    #     else:
+    #         violationPosition = [(1, idx) for idx in range(trajectory.shape[1])]
+    # else:
+    #     return violationFlag, violationPosition
+    if OBoptimalTrajectory and ('state' in OBoptimalTrajectory):
+        trajectory = OBoptimalTrajectory['state']
+        match constraintType:
+            case 'SPHERE':
+                for idx in range(trajectory.shape[1]):
+                    if np.sum(trajectory[:3, idx]**2) <= characteristicSize**2:
+                        violationFlag = True
+                        violationPosition.append((1, idx))
+
+            case 'CONE':
+                for idx in range(trajectory.shape[1]):
+                    if (characteristicSize['acone']**2 * (trajectory[1, idx] - characteristicSize['bcone'])**3 +
+                        trajectory[0, idx]**2 + trajectory[2, idx]**2) > 0:
+                        violationFlag = True
+                        violationPosition.append((1, idx))
+
+        # if violationFlag:
+        #     print("Warning: The computed Trajectory violates the constraints.")
+        # else:
+        #     print("No violations of the constraints identified.")
+
+    return violationFlag, violationPosition

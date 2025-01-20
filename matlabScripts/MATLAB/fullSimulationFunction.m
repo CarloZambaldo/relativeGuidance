@@ -66,12 +66,6 @@ function [timeHistory,fullStateHistory,controlActionHistory_L,info] = fullSimula
     info.crashedBool = crashedBool;
     info.aimReachedBool = aimReachedBool;
 
-    %if crashedBool
-    %    fprintf("CRASHED.\n");
-    %end
-    %if aimReachedBool
-    %    fprintf(" DOCKING SUCCESSFUL.\n")
-    %end
     if ~crashedBool && ~aimReachedBool
         fprintf(" SIMULATION RUN OUT OF TIME . \n");
     end

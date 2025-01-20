@@ -7,7 +7,7 @@ global trigger OBoptimalTrajectory
 
 %%
 rng;
-n_samples = 5;
+n_samples = 100;
 n_samples_speed = 1;
 
 phaseID = 2;
@@ -15,7 +15,7 @@ tspan = [0 0.02];
 triggerReset = 0; % <<<<
 
 % initialization
-[param,~,~,~] = initializeSimulation(phaseID,tspan,0);
+[param,~,~,~] = initializeSimulation(phaseID,tspan);
 
 fprintf("Generating a population for the simulations.\n");
 

@@ -63,7 +63,8 @@ function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarge
     PHI0 = [phi_xx, phi_xy; phi_yx, phi_yy];
     % % [~,PHI]  = ode78(@(t,PHI)computePHI(t,PHI,A,B,Q,R),[tvec(1) tvec(end)],PHI0);
     % % PHI = reshape(PHI(end,:),12,12);
-    [~,PHIT]  = ode78(@(t,PHIT)computePHIT(t,PHIT,B,Q,R,param),tvec,[reshape(PHI0,144,1);initialStateTarget_M]);
+    M12 = -B*(R\B');
+    [~,PHIT]  = ode78(@(t,PHIT)computePHIT(t,PHIT,B,Q,R,M12,param),tvec,[reshape(PHI0,144,1);initialStateTarget_M]);
     PHI = PHIT(end,1:144);
     PHI = reshape(PHI(end,:),12,12);
 
@@ -127,7 +128,7 @@ end
 % %     DP = reshape(DP,12*12,1);
 % % end
 
-function [DStatePHIT] = computePHIT(t,PHIT,B,Q,R,param)
+function [DStatePHIT] = computePHIT(t,PHIT,B,Q,R, M12,param)
 
     PHI = PHIT(1:144);
     targetState_M = PHIT(145:150);
@@ -138,7 +139,8 @@ function [DStatePHIT] = computePHIT(t,PHIT,B,Q,R,param)
 
     % PHI computation
     PHI = reshape(PHI,12,12);
-    M = [A, -B*(R\B'); -Q, -A];
+    %%% M = [A, -B*(R\B'); -Q, -A];
+    M = [A, M12; -Q, -A];
     DP = M*PHI;
     DP = reshape(DP,12*12,1);
 
