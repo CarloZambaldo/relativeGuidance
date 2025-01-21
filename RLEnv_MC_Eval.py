@@ -8,7 +8,7 @@ phaseID = 2
 tspan = np.array([0, 0.02])
 
 #if NEW_EVAL:
-agentName = "Agent_P2-PPO-v6-CPU"
+agentName = "Agent_P2-PPO-v6"
 plotWithMatlab = False
 renderingBool  = True
 
@@ -16,7 +16,7 @@ renderingBool  = True
 fileName = "MC_run_2025_01_20_17-38-53.mat"
 
 # MONTE CARLO PARAMETERS
-n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 5   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 

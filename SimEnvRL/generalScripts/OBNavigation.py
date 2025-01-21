@@ -1,30 +1,28 @@
 import numpy as np
 import time
 from .ReferenceFrames import convert_M_to_LVLH
-
+import cupy as cp
 def OBNavigation(targetState_S, chaserState_S, param):
 	"""
 	This function outputs the translation and rotation from Synodic to
 	Moon-centered synodic and the relative state in LVLH
 
 	"""
-	# Physical values
-	rM = np.array([1 - param.massRatio, 0, 0])  # Position of the moon in Synodic frame
 
 	# Translating and rotating to Moon-centered Synodic [ex FranziRot]
 	targetState_M = np.array([
-		-targetState_S[0] + rM[0],
-		-targetState_S[1] + rM[1],
-		targetState_S[2] - rM[2],
+		-targetState_S[0] + (1 - param.massRatio),
+		-targetState_S[1],
+		targetState_S[2],
 		-targetState_S[3],
 		-targetState_S[4],
 		targetState_S[5]
 	])
 
 	chaserState_M = np.array([
-		-chaserState_S[0] + rM[0],
-		-chaserState_S[1] + rM[1],
-		chaserState_S[2] - rM[2],
+		-chaserState_S[0] + (1 - param.massRatio),
+		-chaserState_S[1],
+		chaserState_S[2],
 		-chaserState_S[3],
 		-chaserState_S[4],
 		chaserState_S[5]

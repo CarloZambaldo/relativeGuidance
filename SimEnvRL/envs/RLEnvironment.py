@@ -56,7 +56,7 @@ class SimEnv(gym.Env):
         if "tspan" not in options or options["tspan"] is None:
             raise AttributeError("'tspan' is required but was not provided. Please set it explicitly.")
         # check 'tspan' type is np.ndarray
-        elif not isinstance(options["tspan"], np.ndarray):
+        elif not isinstance(options["tspan"], np.ndarray) and not options["tspan"].size == 2:
             raise TypeError("'tspan' must be a numpy ndarray.")
         
         if options:
@@ -249,7 +249,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 5e-5
+                K_trigger = 8e-5
                 K_deleted = 0.1
                 K_cnstrnt = 0
                 K_control = 0.001
@@ -304,6 +304,12 @@ class SimEnv(gym.Env):
                 # Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
                 self.stepReward -= K_control * np.linalg.norm(controlAction)
+
+                # Maximum Control Action Reward - Penalize control actions that exceed the maximum available
+                if controlAction[0] > param.maxAdimThrust \
+                or controlAction[1] > param.maxAdimThrust \
+                or controlAction[2] > param.maxAdimThrust:
+                    self.stepReward -= K_control * 1000 * np.linalg.norm(controlAction)
 
                 # Docking Successful - reached goal :)
                 if aimReachedBool:

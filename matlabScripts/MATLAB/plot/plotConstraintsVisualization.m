@@ -1,6 +1,6 @@
 function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
     % coefficients definition
-    acone = 0.04;
+    acone = 0.02;
     bcone = 10;
 
     if DeltaIC_meters < 200

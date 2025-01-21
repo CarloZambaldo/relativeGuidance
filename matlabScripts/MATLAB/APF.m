@@ -32,7 +32,7 @@ function [controlAction,sigma] = APF(relativeState_L,constraintType,param)
 
         case 'CONE'
             % constraints characteristic dimensions definition
-            acone = 0.04; % note: these are adimensional parameters to have 0.4m of radius at docking port
+            acone = 0.02; % note: these are adimensional parameters to have 0.4m of radius at docking port
             bcone = 10;   % note: these are adimensional parameters to have 0.4m of radius at docking port
             
             % coefficients definition
