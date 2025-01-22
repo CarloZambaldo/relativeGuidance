@@ -27,6 +27,7 @@ class physParamClass:
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
     dockingState = np.array([0, 0, 0, 0, 0.03e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
     freqGNC : float = 10 * tc                                # [adimensional (from Hz)] GNC upadate frequency
+    RLGNCratio : int = 100                                   # number of GNC steps per RL step
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
@@ -54,7 +55,6 @@ class physParamClass:
             object.__setattr__(self, 'tspan', np.array([0, 0.02]))
 
         # ENVIRONMENT CONSTRAINTS
-        
         match self.phaseID:
             case 1:
                 object.__setattr__(self,'constraint',
@@ -74,6 +74,7 @@ class physParamClass:
                 )
             case _:
                 raise ValueError("Phase ID not defined correctly")
+            
 
 #### define the initial values ####
 @dataclass()
@@ -148,8 +149,20 @@ class initialValueClass():
         initial_distance = np.linalg.norm(DeltaIC_S[:3]) * param.xc
         initial_velocity = np.linalg.norm(DeltaIC_S[3:]) * param.xc * 1e3 / param.tc
         
-        print(f"  Initial Distance between C and T: {initial_distance:.2f} [km]")
-        print(f"  Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]\n")
+        print(f"   Initial Distance between C and T: {initial_distance:.2f} [km]")
+        print(f"   Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
+
+        # compute the target position "descriptor"
+        angol = 270 - np.arctan2(targetState_S[2],targetState_S[1]) *180/np.pi
+        if angol <= 30 & angol >= -30:
+            posiz = "APOSELENE"
+        elif (angol > 30 and angol <= 90):
+            posiz = "INTERMEDIATE - LEAVING APOSELENE"
+        elif (angol < -30 and angol >= -90):
+            posiz = "INTERMEDIATE - APPROACHING APOSELENE"
+        elif (angol > 90 and angol <= 180) or (angol < -90 and angol >= -180):
+            posiz = "PERISELENE"
+        print(f"   TARGET POSITION: {posiz} (angle: {angol:.2f} deg)")
         print(f" [ seed =",self.seedValue,"]")
         print("==============================================================\n")
         return self
@@ -181,15 +194,7 @@ class initialValueClass():
         return self
 
 
-# defining the parameters
-#### def get(seed=None):
-####     # DEPRECATED
-####     param = physParamClass()
-####     initialValue = initialValueClass()
-####     initialValue = initialValue.define_initialValues(param,seed)
-####     return param, initialValue
-
-## NEW FUNCTIONS:
+# defining the parameters for the environment
 def getParam(phaseID=None,tspan=None):
     # define the environmental parameters (constant for the environment)
     param = physParamClass(phaseID=phaseID,tspan=tspan)
@@ -198,8 +203,8 @@ def getParam(phaseID=None,tspan=None):
 
 def getInitialValues(param,seed=None,values=None):
     # define the dataclass (with no values)
-
     initialValue = initialValueClass()
+
     # fill the class with the values passed by the used
     values = values or {}
     if values: # if the initial conditions are passed define accordingly the initialValue parameter

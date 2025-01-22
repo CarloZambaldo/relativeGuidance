@@ -81,62 +81,78 @@ class SimEnv(gym.Env):
     ## STEP ##
     def step(self, AgentAction):
 
-        # extract parameters for the current time step
-        self.timeNow = self.timeHistory[self.timeIndex]
-        self.AgentActionHistory[self.timeIndex] = AgentAction
-        
-        # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
-        # indeed, the NAVIGATION is required for the agent to determine its action
-        # self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+        RLstepAgentAction = AgentAction
+        GNCiterID = 0
+        while GNCiterID < self.param.RLGNCratio: # loop for the GNC cycles
+            GNCiterID += 1
+        # execute "RLGNCratio" times the GNC and then let the agent decide following action
+        # note that after the first GNC cycle the AgentAction is set to 0 (SKIP) for the following cycles until a new action is taken
+            if (self.timeIndex < len(self.timeHistory)-1): # check if the simulation is not over (still space inside the History vectors)
+                # extract parameters for the current time step
+                self.timeNow = self.timeHistory[self.timeIndex]
+                self.AgentActionHistory[self.timeIndex] = AgentAction
+                
+                # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
+                # indeed, the NAVIGATION is required for the agent to determine its action
+                # self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
 
-        # GUIDANCE ALGORITHM # 
-        # compute the control action and output the optimal trajectory (if re-computed)
+                # GUIDANCE ALGORITHM # 
+                # compute the control action and output the optimal trajectory (if re-computed)
 
-        # ompute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, before applying the AgentAction
-        if self.OBoptimalTrajectory:
-            OBoTAge = (self.timeNow - self.OBoptimalTrajectory["envStartTime"])
-        else:
-            OBoTAge = -1
+                # compute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, before applying the AgentAction
+                if self.OBoptimalTrajectory:
+                    OBoTAge = (self.timeNow - self.OBoptimalTrajectory["envStartTime"])
+                else:
+                    OBoTAge = -1
 
-        #executionTime_start = time.time()
-        controlAction_L, self.OBoptimalTrajectory = \
-                                OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
-                                    self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
-        #executionTime = time.time() - executionTime_start
-        #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
-        if self.OBoptimalTrajectory: # save if for the current time step the optimal trajectory was used
-            self.OBoTUsageHistory[self.timeIndex] = True
-        else:
-            self.OBoTUsageHistory[self.timeIndex] = False
+                #executionTime_start = time.time()
+                controlAction_L, self.OBoptimalTrajectory = \
+                                        OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
+                                            self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
+                #executionTime = time.time() - executionTime_start
+                #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
+                if self.OBoptimalTrajectory: # save if for the current time step the optimal trajectory was used
+                    self.OBoTUsageHistory[self.timeIndex] = True
+                else:
+                    self.OBoTUsageHistory[self.timeIndex] = False
 
-        # CONTROL ACTION #
-        self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
-        # rotate the control action from the local frame to the synodic frame
-        controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
+                # CONTROL ACTION #
+                self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
+                # rotate the control action from the local frame to the synodic frame
+                controlAction_S = OBControl(self.targetState_S,controlAction_L,self.param)
 
-        # PHYSICAL selfRONMENT #
-        # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
-        distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(self.timeNow, self.param.chaser, self.param)
-        odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
-                              [self.timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S,
-                              method="DOP853", rtol=1e-9, atol=1e-8)
-        self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1] # extract following time step
+                # PHYSICAL selfRONMENT #
+                # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
+                distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(self.timeNow, self.param.chaser, self.param)
+                odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
+                                    [self.timeNow, self.timeHistory[self.timeIndex + 1]], self.chaserState_S,
+                                    method="DOP853", rtol=1e-9, atol=1e-8)
+                self.fullStateHistory[self.timeIndex+1, 6:12] = odesol.y[:,-1] # extract following time step
 
-        # PREPARE FOR NEXT TIME STEP #
-        self.timeIndex += 1
-        self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
-        self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
-        self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+                # PREPARE FOR NEXT TIME STEP #
+                self.timeIndex += 1
+                self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
+                self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
+                self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+                AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
+                self.truncated = False
+            else:
+                GNCiterID = self.param.RLGNCratio + 1 # to end the GNC loop
+                # END OF SIMULATION # (out of time)
+                # self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)        
+                self.terminationCause = "_OUT_OF_TIME_"
+                print(" <<<<<<<<<<<<<<< OUT OF TIME >>>>>>>>>>>>>>> ")
+                self.truncated = True
+            # ---- end of GNC loop ----- #
+
+        # RL AGENT OBSERVATION #
         self.observation = self.computeRLobservation()
 
-        # END OF SIMULATION # (out of time)
-        self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)
-        
         # REWARD COMPUTATION #
-        self.stepReward, self.terminated = self.computeReward(AgentAction, OBoTAge, controlAction_L,
+        self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, controlAction_L,
                                                               self.param.phaseID, self.param)
 
-        #print(self.render())
+        print(self.render())
         info = {} #{"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
@@ -158,7 +174,7 @@ class SimEnv(gym.Env):
         }
         
         # Determine the action and color based on conditions
-        action = self.AgentActionHistory[self.timeIndex - 1]
+        action = self.AgentActionHistory[self.timeIndex - self.param.RLGNCratio] # to plot the actual AgentAction
         action_text = {0: "SKIP", 1: "COMPUTE", 2: "DELETE"}.get(action, "UNKNOWN")
         color = colors["reset"]  # Default color
 
@@ -249,7 +265,7 @@ class SimEnv(gym.Env):
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
-                K_trigger = 8e-5
+                K_trigger = 5e-4
                 K_deleted = 0.1
                 K_cnstrnt = 0
                 K_control = 0.001
