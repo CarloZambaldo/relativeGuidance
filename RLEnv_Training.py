@@ -4,8 +4,8 @@ import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
 
 ## CHANGE HERE ##
-trainingType = "TRAIN_NEW_MODEL" # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
-modelName    = "Agent_P2-PPO-v7"             # name of the model (to store it or to load it)
+trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
+modelName    = "Agent_P2-PPO-v8-achiral"     # name of the model (to store it or to load it)
 deviceType   = "cpu"                         # "cuda" or "cpu"
 
 phaseID = 2
@@ -14,10 +14,10 @@ tspan = np.array([0, 0.03])
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
 
 # Create vectorized environments
-if deviceType == "cuda": # USING GPU
-    env = make_vec_env('SimEnv-v3', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan}})
-elif deviceType == "cpu": # USING CPU
-    env = gym.make('SimEnv-v3',options={"phaseID": phaseID, "tspan": tspan})
+if deviceType == "cuda": # IF USING GPU
+    env = make_vec_env('SimEnv-v3', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool":True}})
+elif deviceType == "cpu": # IF USING CPU
+    env = gym.make('SimEnv-v3',options={"phaseID": phaseID, "tspan": tspan, "renderingBool":True})
 
 # Reset the environment
 env.reset()
@@ -39,9 +39,8 @@ match trainingType:
         raise Exception("training Type not defined.")
 
 model.save(RLagent.modelFileNameDir)
+
 ## TRAINING ##
-iters = 0
-while True:
-    iters += 1
+for iter in range(RLagent.maxIterations):
     model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=False, tb_log_name=RLagent.modelName)
     model.save(RLagent.modelFileNameDir)

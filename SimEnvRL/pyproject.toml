@@ -10,7 +10,6 @@ name = "SimEnvRL"
 version = "3.0.0"
 dependencies = [
   "gymnasium",
-  "pre-commit",
   "scipy",      # Scientific computing
   "numpy",      # Numerical computations
   "colorama",   # for the rendering of the environment (use colors)

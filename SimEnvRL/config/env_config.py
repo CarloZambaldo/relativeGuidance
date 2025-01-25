@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from ..generalScripts.ReferenceFrames import convert_S_to_LVLH, convert_LVLH_to_S
 import numpy as np
 import scipy.io
-import random
+#import random
 
 @dataclass(frozen=True)
 class physParamClass:
@@ -90,7 +90,7 @@ class initialValueClass():
         #targetState_S = np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07]) # this is obtained from PhD thesis 
 
         # setting random seed
-        self.seedValue = random.seed(seed)
+        self.seedValue = np.random.seed(seed)
 
         # Extract the 'refTraj' structured array from the refTraj.mat file
         mat_data  = scipy.io.loadmat(r"SimEnvRL/config/refTraj.mat")
@@ -98,7 +98,7 @@ class initialValueClass():
         # Access the trajectory within the structured array
         referenceStates = refTraj['y'][0, 0]        # Main trajectory data
         # Extract a random position
-        rndmnbr = random.randint(1,np.size(referenceStates,1)) # random position inside the reference trajectory
+        rndmnbr = np.random.randint(1,np.size(referenceStates,1)) # random position inside the reference trajectory
         targetState_S = referenceStates[:,rndmnbr]
 
         match param.phaseID:
@@ -153,16 +153,16 @@ class initialValueClass():
         print(f"   Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
 
         # compute the target position "descriptor"
-        angol = 270 - np.arctan2(targetState_S[2],targetState_S[1]) *180/np.pi
-        if angol <= 30 & angol >= -30:
-            posiz = "APOSELENE"
-        elif (angol > 30 and angol <= 90):
-            posiz = "INTERMEDIATE - LEAVING APOSELENE"
-        elif (angol < -30 and angol >= -90):
-            posiz = "INTERMEDIATE - APPROACHING APOSELENE"
-        elif (angol > 90 and angol <= 180) or (angol < -90 and angol >= -180):
-            posiz = "PERISELENE"
-        print(f"   TARGET POSITION: {posiz} (angle: {angol:.2f} deg)")
+        #angol = 270 - np.arctan2(targetState_S[2],targetState_S[1]) *180/np.pi
+        #if angol <= 30 and angol >= -30:
+        #    posiz = "APOSELENE"
+        #elif (angol > 30 and angol <= 90):
+        #    posiz = "INTERMEDIATE - LEAVING APOSELENE"
+        #elif (angol < -30 and angol >= -90):
+        #    posiz = "INTERMEDIATE - APPROACHING APOSELENE"
+        #elif (angol > 90 and angol <= 180) or (angol < -90 and angol >= -180):
+        #    posiz = "PERISELENE"
+        #print(f"   TARGET POSITION: {posiz} (angle: {angol:.2f} deg)")
         print(f" [ seed =",self.seedValue,"]")
         print("==============================================================\n")
         return self

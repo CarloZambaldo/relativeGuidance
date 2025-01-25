@@ -6,8 +6,8 @@ from scipy.integrate import solve_ivp
 import gymnasium as gym
 from gymnasium import spaces
 
-import colorama
-colorama.init()
+#import colorama
+#colorama.init()
 
 ## REINFORCEMENT LEARNING selfRONMENT ##
 class SimEnv(gym.Env):
@@ -48,6 +48,12 @@ class SimEnv(gym.Env):
 
         # create the selfronment simulation parameters dataclass
         options = options or {}
+
+        # if rendering is required
+        if "renderingBool" in options:
+            self.renderingBool = options.get("renderingBool", False)
+        else:
+            self.renderingBool = False  # default value is no rendering
 
         # check "phaseID"
         if "phaseID" not in options:
@@ -151,8 +157,11 @@ class SimEnv(gym.Env):
         # REWARD COMPUTATION #
         self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, controlAction_L,
                                                               self.param.phaseID, self.param)
-
-        print(self.render())
+        
+        # rendering the environment if required
+        if self.renderingBool:
+            print(self.render())
+            
         info = {} #{"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
@@ -165,7 +174,7 @@ class SimEnv(gym.Env):
         if self.timeIndex == 0:
             return "Environment just started. No actions yet."
         
-        # Define colors using ANSI escape codes
+        # Define ANSI escape codes for colors
         colors = {
             "yellow": "\033[93m",  # Yellow
             "green": "\033[92m",   # Green
@@ -173,27 +182,26 @@ class SimEnv(gym.Env):
             "reset": "\033[0m"     # Reset to default
         }
         
-        # Determine the action and color based on conditions
-        action = self.AgentActionHistory[self.timeIndex - self.param.RLGNCratio] # to plot the actual AgentAction
+        # Retrieve the agent's action from history
+        action = self.AgentActionHistory[self.timeIndex - self.param.RLGNCratio]
         action_text = {0: "SKIP", 1: "COMPUTE", 2: "DELETE"}.get(action, "UNKNOWN")
         color = colors["reset"]  # Default color
-
+        
+        # Assign color based on the action and conditions
         if action == 0:  # SKIP
-            if self.OBoptimalTrajectory is not None:
-                color = colors["green"]  # Green if optimal trajectory exists
-            else:
-                color = colors["red"]  # Red if optimal trajectory is None
+            color = colors["green"] if self.OBoptimalTrajectory is not None else colors["red"]
         elif action == 1:  # COMPUTE
-            color = colors["yellow"]  # Yellow for COMPUTE
+            color = colors["yellow"]
         elif action == 2:  # DELETE
-            color = colors["red"]  # Red for DELETE
+            color = colors["red"]
         else:
             raise ValueError("Agent Action Not Defined.")
         
         # Format the output string with color
         ansi_output = f"[envTime = {self.timeNow:.5f}] AgentAction: {color}{action_text}{colors['reset']} (reward = {self.stepReward})"
-
+        
         return ansi_output
+
 
     ## RESET ##
     def reset(self, seed=None, options=None):
@@ -212,7 +220,6 @@ class SimEnv(gym.Env):
         self.OBoptimalTrajectory = None
 
         # defining the initial values
-        ## ORIGINALLY WAS: self.param, self.initialValue = config.env_config.get(seed)
         self.initialValue, typeOfInitialConditions = config.env_config.getInitialValues(self.param,seed,options)
 
         # definition of the time vector with the GNC frequency
@@ -267,10 +274,10 @@ class SimEnv(gym.Env):
                 # reward tunable parameters 
                 K_trigger = 5e-4
                 K_deleted = 0.1
-                K_cnstrnt = 0
-                K_control = 0.001
+                # K_cnstrnt = 0
+                K_control = 0.01
                 K_precisn = 10
-                K_simtime = 0 #0.005
+                # K_simtime = 0 #0.005
 
                 # COMPUTE: check constraints and terminal values
                 TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,(self.chaserState_S-self.targetState_S),param)
@@ -311,15 +318,15 @@ class SimEnv(gym.Env):
                 self.stepReward += K_precisn * precisionFactor * proximityFactor
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
-                if constraintViolationBool:
-                    self.stepReward -= K_cnstrnt * 10
+                # if constraintViolationBool:
+                #     self.stepReward -= K_cnstrnt * 10
 
                 # Time of Flight - penalize long time of flights
-                self.stepReward -= 1/param.freqGNC * K_simtime
+                # self.stepReward -= 1/param.freqGNC * K_simtime
 
                 # Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                self.stepReward -= K_control * np.linalg.norm(controlAction)
+                self.stepReward -= K_control * np.exp(np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2
 
                 # Maximum Control Action Reward - Penalize control actions that exceed the maximum available
                 if controlAction[0] > param.maxAdimThrust \
@@ -333,7 +340,7 @@ class SimEnv(gym.Env):
                     print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                     print(" ################################## ")
                     terminated = True
-                    self.stepReward += 1000
+                    self.stepReward += 100
                     self.terminationCause = "_DOCKING_SUCCESSFUL_"
                     self.terminalState = TRUE_relativeState_L
 
@@ -343,7 +350,7 @@ class SimEnv(gym.Env):
                     print(" ############# CRASHED ############# ")
                     print(" ################################### ")
                     terminated = True
-                    self.stepReward -= 500
+                    self.stepReward -= 50
                     self.terminationCause = "__CRASHED__"
                     self.terminalState = TRUE_relativeState_L
 

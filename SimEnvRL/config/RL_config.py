@@ -2,15 +2,6 @@
 from dataclasses import dataclass, field
 import os
 import time
-import multiprocessing
-import subprocess
-
-
-# Define the function outside the class for multiprocessing compatibility
-def run_tensorboard(logdir):
-    """Runs TensorBoard in a subprocess."""
-    subprocess.Popen(['tensorboard', '--logdir', logdir, '--host', 'localhost', '--port', '6006'])
-
 
 @dataclass()
 class RLagentParamClass():
@@ -19,8 +10,8 @@ class RLagentParamClass():
     modelFileNameDir : str = ""
     model_dir : str = ""
     log_dir    : str = ""
-    maxTimeSteps : int = 8000 # about 2+ hours of environment time
-
+    maxTimeSteps : int = 100*8000 # about 100*2+ hours of environment time
+    maxIterations : int = 10 # maximum number of iterations (at each iteration save the environment)
     def define(self, modelName):
         self.modelNumber = f"{int(time.time())}"
         self.modelName = modelName
@@ -74,7 +65,6 @@ class RLagentParamClass():
         ### Use the external function for multiprocessing compatibility
         ##p = multiprocessing.Process(target=run_tensorboard, args=(training_log_dir,))
         ##p.start()
-
 
         ## USE INSTEAD: tensorboard --logdir="AgentModels//" --host localhost --port 6006
         pass

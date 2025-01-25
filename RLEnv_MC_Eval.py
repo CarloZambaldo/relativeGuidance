@@ -1,6 +1,6 @@
 from SimEnvRL import *
 from stable_baselines3 import PPO
-import matlab.engine
+#import matlab.engine
 from datetime import datetime
 
 ## PARAMETERS THAT CAN BE CHANGED:
@@ -8,8 +8,8 @@ phaseID = 2
 tspan = np.array([0, 0.025])
 
 #if NEW_EVAL:
-agentName = "Agent_P2-PPO-v6"
-plotWithMatlab = False
+agentName = "Agent_P2-PPO-v8-achiral" # name of the agent to load
+#plotWithMatlab = False # deprecated due to achiral not running matlab
 renderingBool  = True
 
 # if LOAD: (note: it is recommended to plot the files using directly MATLAB)
@@ -25,11 +25,11 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
     case "NEW_EVAL":
         print("RUNNING A NEW MONTE CARLO SIMULATION ...")
         # initialization of the environment
-        env = gym.make("SimEnv-v3", options={"phaseID":phaseID,"tspan":tspan})
+        env = gym.make("SimEnv-v3", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
 
         # load the model
         RLagent = config.RL_config.recall(agentName,"latest")
-        model = PPO.load(f"{RLagent.model_dir}\\{RLagent.modelNumber}", env=env, device="cpu")
+        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu")
 
         print("Generating a population for the simulations...")
         data : dict = {
@@ -69,7 +69,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         data["n_population"] = n_ICs + n_targets_pos - 1
 
         # Initialize the variables for "faster" exec time
-        data["timeHistory"] = np.arange(env.param.tspan[0], env.param.tspan[1] + (1/env.param.freqGNC), 1/env.param.freqGNC)
+        data["timeHistory"] = np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC)
         data["fail"] = np.zeros(data["n_population"])
         data["success"] = np.zeros(data["n_population"])
         data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
@@ -141,7 +141,7 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
         POP = POP / env.unwrapped.param.xc
         POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
 
-        fileNameSave = f"Simulations/MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat"
+        fileNameSave = f"MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat"
 
         # run the simulation for all the generated population
         for trgt_id in range(n_targets_pos): # for each target position 
@@ -163,7 +163,6 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                     obs, reward, terminated, truncated, info = env.step(action) # step
                     if renderingBool:
                         print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
-                        print(env.render())
 
                 tstartcomptime = time.time() - tstartcomptime
                 # save the simulation data for future use:
@@ -176,32 +175,34 @@ match "NEW_EVAL": # decide to "LOAD" or "NEW_EVAL" to load or re-execute MC simu
                 data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
                 data["success"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "_DOCKING_SUCCESSFUL_" else 0
 
-                print(f" done > Elapsed time: {tstartcomptime:.2f} [sec] ")
+                print(f" done > Elapsed time: {tstartcomptime/60:.2f} [min] ")
 
                 # saving at each time step not to lose any of the simulation (in case of crash)
-                print("SAVING THE MONTE CARLO SIMULATION: ",end='')
+                print("SAVING THE SIMULATION: ",end='')
                 # Save the Monte Carlo data to a .mat file
-                scipy.io.savemat(fileNameSave, {"data": data})
-                print("DONE.")
+                if not os.path.exists("./Simulations/"):
+                    os.makedirs("./Simulations/")
+                scipy.io.savemat(f"./Simulations/{fileNameSave}", {"data": data})
+                print("DONE.\n")
 
     case "LOAD":
         print(f"LOADING THE DATA FROM '{fileName}'")
         data = scipy.io.loadmat(f"Simulations/{fileName}")["data"]
 
-if plotWithMatlab:
-    # once the simulations are finished plot the results using matlab:
-    print("################## Running MATLAB ##################")
-
-    ## MATLAB ##
-    # Start MATLAB engine
-    eng = matlab.engine.start_matlab()
-
-    # Run the MATLAB script
-    eng.addpath('./matlabScripts', nargout=0)
-    eng.MonteCarloPlots(data, nargout=0)
-    # Add the directory containing the MATLAB scripts to the MATLAB path
-
-    # Stop MATLAB engine
-    eng.quit()
-else:
-    print("PLOTTING INHIBITED.")
+#if plotWithMatlab:
+#    # once the simulations are finished plot the results using matlab:
+#    print("################## Running MATLAB ##################")
+#    print(" (please consider running matlab by yourself to have better performances)")
+#    ## MATLAB ##
+#    # Start MATLAB engine
+#    eng = matlab.engine.start_matlab()
+#
+#    # Run the MATLAB script
+#    eng.addpath('./matlabScripts', nargout=0)
+#    eng.MonteCarloPlots(data, nargout=0)
+#    # Add the directory containing the MATLAB scripts to the MATLAB path
+#
+#    # Stop MATLAB engine
+#    eng.quit()
+#else:
+print(f"PLOTTING INHIBITED.\n\n >>> ALL SIMULATIONS DATA IS SAVED IN '{fileName}' <<<\n")

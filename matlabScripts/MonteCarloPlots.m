@@ -1,5 +1,6 @@
 function [] = MonteCarloPlots(data)
-
+    
+close all
     phaseID = data.phaseID;
     param = data.param;
     n_population = data.n_population;

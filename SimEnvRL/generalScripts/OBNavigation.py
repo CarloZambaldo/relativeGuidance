@@ -1,7 +1,7 @@
 import numpy as np
 import time
 from .ReferenceFrames import convert_M_to_LVLH
-import cupy as cp
+
 def OBNavigation(targetState_S, chaserState_S, param):
 	"""
 	This function outputs the translation and rotation from Synodic to

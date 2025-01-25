@@ -42,7 +42,7 @@ function [] = plotDimensional(solution,param)
         moon.plotAstro;
         legend("Target Dynamics","Target Initial Position","Chaser Dynamics","Chaser Initial Position",'location','best')
     else
-        earth.plotAstro;
+        %earth.plotAstro;
         moon.plotAstro; 
         legend("Target Dynamics","Target Initial Position","","",'location','best')
     end

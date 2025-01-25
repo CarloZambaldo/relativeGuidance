@@ -22,10 +22,6 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
         case 1: # if AgentActioned, compute optimal trajectory
             #print(" AgentAction = COMPUTE")
             OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
-            #if OBoptimalTrajectory: # if trajectory is not empty, check for constraint violation
-            #    constraintViolationFlag = checkConstraintViolation(OBoptimalTrajectory, constraintType, characteristicSize)
-            #    if constraintViolationFlag:
-            #       print("Warning: Constraints could be violated with the given trajectory.\n")
         case 2: # delete the optimal Trajectory
             #print(" AgentAction = DELETE")
             OBoptimalTrajectory = None
@@ -94,7 +90,7 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
     surface_L1_pos = (relativeState[:3]  - closestOptimalState[:3])  * 1e3 * param.xc
     surface_L1_vel = (relativeState[3:6] - closestOptimalState[3:6]) * 1e3 * param.xc / param.tc
 
-    _, surface_L2 = APF(relativeState, constraintType, param)
+    surface_L2 = APF(relativeState, constraintType, param)
     return closestOptimalControl, surface_L1_pos, surface_L1_vel, surface_L2
 
 
@@ -363,9 +359,9 @@ def APF(relativeState_L, constraintType, param):
 
     # sliding surface definition and control action computation
     sigma = NablaU_APF
-    controlAction = -Umax * np.tanh(sigma)
+    #controlAction = -Umax * np.tanh(sigma)
 
-    return controlAction, sigma
+    return sigma #controlAction, 
 
 
 def computeTOF(relativeState, aimAtState, param):
