@@ -6,7 +6,7 @@ global trigger OBoptimalTrajectory
 
 
 %% tune here %%
-phaseID = 2;
+phaseID = 1;
 seed = 1643734973;
 tspan = [0 0.02];
 trigger = 1;

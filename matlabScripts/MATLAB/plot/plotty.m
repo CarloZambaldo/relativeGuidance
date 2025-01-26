@@ -48,7 +48,7 @@ function [] = plotty(adimensionalSolution,phaseID,param)
         plotConstraintsVisualization(200,'S')
         plotConstraintsVisualization(2.5e3,'S','#808080')
     elseif phaseID == 2
-        plotConstraintsVisualization(1e3,'C')
+        plotConstraintsVisualization(norm(DeltaIC_S)*param.xc*1e3,'C')
         % plotConstraintsVisualization(200,'C')
     end
     

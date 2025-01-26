@@ -76,14 +76,11 @@ class SimEnv(gym.Env):
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, 
-        # the next 3 are the control action,
         # the last one is OBoTAge) NOTE THAT OBoTAge is expressed is ADIMENSIONAL in the observation space
         self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
-                                                          -self.param.maxAdimThrust*1.1, -self.param.maxAdimThrust*1.1, -self.param.maxAdimThrust*1.1,
                                                           -1]),
                                             high=np.array([1, 1, 1, 1, 1, 1,
-                                                           self.param.maxAdimThrust*1.1, self.param.maxAdimThrust*1.1, self.param.maxAdimThrust*1.1,
-                                                          1]),
+                                                           1]),
                                             dtype=np.float64)
 
         ## ACTION SPACE
@@ -268,8 +265,8 @@ class SimEnv(gym.Env):
         else:
             trajAGE = -1 # setting to -1 if the optimal trajectory does not exist
 
-        # the observation is composed by the relative state in LVLH, the control action and the trajectory age
-        observation = np.hstack([self.OBStateRelative_L, self.controlActionHistory_L[self.timeIndex], trajAGE])
+        # the observation is composed by the relative state in LVLH, and the trajectory age
+        observation = np.hstack([self.OBStateRelative_L, trajAGE])
 
         return observation
 

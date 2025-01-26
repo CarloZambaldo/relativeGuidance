@@ -2,19 +2,31 @@ from SimEnvRL import *
 from stable_baselines3 import PPO
 #import matlab.engine
 from datetime import datetime
+import sys
 
 # TODO: the initial target state is always exact periselene. It should be randomized.
 
+# allow for terminal variables to be passed as arguments
+if len(sys.argv) != 0:
+    if (sys.argv[1] == "False" or sys.argv[1] == "0"):
+        usingAgentBool = False 
+        print("Agent is not used to control the chaser. SIMULATING SAFE MODE.")
+        agentName = "_NO_AGENT_"
+    else:
+        raise UserWarning("Please pass usingAgentBool only if false") # if True, the agent is used to control the chaser
+else:
+    usingAgentBool = True
+    agentName = "Agent_P2-PPO-v12-achiral" # name of the agent to load
+
 ## ENVIROMENT PARAMETERS
-phaseID = 2
+phaseID = 1
 tspan = np.array([0, 0.025])
 
 # AGENT PARAMETERS
-agentName = "Agent_P2-PPO-v10-achiral" # name of the agent to load
 renderingBool  = True # rendering of the simulation
 
 # MONTE CARLO PARAMETERS
-n_samples = 1   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+n_samples = 250   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 n_samples_speed = None # if None generates all different speeds for each sample
 
 
@@ -22,11 +34,12 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = gym.make("SimEnv-v3", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
+env = gym.make("SimEnv-v4", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
 
 # load the model
-RLagent = config.RL_config.recall(agentName,"latest")
-model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu")
+if usingAgentBool:
+    RLagent = config.RL_config.recall(agentName,"latest")
+    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu")
 
 print("Generating a population for the simulations...")
 data : dict = {
@@ -46,6 +59,7 @@ data : dict = {
         "success" : None,
         "n_population" : None,
         "agentModelName" : agentName,
+        "RLGNCratio" : env.unwrapped.param.RLGNCratio,
 }
 
 # uniform distribution for chaser position
@@ -123,7 +137,37 @@ match phaseID:
                 val['speed_H_BAR'][0]
             ])
     case 1:
-        raise ValueError("PHASE ID 1 NOT IMPLEMENTED YET")
+        if n_samples_speed is None: # this generation runs multiple random conditions
+            val = {}
+
+            # Generate points in the annulus
+            R_inner = 1.5  # minimum radius in km
+            R_outer = 9  # maximum radius in km
+            r = np.cbrt(np.random.uniform(R_inner**3, R_outer**3, n_ICs))  # Uniform in volume
+            theta = np.random.uniform(0, np.pi, n_ICs)  # Polar angle
+            phi = np.random.uniform(0, 2 * np.pi, n_ICs)  # Azimuthal angle
+
+            # Convert to Cartesian coordinates
+            val['R_BAR'] = r * np.sin(theta) * np.cos(phi)  # R component
+            val['V_BAR'] = r * np.sin(theta) * np.sin(phi)  # V component
+            val['H_BAR'] = r * np.cos(theta)  # H component
+
+            # Generate random speeds
+            val['speed_R_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed R component in km/s
+            val['speed_V_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed V component in km/s
+            val['speed_H_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed H component in km/s
+
+            # Stack the population matrix
+            POP = np.array([
+                val['R_BAR'],
+                val['V_BAR'],
+                val['H_BAR'],
+                val['speed_R_BAR'][0],
+                val['speed_V_BAR'][0],
+                val['speed_H_BAR'][0]
+            ])
+        else:
+            raise ValueError("PHASE ID 1 NOT IMPLEMENTED YET")
     case _:
         raise ValueError("given phaseID not defined correctly")
     
@@ -137,7 +181,7 @@ start_time = time.time()
 POP = POP / env.unwrapped.param.xc
 POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
 
-fileNameSave = f"MC_run_{datetime.now().strftime('%Y_%m_%d_%H-%M-%S')}.mat"
+fileNameSave = f"MC_run_{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
@@ -156,7 +200,10 @@ for trgt_id in range(n_targets_pos): # for each target position
 
         # run the simulation until termination/truncation:
         while ((not terminated) and (not truncated)):
-            action, _ = model.predict(obs, deterministic=True) # predict the action using the agent
+            if usingAgentBool:
+                action, _ = model.predict(obs, deterministic=True) # predict the action using the agent
+            else:
+                action = 0 # if the agent is not used, the action is 0 (SKIP)
             obs, reward, terminated, truncated, info = env.step(action) # step
             if renderingBool:
                 print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')

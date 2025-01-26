@@ -1,6 +1,11 @@
-function [] = MonteCarloPlots(data)
+function [] = MonteCarloPlots(data,eachplotbool)
     
-close all
+    if nargin < 2
+        eachplotbool = 0;
+    elseif eachplotbool == 1
+        close all
+    end
+
     phaseID = data.phaseID;
     param = data.param;
     n_population = data.n_population;
@@ -10,6 +15,11 @@ close all
     OBoTUsage = [zeros(1,n_population); data.OBoTUsage];
     AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
     terminalState = data.terminalState;
+    if isfield(data,"RLGNCratio")
+        RLGNCratio = data.RLGNCratio;
+    else
+        RLGNCratio = 100;
+    end
 
     %% print general data information
     [meanFinalState, sigmaFinalState] = MonteCarloInfo(data);
@@ -43,7 +53,7 @@ close all
         relDynami(:,4:6) = relDynami(:,4:6)./param.tc;
         dynamicsHistory(1:length(time),:,sim_id) = relDynami;
 
-        if 0
+        if eachplotbool
             fprintf(" PLOT %d OUT OF %d\n",sim_id,n_population)
 
             figure(1)
@@ -78,12 +88,12 @@ close all
             plot3(relDynami(:,1),relDynami(:,2),relDynami(:,3),'LineWidth',1.2);
         end
     end
-    if 0
+    if eachplotbool
         figure(1)
         if phaseID == 1
             plotConstraintsVisualization(1e3,'S','yellow')
             plotConstraintsVisualization(200,'S')
-            plotConstraintsVisualization(2.5e3,'S','Color','black')
+            plotConstraintsVisualization(2.5e3,'S','black')
         elseif phaseID == 2
             plotConstraintsVisualization(1e3,'C')
         end
@@ -176,10 +186,11 @@ close all
     if isfield(data,"controlAction")
 
         % Inizializza array per le norme delle distanze
-        norm_distances = zeros(n_population,length(timeHistory))./0;
-        agent_actions = zeros(n_population,length(timeHistory))./0;
-        norm_controls = zeros(n_population,length(timeHistory))./0;
-        usage_flags = zeros(n_population,length(timeHistory))./0;
+        norm_distances = NaN(n_population,length(timeHistory));
+        norm_distances_agent = NaN(n_population,ceil(length(timeHistory)/RLGNCratio));
+        agent_actions = NaN(n_population,ceil(length(timeHistory)/RLGNCratio)+1);
+        norm_controls = NaN(n_population,length(timeHistory));
+        usage_flags = NaN(n_population,length(timeHistory));
 
         % Calcolo delle norme delle distanze e raccolta delle azioni
         for sim_id = 1:n_population
@@ -187,8 +198,10 @@ close all
             % Norma delle distanze (x, y, z)
             distances = vecnorm(dynamicsHistory(:, 1:3, sim_id), 2, 2);
     
+
             % Azioni dell'agente
-            actions = [0; AgentAction(:, sim_id)]; % the first action is always (SKIP)
+            distancesAgent = vecnorm(dynamicsHistory(1:RLGNCratio:end, 1:3, sim_id), 2, 2);
+            actions = [0; AgentAction(1:RLGNCratio:end, sim_id)]; % the first action is always (SKIP)
 
             % Norma della control action
             control_norm = vecnorm(controlAction(:, :, sim_id), 2, 2); % Norma euclidea dei controlli
@@ -198,6 +211,7 @@ close all
 
             % Salva i risultati
             norm_distances(sim_id,:) = distances;
+            norm_distances_agent(sim_id,:) = distancesAgent;
             agent_actions(sim_id,:) = actions;
             norm_controls(sim_id,:) = control_norm;
             usage_flags(sim_id,:) = usage;
@@ -210,7 +224,6 @@ close all
         binEdges = linspace(minDist, maxDist, nBins+1);
         binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
 
-    
         %% Media della norma della control action per bin
         average_controls = zeros(1, nBins)./0;
         for b = 1:nBins
@@ -243,7 +256,7 @@ close all
     % Calcola la distribuzione delle azioni per ciascun bin
     for b = 1:nBins
         % Trova gli indici delle distanze che appartengono al bin
-        inBin = norm_distances >= binEdges(b) & norm_distances < binEdges(b+1);
+        inBin = norm_distances_agent >= binEdges(b) & norm_distances_agent < binEdges(b+1);
 
         if any(inBin,'all')
             % Conta le frequenze delle azioni nel bin
