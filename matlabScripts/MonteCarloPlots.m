@@ -9,33 +9,19 @@ close all
     controlAction = data.controlAction;
     OBoTUsage = [zeros(1,n_population); data.OBoTUsage];
     AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
-    fail = data.fail;
-    success = data.success;
+    terminalState = data.terminalState;
 
-%%
-    failRate = sum(fail)/(n_population)*100;
-    fprintf("FAIL RATE: %.2f%%\n",failRate);
-
-    successRate = sum(success)/(n_population)*100;
-    fprintf("SUCCESS RATE: %.2f%%\n",successRate);
+    %% print general data information
+    [meanFinalState, sigmaFinalState] = MonteCarloInfo(data);
 
     %% PLOTTING RELATIVE DYNAMICS INSIDE LVLH FRAME
     fprintf("PLOTTING ...\n");
     % compute actual relative dynamics for each simulation
 
-    figure(1)
-    % plot constraints
-    quiver3(0,0,0,1,0,0,'r','LineWidth',1);
-    hold on
-    quiver3(0,0,0,0,1,0,'r','LineWidth',1);
-    quiver3(0,0,0,0,0,1,'r','LineWidth',1);
-    plot3(0,0,0,'r*','LineWidth',2)
-
-    terminalState = zeros(1,6,length(n_population));
-    dynamicsHistory = zeros(length(timeHistory),6,length(n_population));
+    dynamicsHistory = NaN(length(timeHistory),6,length(n_population));
 
     for sim_id = 1:n_population
-        fprintf(" PLOT %d OUT OF %d\n",sim_id,n_population)
+        fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
 
         %% REMOVE EXTRA VALUES
         soluz = trajectory(:,:,sim_id);
@@ -57,97 +43,106 @@ close all
         relDynami(:,4:6) = relDynami(:,4:6)./param.tc;
         dynamicsHistory(1:length(time),:,sim_id) = relDynami;
 
-        % FROM HERE DIMENSIONAL!!
-        terminalState(:,:,sim_id) = relDynami(end,1:6);
+        if 0
+            fprintf(" PLOT %d OUT OF %d\n",sim_id,n_population)
 
-        %% 1 Plot Control Action, Controlled Relative Dynamics, and Velocity
+            figure(1)
+            % plot constraints
+            quiver3(0,0,0,1,0,0,'r','LineWidth',1);
+            hold on
+            quiver3(0,0,0,0,1,0,'r','LineWidth',1);
+            quiver3(0,0,0,0,0,1,'r','LineWidth',1);
+            plot3(0,0,0,'r*','LineWidth',2)
+
+            %% 1 Plot Control Action, Controlled Relative Dynamics, and Velocity
+            figure(2)
+            % Subplot 1: Control Action
+            subplot(3,1,1)
+            plot(time * param.tc / 60, control(:,1), 'LineWidth', 1.1); hold on
+            plot(time * param.tc / 60, control(:,2), 'LineWidth', 1.1);
+            plot(time * param.tc / 60, control(:,3), 'LineWidth', 1.1);
+            % Subplot 2: Controlled Relative Dynamics
+            subplot(3,1,2)
+            plot(time * param.tc / 60, relDynami(:,1), 'LineWidth', 1); hold on
+            plot(time * param.tc / 60, relDynami(:,2), 'LineWidth', 1);
+            plot(time * param.tc / 60, relDynami(:,3), 'LineWidth', 1);
+            % Subplot 3: Controlled Relative Velocity
+            subplot(3,1,3)
+            plot(time * param.tc / 60, relDynami(:,4).*1e3, 'LineWidth', 1); hold on
+            plot(time * param.tc / 60, relDynami(:,5).*1e3, 'LineWidth', 1);
+            plot(time * param.tc / 60, relDynami(:,6).*1e3, 'LineWidth', 1);
+    
+            %% 2
+            figure(1)
+            plot3(relDynami(1,1),relDynami(1,2),relDynami(1,3),'ok','LineWidth',1)
+            plot3(relDynami(:,1),relDynami(:,2),relDynami(:,3),'LineWidth',1.2);
+        end
+    end
+    if 0
+        figure(1)
+        if phaseID == 1
+            plotConstraintsVisualization(1e3,'S','yellow')
+            plotConstraintsVisualization(200,'S')
+            plotConstraintsVisualization(2.5e3,'S','Color','black')
+        elseif phaseID == 2
+            plotConstraintsVisualization(1e3,'C')
+        end
+        legend("Target LVLH","","","","","Initial Positions",'Location','best')
+        axis equal
+        xlabel("R-bar [km]")
+        ylabel("V-bar [km]")
+        zlabel("H-bar [km]")
+    
+        title("Relative Dynamics")
+        grid on
+    
+        % Plot Control Action, Controlled Relative Dynamics, and Velocity
         figure(2)
+        
         % Subplot 1: Control Action
         subplot(3,1,1)
-        plot(time * param.tc / 60, control(:,1), 'LineWidth', 1.1); hold on
-        plot(time * param.tc / 60, control(:,2), 'LineWidth', 1.1);
-        plot(time * param.tc / 60, control(:,3), 'LineWidth', 1.1);
+        grid on;
+        title("Control Action [LVLH]");
+        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+        xlabel("Time [min]");
+        ylabel("Control Action [-]");
+        
         % Subplot 2: Controlled Relative Dynamics
         subplot(3,1,2)
-        plot(time * param.tc / 60, relDynami(:,1), 'LineWidth', 1); hold on
-        plot(time * param.tc / 60, relDynami(:,2), 'LineWidth', 1);
-        plot(time * param.tc / 60, relDynami(:,3), 'LineWidth', 1);
+        grid on;
+        title("Controlled Relative Dynamics [LVLH]");
+        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+        xlabel("Time [min]");
+        ylabel("Position [km]");
+        
         % Subplot 3: Controlled Relative Velocity
         subplot(3,1,3)
-        plot(time * param.tc / 60, relDynami(:,4).*1e3, 'LineWidth', 1); hold on
-        plot(time * param.tc / 60, relDynami(:,5).*1e3, 'LineWidth', 1);
-        plot(time * param.tc / 60, relDynami(:,6).*1e3, 'LineWidth', 1);
-
-        %% 2
-        figure(1)
-        plot3(relDynami(1,1),relDynami(1,2),relDynami(1,3),'ok','LineWidth',1)
-        plot3(relDynami(:,1),relDynami(:,2),relDynami(:,3),'LineWidth',1.2);
+        grid on;
+        title("Controlled Relative Velocity [LVLH]");
+        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+        xlabel("Time [min]");
+        ylabel("Velocity [m/s]");
     end
-
-    figure(1)
-    if phaseID == 1
-        plotConstraintsVisualization(1e3,'S','yellow')
-        plotConstraintsVisualization(200,'S')
-        plotConstraintsVisualization(2.5e3,'S','Color','black')
-    elseif phaseID == 2
-        plotConstraintsVisualization(1e3,'C')
-    end
-    legend("Target LVLH","","","","","Initial Positions",'Location','best')
-    axis equal
-    xlabel("R-bar [km]")
-    ylabel("V-bar [km]")
-    zlabel("H-bar [km]")
-
-    title("Relative Dynamics")
-    grid on
-
-    % Plot Control Action, Controlled Relative Dynamics, and Velocity
-    figure(2)
-    
-    % Subplot 1: Control Action
-    subplot(3,1,1)
-    grid on;
-    title("Control Action [LVLH]");
-    legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-    xlabel("Time [min]");
-    ylabel("Control Action [-]");
-    
-    % Subplot 2: Controlled Relative Dynamics
-    subplot(3,1,2)
-    grid on;
-    title("Controlled Relative Dynamics [LVLH]");
-    legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-    xlabel("Time [min]");
-    ylabel("Position [km]");
-    
-    % Subplot 3: Controlled Relative Velocity
-    subplot(3,1,3)
-    grid on;
-    title("Controlled Relative Velocity [LVLH]");
-    legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-    xlabel("Time [min]");
-    ylabel("Velocity [m/s]");
-
-
+ 
     %% other plot
     figure()
     % convert to m/s
     terminalState_conv = terminalState.*1e3; % meters
-    terminalState_conv(:,4:6,:) = terminalState_conv(:,4:6,:);
+    terminalState_conv(4:6,:) = terminalState_conv(4:6,:);
 
     % plots (terminal state precision)
     for sim_id = 1:n_population
         subplot(2,2,1)
-        plot(terminalState_conv(:,3,sim_id)*1e2,terminalState_conv(:,1,sim_id)*1e2,'b.','MarkerSize',8);
+        plot(terminalState_conv(3,sim_id)*1e2,terminalState_conv(1,sim_id)*1e2,'b.','MarkerSize',8);
         hold on;
         subplot(2,2,2)
-        plot(terminalState_conv(:,2,sim_id)*1e2,terminalState_conv(:,1,sim_id)*1e2,'b.','MarkerSize',8);
+        plot(terminalState_conv(2,sim_id)*1e2,terminalState_conv(1,sim_id)*1e2,'b.','MarkerSize',8);
         hold on;
         subplot(2,2,3)
-        plot(terminalState_conv(:,6,sim_id),terminalState_conv(:,4,sim_id),'b.','MarkerSize',8);
+        plot(terminalState_conv(6,sim_id),terminalState_conv(4,sim_id),'b.','MarkerSize',8);
         hold on;
         subplot(2,2,4)
-        plot(terminalState_conv(:,5,sim_id),terminalState_conv(:,4,sim_id),'b.','MarkerSize',8);
+        plot(terminalState_conv(5,sim_id),terminalState_conv(4,sim_id),'b.','MarkerSize',8);
         hold on;
     end
 
@@ -176,7 +171,7 @@ close all
     xlabel("V-BAR [m/s]"); ylabel("R-BAR [m/s]");
     title("velocity")
 
-    fprintf("PLOTTING OTHER STUFF...")
+    fprintf("PLOTTING OTHER STUFF...\n")
     %% add a plot on the controlAction
     if isfield(data,"controlAction")
 

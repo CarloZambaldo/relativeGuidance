@@ -106,25 +106,25 @@ class initialValueClass():
                 # defining the random initial relative state (IN SYNODYC!)
                 tentativi = 100
                 while tentativi > 0:
-                    rand_position = (-8+16*np.random.rand(3))          # position range [-8,+8] km
-                    # print(f"Random Position Generated: {rand_position}\n")
-                    if np.linalg.norm(rand_position) > .2: # position must be greater than 200 meters
-                        rand_position /= param.xc # adimensionalize
+                    rand_position_S = (-9+18*np.random.rand(3))          # position range [-9,+9] km
+                    # print(f"Random Position Generated: {rand_position_S}\n")
+                    if np.linalg.norm(rand_position_S) > .2: # position must be greater than 200 meters
+                        rand_position_S /= param.xc # adimensionalize
                         tentativi = 0
                     tentativi -= 1
 
                 if tentativi != -1:
                     raise Exception("Maximum number of attempts reached for random initial conditions definition: the computed state violates the Keep Out Sphere.\nTry again with different seed value.")
                 
-                rand_velocity = (-3+6*np.random.rand(3)) * 1e-3 / param.xc * param.tc # velocity range [-5,+5] m/s
-                DeltaIC_S = np.hstack([rand_position, rand_velocity])
+                rand_velocity_S = (-5+10*np.random.rand(3)) * 1e-3 / param.xc * param.tc # velocity range [-5,+5] m/s
+                DeltaIC_S = np.hstack([rand_position_S, rand_velocity_S])
 
             case 2: # DOCKING #########################################
                 # defining the random initial relative state (IN LVLH!)
-                rand_position_L = np.array([(-2+4*np.random.rand()),
-                                            (-5+3.5*np.random.rand()),
-                                            (-2+4*np.random.rand())]) / param.xc          # position range along V-BAR [-8,-2] km
-                rand_velocity_L = (-1+1*np.random.rand(3)) * 1e-3 / param.xc * param.tc   # velocity range
+                rand_position_L = np.array([(-2+4*np.random.rand()),              # R-BAR # position range along R-BAR [-2,+2] km
+                                            (-8+6.5*np.random.rand()),            # V-BAR # position range along V-BAR [-8,-1.5] km
+                                            (-2+4*np.random.rand())]) / param.xc  # H-BAR # position range along H-BAR [-2,+2] km
+                rand_velocity_L = (-2+2*np.random.rand(3)) * 1e-3 / param.xc * param.tc    # velocity range
                 
                 DeltaIC_S = convert_LVLH_to_S(targetState_S,np.hstack([rand_position_L, rand_velocity_L]),param)
 
@@ -142,29 +142,8 @@ class initialValueClass():
         self.relativeState_L = relativeState_L
         self.fullInitialState = np.hstack([targetState_S, chaserState_S])
 
-        print("\n==============================================================\n")
-        print(f"Correctly defined initial conditions:")
+        self.printIC(param)
 
-        # Print initial distance and velocity between C and T
-        initial_distance = np.linalg.norm(DeltaIC_S[:3]) * param.xc
-        initial_velocity = np.linalg.norm(DeltaIC_S[3:]) * param.xc * 1e3 / param.tc
-        
-        print(f"   Initial Distance between C and T: {initial_distance:.2f} [km]")
-        print(f"   Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
-
-        # compute the target position "descriptor"
-        #angol = 270 - np.arctan2(targetState_S[2],targetState_S[1]) *180/np.pi
-        #if angol <= 30 and angol >= -30:
-        #    posiz = "APOSELENE"
-        #elif (angol > 30 and angol <= 90):
-        #    posiz = "INTERMEDIATE - LEAVING APOSELENE"
-        #elif (angol < -30 and angol >= -90):
-        #    posiz = "INTERMEDIATE - APPROACHING APOSELENE"
-        #elif (angol > 90 and angol <= 180) or (angol < -90 and angol >= -180):
-        #    posiz = "PERISELENE"
-        #print(f"   TARGET POSITION: {posiz} (angle: {angol:.2f} deg)")
-        print(f" [ seed =",self.seedValue,"]")
-        print("==============================================================\n")
         return self
     
     def imporse_initialValues(self,param,values):
@@ -190,8 +169,40 @@ class initialValueClass():
         self.fullInitialState = np.hstack([targetState_S, chaserState_S])
 
         print(f"CORRECTLY IMPOSED INITIAL CONDITIONS. relativeState_L (adim) = {relativeState_L}")
+        self.printIC(param)
 
         return self
+    
+    def printIC(self,param):
+        print("\n==============================================================")
+        print(f"Correctly defined initial conditions:")
+
+        # Print initial distance and velocity between C and T
+        initial_distance = np.linalg.norm(self.DeltaIC_S[:3]) * param.xc
+        initial_velocity = np.linalg.norm(self.DeltaIC_S[3:]) * param.xc * 1e3 / param.tc
+        
+        print(f"   Initial Distance between C and T: {initial_distance:.2f} [km]")
+        print(f"   Initial Relative velocity between C and T: {initial_velocity:.2f} [m/s]")
+
+        # compute the target position "descriptor"
+        angol = (np.arctan2(self.targetState_S[2],self.targetState_S[1]) *180/np.pi)
+        if angol > -180 and angol <= 90:
+            angol = - angol - 90
+        elif angol > 90 and angol <= 180:
+            angol = + angol + 90
+        posiz = "N/A"
+        if angol <= 30 and angol >= -30:
+            posiz = "APOSELENE"
+        elif (angol > 30 and angol <= 90):
+            posiz = "INTERMEDIATE - LEAVING APOSELENE"
+        elif (angol < -30 and angol >= -90):
+            posiz = "INTERMEDIATE - APPROACHING APOSELENE"
+        elif (angol > 90 and angol <= 180) or (angol < -90 and angol >= -180):
+            posiz = "PERISELENE"
+        print(f"   TARGET POSITION: {posiz} (angle: {angol:.2f} deg)")
+        print(f" [ seed =",self.seedValue,"]")
+        print("==============================================================\n")
+
 
 
 # defining the parameters for the environment

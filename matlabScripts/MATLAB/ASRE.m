@@ -29,16 +29,16 @@ function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarge
             % 
             % %% BEST ONE
             % Q = [[5e4 0 0; 0 5e0 0; 0 0 5e4], zeros(3); zeros(3), [1e6 0 0; 0 1e6 0; 0 0 1e6]];      % State cost matrix
-            % R = [2e1 0 0; 0 3e3 0; 0 0 2e1];                                                          % Control cost matrix  
+            % R = [2e1 0 0; 0 3e3 0; 0 0 2e1];                                                         % Control cost matrix  
 
 
             %% LAST USED
             % Q = [[5e5 0 0; 0 1e2 0; 0 0 5e5], zeros(3); zeros(3), [5e6 0 0; 0 5e6 0; 0 0 5e6]];      % State cost matrix
-            % R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                          % Control cost matrix  
+            % R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                         % Control cost matrix  
 
             %% NOW TESTING 
             Q = [[8e5 0 0; 0 1e2 0; 0 0 8e5], zeros(3); zeros(3), [5e6 0 0; 0 5e6 0; 0 0 5e6]];      % State cost matrix
-            R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                          % Control cost matrix  
+            R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                         % Control cost matrix  
 
 
         otherwise
@@ -121,22 +121,15 @@ function B = computeB()
     B(4:6, :) = eye(3);
 end
 
-% % function [DP] = computePHI(t,PHI,A,B,Q,R)
-% %     PHI = reshape(PHI,12,12);
-% %     M = [A, -B*(R\B'); -Q, -A];
-% %     DP = M*PHI;
-% %     DP = reshape(DP,12*12,1);
-% % end
 
 function [DStatePHIT] = computePHIT(t,PHIT,B,Q,R, M12,param)
-
     PHI = PHIT(1:144);
     targetState_M = PHIT(145:150);
     
     % target state and system dynamics retrieval
     dST = CR3BP_MoonFrame(t,targetState_M,param);
     [A] = relDynOBmatrixA(t,targetState_M,param);
-
+    %Q = computeQ(t,targetState_M,param);
     % PHI computation
     PHI = reshape(PHI,12,12);
     %%% M = [A, -B*(R\B'); -Q, -A];

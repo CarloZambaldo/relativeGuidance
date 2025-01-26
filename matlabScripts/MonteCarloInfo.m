@@ -1,0 +1,64 @@
+function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
+
+    phaseID = data.phaseID;
+    param = data.param;
+    n_population = data.n_population;
+    timeHistory = data.timeHistory;
+    trajectory = data.trajectory;
+    controlAction = data.controlAction;
+    OBoTUsage = [zeros(1,n_population); data.OBoTUsage];
+    AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
+    fail = data.fail;
+    success = data.success;
+    terminalState = data.terminalState;
+    
+    if isfield(data,"agentModelName")
+        agentModelName = data.agentModelName;
+    else
+        agentModelName = "N/A";
+    end
+    terminalState_dimensional = terminalState*param.xc*1e3;
+    terminalState_dimensional(4:6,:) = terminalState_dimensional(4:6,:)/param.tc;
+
+    fprintf("\n===========================================================\n")
+    %% general info
+    fprintf("-- GENERAL INFO --\n")
+    fprintf("data contains: %d simulations\n", n_population);
+    fprintf("Name of Agent model used: %s\n", agentModelName);
+
+    fprintf("\n")
+    %%
+    fprintf("-- DATA STATISTICS --\n")
+    successRate = sum(success)/double(n_population)*100;
+    fprintf("SUCCESS RATE:  %3.2f %%\n",successRate);
+
+    failRate = sum(fail)/double(n_population)*100;
+    fprintf("FAIL RATE:     %3.2f %%\n",failRate);
+
+    notConverged = 100 - failRate - successRate;
+    fprintf("NOT CONVERGED: %3.2f %%\n",notConverged);
+    
+    fprintf("\n")
+    %% STATISTICS ON THE FINAL POSITION
+    [sigmaFinalState, meanFinalState] = std(terminalState_dimensional,0,2);
+    fprintf("Final Position R-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(1)*1e2, sigmaFinalState(1)*1e2);
+    fprintf("Final Position V-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(2)*1e2, sigmaFinalState(2)*1e2);
+    fprintf("Final Position H-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(3)*1e2, sigmaFinalState(3)*1e2);
+    fprintf("Final Velocity R-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(4)*1e2, sigmaFinalState(4)*1e2);
+    fprintf("Final Velocity V-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(5)*1e2, sigmaFinalState(5)*1e2);
+    fprintf("Final Velocity H-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(6)*1e2, sigmaFinalState(6)*1e2);
+    
+    %% MEAN OF THE MAXIMUM THRUST REQUIRED IN EACH SIMULATION
+
+
+    %% MEAN
+
+
+    %% MOST FREQUENT ACTION
+
+    %% OPTIMAL TRAJECTORY UTILIZATION
+
+
+
+    fprintf("\n===========================================================\n")
+end

@@ -33,7 +33,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
         loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
-    sigma = surface_L2 + (3 * surface_L1_vel + 6e-3 * surface_L1_pos)
+    sigma = surface_L2 + (5 * surface_L1_vel + 6e-3 * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)

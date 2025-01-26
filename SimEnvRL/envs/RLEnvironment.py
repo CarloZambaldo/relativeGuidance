@@ -266,28 +266,33 @@ class SimEnv(gym.Env):
     def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
         terminated = False
 
+        # COMPUTE: check constraints and terminal values
+        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,(self.chaserState_S-self.targetState_S),param)
+        constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L, 
+                                                            param.constraint["constraintType"],
+                                                            param.constraint["characteristicSize"], param)
+        
+        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
+        self.constraintViolationHistory[self.timeIndex] = constraintViolationBool # save in the history if constraints are violated
+
         match phaseID:
-            case 1:
+            case 1: # RENDEZVOUS
+                K_trigger = 5e-4
+                K_deleted = 1
+                # K_cnstrnt = 0
+                K_control = 0.01
+                K_precisn = 1
+                K_simtime = 0.01
                 raise ValueError("reward function for this phaseID has not been implemented yet")
     
             case 2: # APPROACH AND DOCKING
                 # reward tunable parameters 
                 K_trigger = 5e-4
-                K_deleted = 0.1
+                K_deleted = 1
                 # K_cnstrnt = 0
                 K_control = 0.01
-                K_precisn = 10
-                # K_simtime = 0 #0.005
-
-                # COMPUTE: check constraints and terminal values
-                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,(self.chaserState_S-self.targetState_S),param)
-                constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L, 
-                                                                    param.constraint["constraintType"],
-                                                                    param.constraint["characteristicSize"], param)
-                
-                aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
-                
-                self.constraintViolationHistory[self.timeIndex] = constraintViolationBool
+                K_precisn = 1
+                K_simtime = 0.01
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
                 self.stepReward = 0.
@@ -304,7 +309,7 @@ class SimEnv(gym.Env):
                             # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
                             self.stepReward -= K_deleted/(1+1e3*OBoTAge)
                         else: # avoid "deleting" an inexistant trajectory
-                            self.stepReward -= 100
+                            self.stepReward -= 1
                     case _:
                         pass
 
@@ -315,49 +320,58 @@ class SimEnv(gym.Env):
                     proximityFactor = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
                     
                 precisionFactor = -violationEntity # observe that if a constraint is violated this reward turns to negative!
-                self.stepReward += K_precisn * precisionFactor * proximityFactor
+                velocityFactor  = np.exp(-np.linalg.norm(TRUE_relativeState_L[3:6]-param.constraint["aimAtState"][3:6])) 
+                self.stepReward += K_precisn * (precisionFactor + velocityFactor) * proximityFactor
 
                 # Collision Avoidance Reward - Penalize proximity to obstacles (constraints violation)
                 # if constraintViolationBool:
                 #     self.stepReward -= K_cnstrnt * 10
 
                 # Time of Flight - penalize long time of flights
-                # self.stepReward -= 1/param.freqGNC * K_simtime
+                self.stepReward -= 1/param.freqGNC * K_simtime
 
-                # Fuel Efficiency Reward - Penalize large control actions
+                ## Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                self.stepReward -= K_control * np.exp(np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2
+                self.stepReward -= K_control *(np.exp(np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2 - 1)
 
-                # Maximum Control Action Reward - Penalize control actions that exceed the maximum available
+                ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
                 if controlAction[0] > param.maxAdimThrust \
                 or controlAction[1] > param.maxAdimThrust \
                 or controlAction[2] > param.maxAdimThrust:
-                    self.stepReward -= K_control * 1000 * np.linalg.norm(controlAction)
-
-                # Docking Successful - reached goal :)
-                if aimReachedBool:
-                    print(" ################################## ")
-                    print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
-                    print(" ################################## ")
-                    terminated = True
-                    self.stepReward += 100
-                    self.terminationCause = "_DOCKING_SUCCESSFUL_"
-                    self.terminalState = TRUE_relativeState_L
-
-                # Crash Reward - crash into the target
-                elif crashedBool:
-                    print(" ################################### ")
-                    print(" ############# CRASHED ############# ")
-                    print(" ################################### ")
-                    terminated = True
-                    self.stepReward -= 50
-                    self.terminationCause = "__CRASHED__"
-                    self.terminalState = TRUE_relativeState_L
-
-
+                    self.stepReward -= 1 # penalize the agent for exceeding the maximum control action
+#
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
         
+        ## Docking Successful / Aim Reached - reached goal :)
+        if aimReachedBool:
+            if phaseID == 1:
+                print(" ################################# ")
+                print(" >>>>> SUCCESSFUL RENDEZVOUS <<<<< ")
+                print(" ################################# ")
+                self.terminationCause = "_AIM_REACHED_"
+            elif phaseID == 2:
+                print(" ################################## ")
+                print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
+                print(" ################################## ")
+                self.terminationCause = "_AIM_REACHED_"
+            terminated = True
+            self.stepReward += 1
+            self.terminalState = TRUE_relativeState_L
+
+        ## Crash Reward - crash into the target
+        elif crashedBool:
+            print(" ################################### ")
+            print(" ############# CRASHED ############# ")
+            print(" ################################### ")
+            terminated = True
+            self.stepReward -= 1
+            self.terminationCause = "__CRASHED__"
+            self.terminalState = TRUE_relativeState_L
+
+
+        # TODO: here normalize the reward
+
         return self.stepReward, terminated
     
     ## END OF SIMULATION ##

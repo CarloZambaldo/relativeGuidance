@@ -3,20 +3,21 @@ close all
 clc
 
 %% initialize Simulation in Synodic Frame
-initializeSimulation;
+phaseID = 1;
+[param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,[0 4*pi/9]);
 xc = param.xc;
 tc = param.tc;
 
-recall = initialRelativeState_S;
+recall = DeltaIC_S;
 % [targetState_M,chaserState_M] = OBNavigation(initialStateTarget_S,initialStateChaser_S,param);
-[initialRelativeState_L] = convert_S_to_LVLH(initialStateTarget_S,initialRelativeState_S,param);
+[initialRelativeState_L] = convert_S_to_LVLH(initialStateTarget_S,DeltaIC_S,param);
 
 
 %% INTEGRATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 %<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 fullInitialState = [initialStateTarget_S; initialStateChaser_S; initialRelativeState_L];
-tspan = [0 .6];%[0 4*pi/9];
-param.BOOLS.controlActionBool = 1;
+tspan = param.tspan;
+param.BOOLS.controlActionBool = 0;
 
 odeopts = odeset("AbsTol",1e-11,"RelTol",1e-10);                                                        % <<<
 [adimensionalSolution] = ode113(@(t,state)simEquations(t,state,param),tspan,fullInitialState,odeopts);  % <<<
@@ -80,7 +81,7 @@ quiver3(0,0,0,norm(DeltaICm),0,0,'r','LineWidth',1)
 quiver3(0,0,0,0,norm(DeltaICm),0,'r','LineWidth',1)
 quiver3(0,0,0,0,0,norm(DeltaICm),'r','LineWidth',1)
 
-plotConstraintsVisualization(DeltaIC_S./10)
+plotConstraintsVisualization(1e3,phaseID);
 
 legend("Relative Dynamics","","Initial Condition","","Target LVLH",'Location','best')
 axis equal
@@ -152,7 +153,7 @@ quiver3(0,0,0,0,norm(DeltaICm),0,'r','LineWidth',1)
 quiver3(0,0,0,0,0,norm(DeltaICm),'r','LineWidth',1)
 
 quiver3(relDynami(:,1),relDynami(:,2),relDynami(:,3),controlAction(1,:)',controlAction(2,:)',controlAction(3,:)','g','LineWidth',0.8)
-plotConstraintsVisualization(DeltaIC_S/3)
+plotConstraintsVisualization(1e3,phaseID)
 
 legend("Relative Dynamics","","Initial Condition","","Target LVLH",'Location','best')
 axis equal

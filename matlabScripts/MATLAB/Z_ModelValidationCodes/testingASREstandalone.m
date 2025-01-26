@@ -3,7 +3,7 @@ close all
 clc
 
 %% 
-seed = 1627822783;
+%seed = 1627822783;
 phaseID = 2;
 [param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,0);
 seed = param.rng_settings.Seed

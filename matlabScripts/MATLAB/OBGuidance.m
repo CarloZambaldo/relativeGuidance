@@ -38,7 +38,7 @@ function [controlAction_L] = OBGuidance(envTime,relativeState,targetState,phaseI
     [closestOptimalControl,surface_L1_pos,surface_L1_vel,surface_L2] = loopTwo(envTime,relativeState,aimAtState,OBoptimalTrajectory,constraintType,param);
 
     % sliding surface computation
-    sigma = surface_L2 + (3*surface_L1_vel + 6e-3*surface_L1_pos);
+    sigma = surface_L2 + (5*surface_L1_vel + 6e-3*surface_L1_pos);
     %       ^ APF REP ^        ^  OPTIMAL TRAJECTORY VEL + POS  ^    %
 
     %% adding the terms inside the SMC 

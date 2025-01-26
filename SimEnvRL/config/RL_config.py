@@ -10,8 +10,9 @@ class RLagentParamClass():
     modelFileNameDir : str = ""
     model_dir : str = ""
     log_dir    : str = ""
-    maxTimeSteps : int = 100*8000 # about 100*2+ hours of environment time
+    maxTimeSteps : int = 50*8000 # about 50*2+ hours of environment time
     maxIterations : int = 10 # maximum number of iterations (at each iteration save the environment)
+    
     def define(self, modelName):
         self.modelNumber = f"{int(time.time())}"
         self.modelName = modelName
