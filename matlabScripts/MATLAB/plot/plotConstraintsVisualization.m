@@ -17,52 +17,56 @@ function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
         type = 'C';
     end
 
+    switch upper(type)
     %% SPHERE %% 
-    if upper(type) == 'S' || isequal(upper(type), 'SPHERE') || upper(type) == 1
-        z = @(RbarX,VbarX) real(sqrt(rsphere^2-RbarX.^2-VbarX.^2))*1e-3;
-        pointsR = linspace(-rsphere,rsphere,501);
-        pointsV =  linspace(-rsphere,rsphere,501);
-        [X,Y] = meshgrid(pointsR,pointsV);
-
-        sferaz = z(X,Y);
-        for i = 1:size(X,1)
-            for j = 1:size(X,2)
-                if X(i,j)^2+Y(i,j)^2 > (rsphere*1.01)^2
-                    sferaz(i,j) = NaN;
+        case 'S'
+            z = @(RbarX,VbarX) real(sqrt(rsphere^2-RbarX.^2-VbarX.^2))*1e-3;
+            pointsR = linspace(-rsphere,rsphere,501);
+            pointsV =  linspace(-rsphere,rsphere,501);
+            [X,Y] = meshgrid(pointsR,pointsV);
+    
+            sferaz = z(X,Y);
+            for i = 1:size(X,1)
+                for j = 1:size(X,2)
+                    if X(i,j)^2+Y(i,j)^2 > (rsphere*1.01)^2
+                        sferaz(i,j) = NaN;
+                    end
                 end
             end
-        end
+    
+            if nargin<3
+                colore = 'red';
+            end
+            
+            surf(X*1e-3,Y*1e-3,sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none');
+            hold on
+            surf(X*1e-3,Y*1e-3,-sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none')
 
-        if nargin<3
-            colore = 'red';
-        end
-        
-        surf(X*1e-3,Y*1e-3,sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none');
-        hold on
-        surf(X*1e-3,Y*1e-3,-sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none')
 
-
-    %% CONE %% 
-    if upper(type) == 'C' ||  isequal(upper(type), 'CONE') || upper(type) == 2
-        z = @(RbarX,VbarX) real(sqrt(acone^2*bcone^3 - 3*acone^2*bcone^2.*VbarX + 3*acone^2*bcone.*VbarX.^2 - acone^2.*VbarX.^3 - RbarX.^2));
-        pointsR = linspace(-3*DeltaIC_meters,3*DeltaIC_meters,1875);
-        pointsV =  linspace(-3*DeltaIC_meters,0,1001);
-        [X,Y] = meshgrid(pointsR,pointsV);
-       
-        halfCone = z(X,Y); % [m]
-        toll = max(max(diff(pointsR)),max(diff(pointsV)))*1.9;
-        for i = 1:size(X,1)
-            for j = 1:size(X,2)
-                if -(Y(i,j)-toll-bcone)^3 < ((X(i,j).^2/acone^2))
-                    halfCone(i,j) = NaN;
+        %% CONE %% 
+        case 'C'
+            z = @(RbarX,VbarX) real(sqrt(acone^2*bcone^3 - 3*acone^2*bcone^2.*VbarX + 3*acone^2*bcone.*VbarX.^2 - acone^2.*VbarX.^3 - RbarX.^2));
+            pointsR = linspace(-3*DeltaIC_meters,3*DeltaIC_meters,1071);
+            pointsV =  linspace(-DeltaIC_meters,0,1001);
+            [X,Y] = meshgrid(pointsR,pointsV);
+           
+            halfCone = z(X,Y); % [m]
+            toll = max(max(diff(pointsR)),max(diff(pointsV)))*1.9;
+            for i = 1:size(X,1)
+                for j = 1:size(X,2)
+                    if -(Y(i,j)-toll-bcone)^3 < ((X(i,j).^2/acone^2))
+                        halfCone(i,j) = NaN;
+                    end
                 end
             end
-        end
+    
+            % plots is in km, the computation of the cone is in meters
+            surf(X*1e-3,Y*1e-3,halfCone*1e-3,'FaceColor','black','FaceAlpha',0.5,'EdgeColor','none','EdgeLighting','gouraud');
+            hold on
+            surf(X*1e-3,Y*1e-3,-halfCone*1e-3,'FaceColor','black','FaceAlpha',0.5,'EdgeColor','none','EdgeLighting','gouraud');
 
-        % plots is in km, the computation of the cone is in meters
-        surf(X*1e-3,Y*1e-3,halfCone*1e-3,'FaceColor','black','FaceAlpha',0.5,'EdgeColor','none','EdgeLighting','gouraud');
-        hold on
-        surf(X*1e-3,Y*1e-3,-halfCone*1e-3,'FaceColor','black','FaceAlpha',0.5,'EdgeColor','none','EdgeLighting','gouraud');
+        otherwise
+            error("Constraint Type not defined.")
     end
     xlabel("R-BAR");
     ylabel("V-BAR");

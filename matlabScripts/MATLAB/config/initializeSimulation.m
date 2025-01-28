@@ -13,7 +13,7 @@ function [param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializ
 
     param.maxAdimThrust = (490/param.chaser.mass)*1e-3/param.xc*param.tc^2; % [adimensional]
     param.holdingState = [0;-4; 0; 0; 0; 0]./param.xc; % [-] [.5;-5; 0; 0; 0; 0]./param.xc; % [-]
-    param.dockingState = [0; 0; 0; 0; 0.04e-3*param.tc/param.xc; 0]; % Final relative state similar Luca Thesis
+    param.dockingState = [0; 0; 0; 0; 0.02e-3*param.tc/param.xc; 0]; % Final relative state similar Luca Thesis
     param.freqGNC = 10*param.tc; % [adimensional Hz]
 
     % TARGET

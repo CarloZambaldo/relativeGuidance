@@ -25,8 +25,8 @@ class physParamClass:
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
-    dockingState = np.array([0, 0, 0, 0, 0.03e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
-    freqGNC : float = 10 * tc                                # [adimensional (from Hz)] GNC upadate frequency
+    dockingState = np.array([0, 0, 0, 0, 0.02e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
+    freqGNC : float = 5 * tc                                # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
 
     # SPACECRAFT PARAMETERS #

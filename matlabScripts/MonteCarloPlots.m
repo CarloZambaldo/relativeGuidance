@@ -64,6 +64,10 @@ function [] = MonteCarloPlots(data,eachplotbool)
             quiver3(0,0,0,0,0,1,'r','LineWidth',1);
             plot3(0,0,0,'r*','LineWidth',2)
 
+            if phaseID == 1
+                plot3(0,-4,0,'kd','LineWidth',1)
+            end
+
             %% 1 Plot Control Action, Controlled Relative Dynamics, and Velocity
             figure(2)
             % Subplot 1: Control Action
@@ -97,7 +101,12 @@ function [] = MonteCarloPlots(data,eachplotbool)
         elseif phaseID == 2
             plotConstraintsVisualization(1e3,'C')
         end
-        legend("Target LVLH","","","","","Initial Positions",'Location','best')
+        if phaseID == 1
+            legend("Target LVLH","","","Target Position","Holding State","","Chaser Initial Positions",'Location','best')
+        else
+            legend("Target LVLH","","","Target Position","","Chaser Initial Positions",'Location','best')
+        end
+        
         axis equal
         xlabel("R-bar [km]")
         ylabel("V-bar [km]")

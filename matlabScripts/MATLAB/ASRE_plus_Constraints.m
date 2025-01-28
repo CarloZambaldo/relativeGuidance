@@ -1,4 +1,4 @@
-function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phaseID, param)
+function optimalTrajectory = ASRE_plus_Constraints(TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phaseID, param)
     tic
     % PARAMETERS
     t_i = 0;                   % Initial time
@@ -39,6 +39,7 @@ function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarge
             %% NOW TESTING 
             Q = [[8e5 0 0; 0 1e2 0; 0 0 8e5], zeros(3); zeros(3), [5e6 0 0; 0 5e6 0; 0 0 5e6]];      % State cost matrix
             R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                         % Control cost matrix  
+            W = diag(1,1,1);
 
         otherwise
             Q = eye(6);               % State cost matrix

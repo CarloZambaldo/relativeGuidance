@@ -3,19 +3,26 @@ from stable_baselines3 import PPO
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from datetime import datetime
 import sys
 
-if len(sys.argv) < 3:
-    print("Usage: python3 RLEnv_Training.py <phaseID> <'modelName'> <optional:renderingBool>")
+if len(sys.argv) < 4:
+    print("Usage: python3 RLEnv_Training.py <phaseID> <'modelName'> <'new'/'old'> <optional:renderingBool>")
 else:
     phaseID = int(sys.argv[1])
     modelName = sys.argv[2]
     renderingBool = False
-    if len(sys.argv) == 4:
-        renderingBool = 0 if (sys.argv[3] == "False" or sys.argv[3] == "0") else 1
+    taip = sys.argv[3]
+    if len(sys.argv) == 5:
+        renderingBool = 0 if (sys.argv[4] == "False" or sys.argv[4] == "0") else 1
 
 ## CHANGE HERE ##
-trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
+if taip == "new":
+    trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
+elif taip == "old":
+    trainingType = "CONTINUE_TRAINING_OLD_MODEL"
+else:
+    raise Exception("training Type not defined. Please use 'new' or 'old'.")
 #modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
 deviceType   = "cpu"                         # "cuda" or "cpu"
 normalisation = True                         # True or False
@@ -68,8 +75,8 @@ model.save(RLagent.modelFileNameDir)
 
 ## TRAINING ##
 print("TRAINING ...")
-for iter in range(RLagent.maxIterations):
-    model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
-    model.save(RLagent.modelFileNameDir)
-    print(f"> TRAINING ITERATION {iter} COMPLETED")
-print("STOPPED TRAINING")
+#for iter in range(RLagent.maxIterations):
+model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
+model.save(RLagent.modelFileNameDir)
+#print(f"> TRAINING ITERATION {iter} COMPLETED")
+print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")

@@ -3,32 +3,48 @@ from stable_baselines3 import PPO
 #import matlab.engine
 from datetime import datetime
 import sys
-
 # TODO: the initial target state is always exact periselene. It should be randomized.
 
 # allow for terminal variables to be passed as arguments
-if len(sys.argv) != 0:
-    if (sys.argv[1] == "False" or sys.argv[1] == "0"):
-        usingAgentBool = False 
-        print("Agent is not used to control the chaser. SIMULATING SAFE MODE.")
-        agentName = "_NO_AGENT_"
-    else:
-        raise UserWarning("Please pass usingAgentBool only if false") # if True, the agent is used to control the chaser
+# syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
+# agentName in the form: "Agent_P2-PPO-v12-achiral"
+if len(sys.argv) < 3:
+    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
 else:
-    usingAgentBool = True
-    agentName = "Agent_P2-PPO-v12-achiral" # name of the agent to load
+    phaseID = int(sys.argv[1])
+    n_samples = int(sys.argv[2])
+    if len(sys.argv) > 3: # means the agent is being used
+        usingAgentBool = True
+        agentName = sys.argv[3]
+        print(f"Agent {agentName} is used to control the chaser.")
+    else:
+        usingAgentBool = False 
+        print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
+        print("Please press enter to continue...")
+        input()
+        agentName = "_NO_AGENT_"
+        
 
-## ENVIROMENT PARAMETERS
-phaseID = 1
-tspan = np.array([0, 0.025])
-
-# AGENT PARAMETERS
+## GENREAL DATA
+# phaseID = 2
+# usingAgentBool = False 
+# agentName = "_NO_AGENT_"
 renderingBool  = True # rendering of the simulation
 
-# MONTE CARLO PARAMETERS
-n_samples = 250   # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-n_samples_speed = None # if None generates all different speeds for each sample
+## ENVIROMENT PARAMETERS
+if phaseID == 1:
+    tspan = np.array([0, 0.04]) # ca 2.5 hours
+elif phaseID == 2:
+    tspan = np.array([0, 0.025]) # ca 5 hours
 
+
+print("***************************************************************************")
+print(f"Monte Carlo Analysis of {n_samples} samples. Agent: {agentName}")
+print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
+print("***************************************************************************")
+
+# MONTE CARLO PARAMETERS
+n_samples_speed = None # if None generates all different speeds for each sample
 
 ## SCRIPT STARTS HERE ##
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
@@ -41,7 +57,7 @@ if usingAgentBool:
     RLagent = config.RL_config.recall(agentName,"latest")
     model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu")
 
-print("Generating a population for the simulations...")
+print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
         "phaseID" : env.unwrapped.param.phaseID,
         "param" : {
@@ -170,9 +186,11 @@ match phaseID:
             raise ValueError("PHASE ID 1 NOT IMPLEMENTED YET")
     case _:
         raise ValueError("given phaseID not defined correctly")
-    
+
+print("DONE.")
+
 ## RUN THE MONTE CARLO SIMULATION
-print("Starting Monte Carlo analysis... (this operation can take several minutes)")
+print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_population"]*4/60} [hours]")
 start_time = time.time()
 
 # RUN THE SIMULATIONS
@@ -209,6 +227,7 @@ for trgt_id in range(n_targets_pos): # for each target position
                 print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
 
         tstartcomptime = time.time() - tstartcomptime
+        print("COPYING THE SIMULATION INSIDE 'data' STRUCTURE: ",end='')
         # save the simulation data for future use:
         data["trajectory"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory
         data["controlAction"][:, :, sim_id + trgt_id] = env.unwrapped.controlActionHistory_L
@@ -219,7 +238,7 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.unwrapped.terminationCause == "_AIM_REACHED_" else 0
 
-        print(f" done > Elapsed time: {tstartcomptime/60:.2f} [min] ")
+        print(f" done\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 
         # saving at each time step not to lose any of the simulation (in case of crash)
         print("SAVING THE SIMULATION: ",end='')

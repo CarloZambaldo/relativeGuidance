@@ -45,3 +45,4 @@ old/
 # Ignore simulations storage
 Simulations/
 AgentModels/
+deprecated/

@@ -7,12 +7,12 @@ global trigger OBoptimalTrajectory
 
 %% tune here %%
 phaseID = 1;
-seed = 1643734973;
+seed = 1766685777;
 tspan = [0 0.02];
 trigger = 1;
 
 %% function [timeHistory, fullStateHistory, controlActionHistory_L] = fullSimulation(phaseID)
-[param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,tspan);
+[param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,tspan,seed);
 fullInitialState = [initialStateTarget_S; initialStateChaser_S];
 
 

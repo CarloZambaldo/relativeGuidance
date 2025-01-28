@@ -296,7 +296,7 @@ class SimEnv(gym.Env):
         # REWARD COMPUTATION DEPENDING ON THE PHASE ID #
         match phaseID:
             case 1: # RENDEZVOUS
-                K_trigger = 1e-4
+                K_trigger = 0.005
                 K_deleted = 1
                 K_control = 0.2
                 K_precisn = 0.5
@@ -341,11 +341,11 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 1e-4
+                K_trigger = 0.005
                 K_deleted = 1
-                K_control = 0.01
+                K_control = 0.015
                 K_precisn = 1
-                K_simtime = 0.01
+                K_simtime = 0.03
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
                 self.stepReward = 0.
@@ -368,12 +368,15 @@ class SimEnv(gym.Env):
 
                 # Precision Reward - give a positive reward for good convergence
                 if TRUE_relativeState_L[1] <= 0:
-                    proximityFactor = np.exp(TRUE_relativeState_L_meters[1]/30) # the closer to the target on V BAR
+                    proximityFactorPos = np.exp(TRUE_relativeState_L_meters[1]/30) # the closer to the target on V BAR
+                    proximityFactorVel = np.exp(TRUE_relativeState_L_meters[1]/50) # the closer to the target on V BAR
                 else:
-                    proximityFactor = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
+                    proximityFactorPos = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
+                    proximityFactorVel = 1
                 precisionFactor = -violationEntity # observe that if a constraint is violated this reward turns to negative!
                 velocityFactor  = np.exp(-np.linalg.norm(TRUE_relativeState_L[3:6]-param.constraint["aimAtState"][3:6])) 
-                self.stepReward += K_precisn * (precisionFactor + velocityFactor) * proximityFactor
+                self.stepReward += K_precisn * (proximityFactorPos * precisionFactor) 
+                self.stepReward += K_precisn * (proximityFactorVel * velocityFactor)
 
                 # Time of Flight - penalize long time of flights
                 timeExpenseFactor = 1/param.freqGNC 
@@ -382,7 +385,7 @@ class SimEnv(gym.Env):
 
                 ## Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                self.stepReward -= K_control * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+                self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
 
                 ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
                 if controlAction[0] > param.maxAdimThrust \

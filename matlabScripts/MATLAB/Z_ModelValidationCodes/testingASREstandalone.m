@@ -23,7 +23,7 @@ end
 TOF = computeTOF(initialRelativeState_L,aimAtState,param);
 
 tspan = [0 TOF];
-fprintf("\n  Estimated TOF: %f [-]\n",TOF);
+fprintf("\n  Imposed TOF: %f [-]\n",TOF);
 optimalTrajectory = ASRE(TOF,initialRelativeState_L, initialTargetState_M, aimAtState, phaseID, param);
 
 
@@ -146,7 +146,7 @@ quiver3(relDynami(:,1),relDynami(:,2),relDynami(:,3),controlAction(:,1),controlA
         plotConstraintsVisualization(200,'S')
         plotConstraintsVisualization(2.5e3,'S','#808080')
     elseif phaseID == 2
-        plotConstraintsVisualization(200,'C')
+        plotConstraintsVisualization(1e3,'C')
     end
 
 legend("Relative Dynamics","","Initial Condition","","Target LVLH",'Location','best')

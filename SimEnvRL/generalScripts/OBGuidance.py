@@ -120,8 +120,8 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
             
         case 2: # safe approach and docking phase
             Q = np.block([
-                [np.diag([8e5, 1e2, 8e5]), np.zeros((3, 3))],
-                [np.zeros((3, 3)), np.diag([5e6, 5e6, 5e6])]
+                [np.diag([7e5, 1e2, 7e5]), np.zeros((3, 3))],
+                [np.zeros((3, 3)), np.diag([6e6, 6e6, 6e6])]
             ])
             R = np.diag([2e1, 2e1, 2e1])
             
@@ -335,7 +335,7 @@ def APF(relativeState_L, constraintType, param):
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1, 0, 1]) + \
+            K_C_inside  = np.array([1, 1e-1, 1]) + \
                           np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([1e1, 0, 1e1])
 
@@ -369,5 +369,6 @@ def computeTOF(relativeState, aimAtState, param):
     deltanorm = np.linalg.norm(delta)   
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
-    TOF = deltanorm/5e-4 * o_factor * p_factor
+    #TOF = deltanorm/5e-4 * o_factor * p_factor # original
+    TOF = deltanorm/3e-3 * o_factor * p_factor
     return TOF
