@@ -37,7 +37,7 @@ function [controlAction,sigma] = APF(relativeState_L,constraintType,param)
             
             % coefficients definition
             % K_C_inside = [.1; 1e-1; .1]; % era : 1e-1
-            K_C_inside = [1; 1e-1; 1] + [1.5; 5e-1; 1.5].*(abs(rho(2))^3/(1e9));
+            K_C_inside = [1; 1e-1; 1] + 5e4*[1;1e-5;1].*(abs(rho(2))^4/(1e9)); % *[1.5; 5e-1; 1.5]
             K_C_outside = [1e1; 0; 1e1];
             
             % approach cone definition

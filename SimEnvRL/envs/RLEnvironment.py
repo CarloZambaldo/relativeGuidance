@@ -274,7 +274,9 @@ class SimEnv(gym.Env):
         return observation
 
     def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
+
         terminated = False
+        self.stepReward = 0. # initialize the reward for the current time step
 
         # compute the TRUE relative state in synodic and LVLH
         TRUE_relativeState_S = self.chaserState_S - self.targetState_S
@@ -299,12 +301,10 @@ class SimEnv(gym.Env):
                 K_trigger = 0.005
                 K_deleted = 1
                 K_control = 0.2
-                K_precisn = 0.5
+                K_precisn = 0.1
                 K_simtime = 0.01
     
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
-                self.stepReward = 0.
-
                 # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
                 match AgentAction:
                     case 0: # no action means no reward nor penalization
@@ -331,7 +331,9 @@ class SimEnv(gym.Env):
 
                 ## Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                self.stepReward -= K_control * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+                for ix in range(self.param.RLGNCratio):
+                    self.stepReward -= K_control * proximityFactor * \
+                    (1 - np.exp(-np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])/self.param.maxAdimThrust)**2)
 
                 ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
                 if controlAction[0] > param.maxAdimThrust \
@@ -341,14 +343,13 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.005
+                K_trigger = 0#.005
                 K_deleted = 1
-                K_control = 0.015
+                K_control = 0.01
                 K_precisn = 1
                 K_simtime = 0.03
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
-                self.stepReward = 0.
 
                 # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
                 match AgentAction:
@@ -385,13 +386,17 @@ class SimEnv(gym.Env):
 
                 ## Fuel Efficiency Reward - Penalize large control actions
                 # reduce the reward of an amount proportional to the Guidance control effort
-                self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+                # OLD: self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+                ## Fuel Efficiency Reward - Penalize large control actions 
+                for ix in range(self.param.RLGNCratio):
+                    self.stepReward -= K_control * proximityFactor * \
+                    (1 - np.exp(-np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])/self.param.maxAdimThrust)**2)
 
                 ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
-                if controlAction[0] > param.maxAdimThrust \
-                or controlAction[1] > param.maxAdimThrust \
-                or controlAction[2] > param.maxAdimThrust:
-                    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
+                #if controlAction[0] > param.maxAdimThrust \
+                #or controlAction[1] > param.maxAdimThrust \
+                #or controlAction[2] > param.maxAdimThrust:
+                #    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
 #
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")

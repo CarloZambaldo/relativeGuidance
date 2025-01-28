@@ -97,88 +97,93 @@ def loopTwo(envTime, relativeState, aimAtState, OBoptimalTrajectory, constraintT
 
 ## ASRE ##################################################################################
 def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimState, phaseID, param):
-    exectime_start = time.time()
-    
-    # PARAMETERS
-    t_i = 0                  # Initial time
-    t_f = TOF                # Final time
-    N = 250                  # Number of time steps
+    try:
+        #exectime_start = time.time()
+        
+        # PARAMETERS
+        t_i = 0                  # Initial time
+        t_f = TOF                # Final time
+        N = 250                  # Number of time steps
 
-    # TIME GRID DEFINITON
-    tvec = np.linspace(t_i, t_f, N)
-    
-    # INITIAL AND FINAL STATES
-    x_i = initialRelativeState_L
-    x_f = finalAimState.flatten()
-    u_guess = np.zeros((3, N - 1))  # Initial control guess (zeros)
+        # TIME GRID DEFINITON
+        tvec = np.linspace(t_i, t_f, N)
+        
+        # INITIAL AND FINAL STATES
+        x_i = initialRelativeState_L
+        x_f = finalAimState.flatten()
+        u_guess = np.zeros((3, N - 1))  # Initial control guess (zeros)
 
-    # COST MATRICES
-    match phaseID:
-        case 1: # rendezvous phase
-            Q = np.eye(6)
-            R = np.eye(3)
-            
-        case 2: # safe approach and docking phase
-            Q = np.block([
-                [np.diag([7e5, 1e2, 7e5]), np.zeros((3, 3))],
-                [np.zeros((3, 3)), np.diag([6e6, 6e6, 6e6])]
-            ])
-            R = np.diag([2e1, 2e1, 2e1])
-            
-        case _:
-            Q = np.eye(6)
-            R = np.eye(3)
+        # COST MATRICES
+        match phaseID:
+            case 1: # rendezvous phase
+                Q = np.eye(6)
+                R = np.eye(3)
+                
+            case 2: # safe approach and docking phase
+                Q = np.block([
+                    [np.diag([7e5, 1e2, 7e5]), np.zeros((3, 3))],
+                    [np.zeros((3, 3)), np.diag([6e6, 6e6, 6e6])]
+                ])
+                R = np.diag([2e1, 2e1, 2e1])
+                
+            case _:
+                Q = np.eye(6)
+                R = np.eye(3)
 
-    # INITIALIZE ASRE
-    x_guess = interpolate_trajectory(x_i, x_f, tvec)  # Linear initial guess
+        # INITIALIZE ASRE
+        x_guess = interpolate_trajectory(x_i, x_f, tvec)  # Linear initial guess
 
-    # iteration 0
-    #A = computeA(1, initialStateTarget_M, param)
-    B = computeB()
+        # iteration 0
+        #A = computeA(1, initialStateTarget_M, param)
+        B = computeB()
 
-    phi_xx = np.eye(6)
-    phi_yy = np.eye(6)
-    phi_xy = np.zeros((6, 6))
-    phi_yx = np.zeros((6, 6))
+        phi_xx = np.eye(6)
+        phi_yy = np.eye(6)
+        phi_xy = np.zeros((6, 6))
+        phi_yx = np.zeros((6, 6))
 
-    PHI0 = np.block([[phi_xx, phi_xy], [phi_yx, phi_yy]])
-    initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
+        PHI0 = np.block([[phi_xx, phi_xy], [phi_yx, phi_yy]])
+        initial_conditions = np.concatenate([PHI0.flatten(), initialStateTarget_M])
 
-    #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
-    M12 = -B @ np.linalg.solve(R, B.T)
-    solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='RK45')
-    PHIT = solution.y.T
-    PHI = PHIT[-1, :144].reshape(12, 12)
+        #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
+        M12 = -B @ np.linalg.solve(R, B.T)
+        solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='RK45')
+        PHIT = solution.y.T
+        PHI = PHIT[-1, :144].reshape(12, 12)
 
-    lambdaCoeff_i = np.linalg.solve(PHI[:6, 6:], (x_f - PHI[:6, :6] @ x_i))
+        lambdaCoeff_i = np.linalg.solve(PHI[:6, 6:], (x_f - PHI[:6, :6] @ x_i))
 
-    x_new = np.zeros((6, N))
-    u_new = np.zeros((3, N))
-    x_new[:, 0] = x_i
-    u_new[:, 0] = -np.linalg.solve(R, B.T @ lambdaCoeff_i)
+        x_new = np.zeros((6, N))
+        u_new = np.zeros((3, N))
+        x_new[:, 0] = x_i
+        u_new[:, 0] = -np.linalg.solve(R, B.T @ lambdaCoeff_i)
 
-    # for each time step (compute the trajectory)
-    for time_id in range(1, N):
-        PHI = PHIT[time_id, :144].reshape(12, 12)
-        lambdaCoeff = PHI[6:, :6] @ x_i + PHI[6:, 6:] @ lambdaCoeff_i
-        x_new[:, time_id] = PHI[:6, :6] @ x_i + PHI[:6, 6:] @ lambdaCoeff_i
-        u_new[:, time_id] = -np.linalg.solve(R, B.T @ lambdaCoeff)
+        # for each time step (compute the trajectory)
+        for time_id in range(1, N):
+            PHI = PHIT[time_id, :144].reshape(12, 12)
+            lambdaCoeff = PHI[6:, :6] @ x_i + PHI[6:, 6:] @ lambdaCoeff_i
+            x_new[:, time_id] = PHI[:6, :6] @ x_i + PHI[:6, 6:] @ lambdaCoeff_i
+            u_new[:, time_id] = -np.linalg.solve(R, B.T @ lambdaCoeff)
 
-    # Update the guess for the next iteration
-    x_guess = x_new
-    u_guess = u_new
+        # Update the guess for the next iteration
+        x_guess = x_new
+        u_guess = u_new
 
-    # OUTPUT OPTIMAL TRAJECTORY
-    optimalTrajectory = {
-        "time": tvec,
-        "state": x_guess.T,
-        "controlAction": u_guess.T,
-        "envStartTime": timeNow        # environment time when the trajectory has been computed
-    }
+        # OUTPUT OPTIMAL TRAJECTORY
+        optimalTrajectory = {
+            "time": tvec,
+            "state": x_guess.T,
+            "controlAction": u_guess.T,
+            "envStartTime": timeNow        # environment time when the trajectory has been computed
+        }
 
-    # print the execution time of the simulation
-    exectime = time.time() - exectime_start
-    #print(f"     > ASRE Converged. [Execution time: {exectime:.2f} sec]")
+        # print the execution time of the simulation
+        #exectime = time.time() - exectime_start
+        #print(f"     > ASRE Converged. [Execution time: {exectime:.2f} sec]")
+    except Exception as e:
+        print(f"     > ASRE did not converge. Error: {e}")
+        optimalTrajectory = None
+        
     return optimalTrajectory
 
 def interpolate_trajectory(x_i, x_f, tvec):
@@ -334,9 +339,11 @@ def APF(relativeState_L, constraintType, param):
             acone = param.constraint["characteristicSize"]["acone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
-            # coefficients definition
-            K_C_inside  = np.array([1, 1e-1, 1]) + \
-                          np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
+            # coefficients definition FIXME
+            K_C_inside  = np.array([1, 2e-1, 1]) + \
+                          np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))#
+                            # test but not sure: np.array([5e4, 5e-1, 5e4]) * (abs(rho[1])**4/(1e9))
+                            # the old one np.array([1, 1e-1, 1]) + np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([1e1, 0, 1e1])
 
             # approach cone definition

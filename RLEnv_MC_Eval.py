@@ -9,7 +9,11 @@ import sys
 # syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
 # agentName in the form: "Agent_P2-PPO-v12-achiral"
 if len(sys.argv) < 3:
-    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
+    phaseID = 2
+    n_samples = 1
+    usingAgentBool = True
+    agentName = "Agent_P2-PPO-v4.0-achiral-stable"
+    #raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
 else:
     phaseID = int(sys.argv[1])
     n_samples = int(sys.argv[2])
