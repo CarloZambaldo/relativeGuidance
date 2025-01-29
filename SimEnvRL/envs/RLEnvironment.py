@@ -163,8 +163,7 @@ class SimEnv(gym.Env):
         self.observation = self.computeRLobservation()
 
         # REWARD COMPUTATION #
-        self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, controlAction_L,
-                                                              self.param.phaseID, self.param)
+        self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, self.param.phaseID, self.param)
         
         # rendering the environment if required
         if self.renderingBool:
@@ -269,11 +268,15 @@ class SimEnv(gym.Env):
             trajAGE = -1 # setting to -1 if the optimal trajectory does not exist
 
         # the observation is composed by the relative state in LVLH, the control action and the trajectory age
-        observation = np.hstack([self.OBStateRelative_L, self.controlActionHistory_L[self.timeIndex], trajAGE])
+        if self.timeIndex < self.param.RLGNCratio:
+            meanControlAction = np.zeros((3,))
+        else:
+            meanControlAction = self.controlActionHistory_L[self.timeIndex-self.param.RLGNCratio+1:self.timeIndex+1].mean(axis=0)
+        observation = np.hstack([self.OBStateRelative_L, meanControlAction, trajAGE])
 
         return observation
 
-    def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
+    def computeReward(self, AgentAction, OBoTAge, phaseID, param):
 
         terminated = False
         self.stepReward = 0. # initialize the reward for the current time step
@@ -300,8 +303,8 @@ class SimEnv(gym.Env):
             case 1: # RENDEZVOUS
                 K_trigger = 0.005
                 K_deleted = 1
-                K_control = 0.2
-                K_precisn = 0.1
+                K_control = .7
+                K_precisn = 0.5
                 K_simtime = 0.01
     
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
@@ -329,24 +332,12 @@ class SimEnv(gym.Env):
                 # Time of Flight - penalize long time of flights
                 self.stepReward -= K_simtime * 1/param.freqGNC  
 
-                ## Fuel Efficiency Reward - Penalize large control actions
-                # reduce the reward of an amount proportional to the Guidance control effort
-                for ix in range(self.param.RLGNCratio):
-                    self.stepReward -= K_control * proximityFactor * \
-                    (1 - np.exp(-np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])/self.param.maxAdimThrust)**2)
-
-                ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
-                if controlAction[0] > param.maxAdimThrust \
-                or controlAction[1] > param.maxAdimThrust \
-                or controlAction[2] > param.maxAdimThrust:
-                    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
-
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0#.005
-                K_deleted = 1
-                K_control = 0.01
-                K_precisn = 1
+                K_trigger = 0.001
+                K_deleted = 0.5
+                K_control = 0.5
+                K_precisn = 0.5
                 K_simtime = 0.03
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
@@ -384,13 +375,6 @@ class SimEnv(gym.Env):
                 proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
                 self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
 
-                ## Fuel Efficiency Reward - Penalize large control actions
-                # reduce the reward of an amount proportional to the Guidance control effort
-                # OLD: self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
-                ## Fuel Efficiency Reward - Penalize large control actions 
-                for ix in range(self.param.RLGNCratio):
-                    self.stepReward -= K_control * proximityFactor * \
-                    (1 - np.exp(-np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])/self.param.maxAdimThrust)**2)
 
                 ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
                 #if controlAction[0] > param.maxAdimThrust \
@@ -400,7 +384,16 @@ class SimEnv(gym.Env):
 #
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
-        
+
+
+        ## Fuel Efficiency Reward - Penalize large control actions
+        # reduce the reward of an amount proportional to the Guidance control effort
+        # OLD: self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+        ## Fuel Efficiency Reward - Penalize large control actions 
+        for ix in range(self.param.RLGNCratio):
+            self.stepReward -= K_control * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
+
+
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:
             if phaseID == 1:
@@ -426,9 +419,6 @@ class SimEnv(gym.Env):
             self.stepReward -= 1
             self.terminationCause = "__CRASHED__"
             self.terminalState = TRUE_relativeState_L
-
-
-        # TODO: here normalize the reward
 
         return self.stepReward, terminated
     

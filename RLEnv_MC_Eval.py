@@ -13,7 +13,7 @@ if len(sys.argv) < 3:
     n_samples = 1
     usingAgentBool = True
     agentName = "Agent_P2-PPO-v4.0-achiral-stable"
-    #raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
+    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
 else:
     phaseID = int(sys.argv[1])
     n_samples = int(sys.argv[2])
@@ -67,7 +67,9 @@ data : dict = {
         "param" : {
                     "xc": env.unwrapped.param.xc,
                     "tc": env.unwrapped.param.tc,
-                    "massRatio": env.unwrapped.param.massRatio
+                    "massRatio": env.unwrapped.param.massRatio,
+                    "freqGNC": env.unwrapped.param.freqGNC,
+                    "RLGNCratio": env.unwrapped.param.RLGNCratio,
                     },
         "timeHistory" : None,
         "trajectory" : None,

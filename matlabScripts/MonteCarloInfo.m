@@ -48,13 +48,45 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("Final Velocity V-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(5)*1e2, sigmaFinalState(5)*1e2);
     fprintf("Final Velocity H-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(6)*1e2, sigmaFinalState(6)*1e2);
     
-    %% MEAN OF THE MAXIMUM THRUST REQUIRED IN EACH SIMULATION
+
+    %% MEAN THRUST REQUIRED
+    meanControlAction = zeros(3,1);
+    totalImpulse = zeros(3,1);
+    totalMassUsed = 0;
+    
+    for sim_id = 1:n_population
+        soluz = trajectory(:,:,sim_id);
+        indicezeri = soluz(:,7:12) == 0;
+        soluz(indicezeri,1:6) = 0;
+        indiceValori = ~(soluz(:,1) == 0 & soluz(:,2) == 0 & soluz(:,3) == 0);
+        soluz = soluz(indiceValori,:);
+        time = timeHistory(indiceValori);
+        control = controlAction(indiceValori,:,sim_id);
+        
+        meanControlAction = meanControlAction + mean(control, 1)';
+        dt = param.freqGNC;
+        totalImpulse = totalImpulse + sum(control(1:end-1,:) .* dt, 1)';
+        totalMassUsed = totalMassUsed + sum(vecnorm(control(1:end-1,:), 2, 2) .* dt) / param.Isp / param.g0;
+    end
+    
+    meanControlAction = meanControlAction / n_population;
+    totalImpulse = totalImpulse / n_population;
+    totalMassUsed = totalMassUsed / n_population;
+    
+    fprintf("\n-- MEAN CONTROL ACTION --\n");
+    fprintf("Mean Control Action X = %.2f [N]\n", meanControlAction(1));
+    fprintf("Mean Control Action Y = %.2f [N]\n", meanControlAction(2));
+    fprintf("Mean Control Action Z = %.2f [N]\n", meanControlAction(3));
+    
+    fprintf("\n-- TOTAL IMPULSE --\n");
+    fprintf("Total Impulse X = %.2f [Ns]\n", totalImpulse(1));
+    fprintf("Total Impulse Y = %.2f [Ns]\n", totalImpulse(2));
+    fprintf("Total Impulse Z = %.2f [Ns]\n", totalImpulse(3));
+    
+    fprintf("\n-- TOTAL MASS USED --\n");
+    fprintf("Total Mass Used = %.4f [kg]\n", totalMassUsed);
 
 
-    %% MEAN
-
-
-    %% MOST FREQUENT ACTION
 
     %% OPTIMAL TRAJECTORY UTILIZATION
 

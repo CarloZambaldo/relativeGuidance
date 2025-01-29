@@ -20,28 +20,38 @@ function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
     switch upper(type)
     %% SPHERE %% 
         case 'S'
-            z = @(RbarX,VbarX) real(sqrt(rsphere^2-RbarX.^2-VbarX.^2))*1e-3;
-            pointsR = linspace(-rsphere,rsphere,501);
-            pointsV =  linspace(-rsphere,rsphere,501);
-            [X,Y] = meshgrid(pointsR,pointsV);
-    
-            sferaz = z(X,Y);
-            for i = 1:size(X,1)
-                for j = 1:size(X,2)
-                    if X(i,j)^2+Y(i,j)^2 > (rsphere*1.01)^2
-                        sferaz(i,j) = NaN;
-                    end
-                end
-            end
-    
+            % z = @(RbarX,VbarX) real(sqrt(rsphere^2-RbarX.^2-VbarX.^2))*1e-3;
+            % pointsR = linspace(-rsphere,rsphere,501);
+            % pointsV =  linspace(-rsphere,rsphere,501);
+            % [X,Y] = meshgrid(pointsR,pointsV);
+            % 
+            % sferaz = z(X,Y);
+            % for i = 1:size(X,1)
+            %     for j = 1:size(X,2)
+            %         if X(i,j)^2+Y(i,j)^2 > (rsphere*1.01)^2
+            %             sferaz(i,j) = NaN;
+            %         end
+            %     end
+            % end
+            % 
             if nargin<3
                 colore = 'red';
             end
-            
-            surf(X*1e-3,Y*1e-3,sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none');
-            hold on
-            surf(X*1e-3,Y*1e-3,-sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none')
+            % 
+            % surf(X*1e-3,Y*1e-3,sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none');
+            % hold on
+            % surf(X*1e-3,Y*1e-3,-sferaz,'FaceColor',colore,'FaceAlpha',0.5,'EdgeColor','none')
 
+            [X, Y, Z] = sphere(50); 
+    
+            % Scale the sphere to the given radius
+            X = X * rsphere;
+            Y = Y * rsphere;
+            Z = Z * rsphere;
+            
+            % Plot the sphere
+            figure;
+            surf(X, Y, Z, 'FaceColor', colore, 'EdgeColor', 'none', 'FaceAlpha',0.4);
 
         %% CONE %% 
         case 'C'

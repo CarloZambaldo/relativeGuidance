@@ -7,6 +7,10 @@ from datetime import datetime
 import sys
 
 if len(sys.argv) < 4:
+    phaseID = 2
+    modelName = "TEST_AGENT"
+    taip = "new"
+    renderingBool = True
     print("Usage: python3 RLEnv_Training.py <phaseID> <'modelName'> <'new'/'old'> <optional:renderingBool>")
 else:
     phaseID = int(sys.argv[1])
@@ -24,12 +28,12 @@ elif taip == "old":
 else:
     raise Exception("training Type not defined. Please use 'new' or 'old'.")
 #modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
-deviceType   = "cpu"                         # "cuda" or "cpu"
-normalisation = True                         # True or False
-discountFactor = 0.99                        # discount factor for the reward
+deviceType   = "cpu"                           # "cuda" or "cpu"
+normalisation = True                           # True or False
+discountFactor = 0.99                          # discount factor for the reward
 #phaseID = 1
 if phaseID == 1:
-    tspan = np.array([0, 0.04])
+    tspan = np.array([0, 0.06])
 else:
     tspan = np.array([0, 0.03])
 
@@ -37,12 +41,18 @@ else:
 # to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
 
+## ENV
+def lr_schedule(progress_remaining):
+    return 1e-3 * progress_remaining  # Decreases as training progresses
+
+
 # Create vectorized environments
 if deviceType == "cuda": # IF USING GPU
-    env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+    #env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+    raise Exception("GPU not supported.")
 elif deviceType == "cpu": # IF USING CPU
     if not normalisation: # IF USING CPU without vectorized environment
-        env = gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+        env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
     else: # IF USING CPU with vectorized environment
         env = DummyVecEnv([lambda: gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
         env = VecNormalize(env, norm_obs=True, norm_reward=True)
@@ -61,7 +71,7 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
+        model = PPO('MlpPolicy', env=env, learning_rate=lr_schedule, device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters

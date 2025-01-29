@@ -107,6 +107,11 @@ def computeEnvironmentDisturbances(t,SCparam,param):
 	distAcceleration_S = (param.SolarFlux * SCparam["Area"] / SCparam["mass"] * 
 						(1 + SCparam["reflCoeffSpecular"] + 2/3 * SCparam["reflCoeffDiffuse"])) * sunVersor
 
+
+	# add 
+
+
+	
 	# adimensionalize:
 	distAcceleration_S = distAcceleration_S * (1e-3) * param.tc**2 / param.xc
 	

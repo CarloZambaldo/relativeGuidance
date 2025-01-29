@@ -89,7 +89,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
             %% 2
             figure(1)
             plot3(relDynami(1,1),relDynami(1,2),relDynami(1,3),'ok','LineWidth',1)
-            plot3(relDynami(:,1),relDynami(:,2),relDynami(:,3),'LineWidth',1.2);
+            plot3(relDynami(:,1),relDynami(:,2),relDynami(:,3),'b','LineWidth',1.2);
         end
     end
     if eachplotbool

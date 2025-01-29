@@ -9,8 +9,9 @@ packages = ["src/SimEnvRL"]
 name = "SimEnvRL"
 version = "4.5.0"
 dependencies = [
-  "gymnasium",
-  "scipy",      # Scientific computing
-  "numpy",      # Numerical computations
-  "colorama",   # for the rendering of the environment (use colors)
+  "gymnasium",          # Gym environment
+  "scipy",              # Scientific computing
+  "numpy",              # Numerical computations
+  "stable-baselines3",  # Reinforcement learning
+  "torch",              # Deep learning
 ]

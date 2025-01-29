@@ -321,12 +321,12 @@ def APF(relativeState_L, constraintType, param):
             SphereRadius_SS = 2.5e3  # [m]
 
             # coefficients definition
-            K_SS_inside = np.array([1e2, 5e3, 1e2])
-            K_SS_outside = np.array([1e5, 5e5, 1e5])
+            K_SS_inside = np.array([5e1, 5e2, 5e1])
+            K_SS_outside = np.array([1e5, 5e6, 1e5])
             
             # potential field computation
             if np.linalg.norm(rho)**2 - SphereRadius_SS**2 <= 0:  # if constraint is violated
-                NablaUrep_SS = -rho / np.linalg.norm(rho)
+                NablaUrep_SS = - rho / np.linalg.norm(rho)
                 NablaU_APF = K_SS_inside * NablaUrep_SS  # inside the sphere
             else:
                 gamma = lambda r, constRadius: abs(r[0]**2 + r[1]**2 + r[2]**2 - constRadius**2)
@@ -376,6 +376,6 @@ def computeTOF(relativeState, aimAtState, param):
     deltanorm = np.linalg.norm(delta)   
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
-    #TOF = deltanorm/5e-4 * o_factor * p_factor # original
-    TOF = deltanorm/3e-3 * o_factor * p_factor
+    #TOF = deltanorm/5e-4 * o_factor * p_factor # original, tested also: 3e-3
+    TOF = deltanorm/1e-4 * o_factor * p_factor
     return TOF
