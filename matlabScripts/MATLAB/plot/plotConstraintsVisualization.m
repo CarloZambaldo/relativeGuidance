@@ -4,9 +4,9 @@ function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
     bcone = 10;
 
     if DeltaIC_meters < 200
-        rsphere = 200; % [m]
+        rsphere = 200e-3; % [m]
     else
-        rsphere = DeltaIC_meters;
+        rsphere = DeltaIC_meters*1e-3;
     end
     % DeltaIC_meters = min(norm(DeltaIC_meters)*384400*1e3,1e3);
     
@@ -50,7 +50,6 @@ function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
             Z = Z * rsphere;
             
             % Plot the sphere
-            figure;
             surf(X, Y, Z, 'FaceColor', colore, 'EdgeColor', 'none', 'FaceAlpha',0.4);
 
         %% CONE %% 

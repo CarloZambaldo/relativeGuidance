@@ -11,6 +11,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fail = data.fail;
     success = data.success;
     terminalState = data.terminalState;
+    endTimeIx = data.terminalTimeIndex;
     
     if isfield(data,"agentModelName")
         agentModelName = data.agentModelName;
@@ -23,8 +24,9 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("\n===========================================================\n")
     %% general info
     fprintf("-- GENERAL INFO --\n")
-    fprintf("data contains: %d simulations\n", n_population);
-    fprintf("Name of Agent model used: %s\n", agentModelName);
+    fprintf("data contains:    %d [simulations]\n", n_population);
+    fprintf("Simulated Phase:  %d\n",phaseID)
+    fprintf("Agent model used: %s\n", agentModelName);
 
     fprintf("\n")
     %%
@@ -50,41 +52,38 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     
 
     %% MEAN THRUST REQUIRED
-    meanControlAction = zeros(3,1);
-    totalImpulse = zeros(3,1);
+    meanControlAction_dim = zeros(1,3); % THIS IS IN NEWTON!!
+    totalImpulse = zeros(1,3);
     totalMassUsed = 0;
     
-    for sim_id = 1:n_population
-        soluz = trajectory(:,:,sim_id);
-        indicezeri = soluz(:,7:12) == 0;
-        soluz(indicezeri,1:6) = 0;
-        indiceValori = ~(soluz(:,1) == 0 & soluz(:,2) == 0 & soluz(:,3) == 0);
-        soluz = soluz(indiceValori,:);
-        time = timeHistory(indiceValori);
-        control = controlAction(indiceValori,:,sim_id);
+    for sim_id = 1:n_population  
+        time_dim = timeHistory(1:endTimeIx(sim_id)) .* param.tc;
+        dt = 1/param.freqGNC .* param.tc;
+
+        control_dim = double(param.chaserMass) .* controlAction(1:endTimeIx(sim_id),:,sim_id) .* param.xc./param.tc^2;
         
-        meanControlAction = meanControlAction + mean(control, 1)';
-        dt = param.freqGNC;
-        totalImpulse = totalImpulse + sum(control(1:end-1,:) .* dt, 1)';
-        totalMassUsed = totalMassUsed + sum(vecnorm(control(1:end-1,:), 2, 2) .* dt) / param.Isp / param.g0;
+        meanControlAction_dim = meanControlAction_dim + trapz(time_dim,control_dim,1);
+
+        totalImpulse = totalImpulse + sum(control_dim(1:end-1,:) .* dt, 1);
+        totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
     
-    meanControlAction = meanControlAction / n_population;
-    totalImpulse = totalImpulse / n_population;
-    totalMassUsed = totalMassUsed / n_population;
+    meanControlAction_dim = meanControlAction_dim / double(n_population);
+    totalImpulse = totalImpulse / double(n_population);
+    totalMassUsed = totalMassUsed / double(n_population);
     
     fprintf("\n-- MEAN CONTROL ACTION --\n");
-    fprintf("Mean Control Action X = %.2f [N]\n", meanControlAction(1));
-    fprintf("Mean Control Action Y = %.2f [N]\n", meanControlAction(2));
-    fprintf("Mean Control Action Z = %.2f [N]\n", meanControlAction(3));
+    fprintf("Mean Control Action R = %.2f [N]\n", meanControlAction_dim(1));
+    fprintf("Mean Control Action V = %.2f [N]\n", meanControlAction_dim(2));
+    fprintf("Mean Control Action H = %.2f [N]\n", meanControlAction_dim(3));
     
-    fprintf("\n-- TOTAL IMPULSE --\n");
-    fprintf("Total Impulse X = %.2f [Ns]\n", totalImpulse(1));
-    fprintf("Total Impulse Y = %.2f [Ns]\n", totalImpulse(2));
-    fprintf("Total Impulse Z = %.2f [Ns]\n", totalImpulse(3));
+    fprintf("\n-- MEAN TOTAL IMPULSE --\n");
+    fprintf("Total Impulse R = %.2f [Ns]\n", totalImpulse(1));
+    fprintf("Total Impulse V = %.2f [Ns]\n", totalImpulse(2));
+    fprintf("Total Impulse H = %.2f [Ns]\n", totalImpulse(3));
     
-    fprintf("\n-- TOTAL MASS USED --\n");
-    fprintf("Total Mass Used = %.4f [kg]\n", totalMassUsed);
+    fprintf("\n-- MEAN TOTAL MASS USED --\n");
+    fprintf("Total Mass Used = %.2g [kg]\n", totalMassUsed);
 
 
 

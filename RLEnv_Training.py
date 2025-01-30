@@ -43,8 +43,9 @@ else:
 
 ## ENV
 def lr_schedule(progress_remaining):
-    return 1e-3 * progress_remaining  # Decreases as training progresses
+    return 1e-4 * progress_remaining  # Decreases as training progresses
 
+ent_coef=0.02
 
 # Create vectorized environments
 if deviceType == "cuda": # IF USING GPU
@@ -60,7 +61,7 @@ elif deviceType == "cpu": # IF USING CPU
 print("***************************************************************************")
 print(f"Training: {modelName} on {deviceType} with normalisation: {normalisation}")
 print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
-print(f"Discount Factor: {discountFactor}")
+print(f"Discount Factor: {discountFactor},\nent_coef: {ent_coef},\nlearning_rate: linear from {lr_schedule(1)}")
 print("***************************************************************************")
 # Reset the environment
 env.reset()
@@ -71,7 +72,7 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, learning_rate=lr_schedule, device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
+        model = PPO('MlpPolicy', env=env, learning_rate=lr_schedule, ent_coef=ent_coef, device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters

@@ -1,9 +1,0 @@
-import os
-
-"""
-THIS FILE IS USED TO RESET THE WHOLE DIRECTORY AND TO RE-INSTALL THE ENVIRONMENT
-
-"""
-print(" ZERO SCRIPT IS RUNNING: INSTALLING SimEnvRL")
-
-os.system(f"py -m pip install ./SimEnvRL")

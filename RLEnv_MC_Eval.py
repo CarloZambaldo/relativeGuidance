@@ -13,13 +13,20 @@ if len(sys.argv) < 3:
     n_samples = 1
     usingAgentBool = True
     agentName = "Agent_P2-PPO-v4.0-achiral-stable"
-    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]")
+    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName] [seed]")
 else:
     phaseID = int(sys.argv[1])
     n_samples = int(sys.argv[2])
     if len(sys.argv) > 3: # means the agent is being used
-        usingAgentBool = True
         agentName = sys.argv[3]
+        if agentName == "_NO_AGENT_":
+            usingAgentBool = False
+            print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
+            print("Please press enter to continue...")
+            input()
+        else:
+            usingAgentBool = True
+        seed = int(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional seed
         print(f"Agent {agentName} is used to control the chaser.")
     else:
         usingAgentBool = False 
@@ -45,6 +52,10 @@ elif phaseID == 2:
 print("***************************************************************************")
 print(f"Monte Carlo Analysis of {n_samples} samples. Agent: {agentName}")
 print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
+if seed is not None:
+    print(f"Using seed: {seed}")
+else:
+    print("No seed provided. Running with random initialization.")
 print("***************************************************************************")
 
 # MONTE CARLO PARAMETERS
@@ -55,33 +66,40 @@ print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
 env = gym.make("SimEnv-v4", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
-
+if seed is not None:
+    env.action_space.seed(seed)  # Seed the Gym action space
+    env.observation_space.seed(seed)  # Seed the Gym observation space
 # load the model
 if usingAgentBool:
     RLagent = config.RL_config.recall(agentName,"latest")
-    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu")
+    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
+        "seed": seed,
         "phaseID" : env.unwrapped.param.phaseID,
+        "agentModelName" : agentName,
+        "n_population" : None,
         "param" : {
                     "xc": env.unwrapped.param.xc,
                     "tc": env.unwrapped.param.tc,
                     "massRatio": env.unwrapped.param.massRatio,
                     "freqGNC": env.unwrapped.param.freqGNC,
                     "RLGNCratio": env.unwrapped.param.RLGNCratio,
+                    "chaserThrust": env.unwrapped.param.maxAdimThrust,
+                    "chaserMass": env.unwrapped.param.chaser["mass"],
+                    "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
                     },
-        "timeHistory" : None,
+        "timeHistory" : np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC),
+        
         "trajectory" : None,
         "AgentAction" : None,
         "controlAction" : None,
         "constraintViolation" : None,
         "terminalState" : None,
+        "terminalTimeIndex" : None,
         "fail" : None,
         "success" : None,
-        "n_population" : None,
-        "agentModelName" : agentName,
-        "RLGNCratio" : env.unwrapped.param.RLGNCratio,
 }
 
 # uniform distribution for chaser position
@@ -103,17 +121,17 @@ n_targets_pos = initialStateTarget_S_batch.shape[0]
 data["n_population"] = n_ICs + n_targets_pos - 1
 
 # Initialize the variables for "faster" exec time
-data["timeHistory"] = np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC)
 data["fail"] = np.zeros(data["n_population"])
 data["success"] = np.zeros(data["n_population"])
 data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
 data["controlAction"] = np.zeros((len(data["timeHistory"]), 3, data["n_population"]))
 data["terminalState"] = np.zeros((6, data["n_population"]))
+data["terminalTimeIndex"] = np.zeros(data["n_population"])
 data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["OBoTUsage"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["constraintViolation"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 
-# Generate the population (states) - implemented 2 types of generation, the first one compares all the possible combinations
+# GENERATE THE POPULATION (states) - DEPENDING ON THE PHASE ID
 match phaseID:
     case 2: # FOR PHASE ID 2
         if n_samples_speed is not None:
@@ -158,7 +176,7 @@ match phaseID:
                 val['speed_V_BAR'][0],
                 val['speed_H_BAR'][0]
             ])
-    case 1:
+    case 1: # FOR PHASE ID 1
         if n_samples_speed is None: # this generation runs multiple random conditions
             val = {}
 
@@ -192,6 +210,10 @@ match phaseID:
             raise ValueError("PHASE ID 1 NOT IMPLEMENTED YET")
     case _:
         raise ValueError("given phaseID not defined correctly")
+    
+# Adimensionalize the initial conditions
+POP = POP / env.unwrapped.param.xc
+POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
 
 print("DONE.")
 
@@ -200,12 +222,7 @@ print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_popu
 start_time = time.time()
 
 # RUN THE SIMULATIONS
-
-# Adimensionalize the initial conditions
-POP = POP / env.unwrapped.param.xc
-POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
-
-fileNameSave = f"MC_run_{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
+fileNameSave = f"MC_P{phaseID}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
@@ -241,10 +258,11 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["OBoTUsage"][:, sim_id + trgt_id] = env.unwrapped.OBoTUsageHistory
         data["constraintViolation"][:, sim_id + trgt_id] = env.unwrapped.constraintViolationHistory
         data["terminalState"][:, sim_id + trgt_id] = env.unwrapped.terminalState
+        data["terminalTimeIndex"][sim_id] = env.unwrapped.timeIndex
         data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.unwrapped.terminationCause == "_AIM_REACHED_" else 0
 
-        print(f" done\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
+        print(f" DONE.\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 
         # saving at each time step not to lose any of the simulation (in case of crash)
         print("SAVING THE SIMULATION: ",end='')

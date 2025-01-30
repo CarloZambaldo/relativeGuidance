@@ -63,6 +63,8 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                 # under 10 m tollerance and 0.5 m/s
                 aimReachedBool = True
                 # note that it is not possible to crash in phase 1... (the chaser is distant from the target!)
+            if np.linalg.norm(TRUE_relativeState_L[0:3]) < 5.2029e-07: # if below 200 m safe sphere
+                crashedBool = True
         case 2:
             if (TRUE_relativeState_L[1] - aimAtState[1] >= -1.3007e-11):  # when below 5 mm along V-BAR (from -5mm to in front of the target)
                 # check if converged on R and H:

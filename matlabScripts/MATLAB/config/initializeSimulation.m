@@ -108,7 +108,7 @@ function [param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializ
 
         case 2 % DOCKING
             % compute random relative position
-            rand_position_L = [(-2+4*rand()),(-4+3*rand()),(-2+4*rand())]' / param.xc; % in a radius around the holding point
+            rand_position_L = [(-2+4*rand()),(-5+4.5*rand()),(-2+4*rand())]' / param.xc; % in a radius around the holding point
             rand_velocity_L = (-1+1*rand(3,1)) * 1e-3 / param.xc * param.tc;
         otherwise
             error("No phase id defined");

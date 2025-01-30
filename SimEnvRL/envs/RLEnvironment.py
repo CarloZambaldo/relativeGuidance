@@ -132,6 +132,7 @@ class SimEnv(gym.Env):
                 # CONTROL ACTION #
                 
                 # rotate the control action from the local frame to the synodic frame
+                # observe that the OBControl function also clips the control action if it exceeds the maximum value
                 controlAction_S, controlAction_L = OBControl(self.targetState_S,controlAction_L,self.param)
                 self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
 
@@ -272,7 +273,11 @@ class SimEnv(gym.Env):
             meanControlAction = np.zeros((3,))
         else:
             meanControlAction = self.controlActionHistory_L[self.timeIndex-self.param.RLGNCratio+1:self.timeIndex+1].mean(axis=0)
+            #print(f"meanControlAction: {meanControlAction}")
         observation = np.hstack([self.OBStateRelative_L, meanControlAction, trajAGE])
+
+        # if np.isnan(observation).any() or np.isinf(observation).any():
+        #     raise ValueError("Error: NaN or Inf detected in observations!")
 
         return observation
 
@@ -301,9 +306,9 @@ class SimEnv(gym.Env):
         # REWARD COMPUTATION DEPENDING ON THE PHASE ID #
         match phaseID:
             case 1: # RENDEZVOUS
-                K_trigger = 0.005
-                K_deleted = 1
-                K_control = .7
+                K_trigger = 0#.005
+                K_deleted = 0#.1
+                K_control = 0.05
                 K_precisn = 0.5
                 K_simtime = 0.01
     
@@ -336,9 +341,9 @@ class SimEnv(gym.Env):
                 # reward tunable parameters 
                 K_trigger = 0.001
                 K_deleted = 0.5
-                K_control = 0.5
-                K_precisn = 0.5
-                K_simtime = 0.03
+                K_control = 0.3
+                K_precisn = 0.35
+                K_simtime = 0.001
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
 
@@ -374,13 +379,6 @@ class SimEnv(gym.Env):
                 timeExpenseFactor = 1/param.freqGNC 
                 proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
                 self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
-
-
-                ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
-                #if controlAction[0] > param.maxAdimThrust \
-                #or controlAction[1] > param.maxAdimThrust \
-                #or controlAction[2] > param.maxAdimThrust:
-                #    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
 #
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
@@ -390,9 +388,10 @@ class SimEnv(gym.Env):
         # reduce the reward of an amount proportional to the Guidance control effort
         # OLD: self.stepReward -= K_control * proximityFactor * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
         ## Fuel Efficiency Reward - Penalize large control actions 
+        controlReward = 0.
         for ix in range(self.param.RLGNCratio):
-            self.stepReward -= K_control * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
-
+            controlReward += K_control * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
+        self.stepReward -= controlReward/self.param.RLGNCratio
 
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:

@@ -120,11 +120,17 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
                 R = np.eye(3)
                 
             case 2: # safe approach and docking phase
+                #Q = np.block([
+                #    [np.diag([8e5, 1e2, 8e5]), np.zeros((3, 3))],
+                #    [np.zeros((3, 3)), np.diag([5e6, 5e6, 5e6])]
+                #])
+                #R = np.diag([2e1, 2e1, 2e1])
+
                 Q = np.block([
-                    [np.diag([7e5, 1e2, 7e5]), np.zeros((3, 3))],
-                    [np.zeros((3, 3)), np.diag([6e6, 6e6, 6e6])]
+                    [np.diag([6e1, 1e-2, 6e1]), np.zeros((3, 3))],
+                    [np.zeros((3, 3)), np.diag([1e3, 5e3, 1e3])]
                 ])
-                R = np.diag([2e1, 2e1, 2e1])
+                R = np.diag([1e-2, 1e-2, 1e-2])
                 
             case _:
                 Q = np.eye(6)
@@ -147,7 +153,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 
         #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
         M12 = -B @ np.linalg.solve(R, B.T)
-        solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='RK45')
+        solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='DOP853')
         PHIT = solution.y.T
         PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -344,7 +350,7 @@ def APF(relativeState_L, constraintType, param):
                           np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))#
                             # test but not sure: np.array([5e4, 5e-1, 5e4]) * (abs(rho[1])**4/(1e9))
                             # the old one np.array([1, 1e-1, 1]) + np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
-            K_C_outside = np.array([1e1, 0, 1e1])
+            K_C_outside = np.array([1, 1e-3, 1])
 
             # approach cone definition
             #h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
@@ -377,5 +383,5 @@ def computeTOF(relativeState, aimAtState, param):
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
     #TOF = deltanorm/5e-4 * o_factor * p_factor # original, tested also: 3e-3
-    TOF = deltanorm/1e-4 * o_factor * p_factor
+    TOF = deltanorm/4e-4 * o_factor * p_factor
     return TOF

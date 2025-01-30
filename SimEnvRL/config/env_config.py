@@ -24,22 +24,23 @@ class physParamClass:
 
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
+    specificImpulse: float = 270                             # [s] specific impulse of the thruster 
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
     dockingState = np.array([0, 0, 0, 0, 0.02e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
-    freqGNC : float = 5 * tc                                # [adimensional (from Hz)] GNC upadate frequency
+    freqGNC : float = 5 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
-        "mass": 15000,                  # [kg]
-        "Area": 18,                     # [m^2]
+        "mass": 15000.,                 # [kg]
+        "Area": 18.,                    # [m^2]
         "reflCoeffSpecular": 0.5,       # [-]
         "reflCoeffDiffuse":  0.1        # [-]
     })
 
     target: dict = field(default_factory=lambda: {
-        "mass": 40000,                  # [kg]
-        "Area": 110,                    # [m^2]
+        "mass": 40000.,                 # [kg]
+        "Area": 110.,                   # [m^2]
         "reflCoeffSpecular": 0.5,       # [-]
         "reflCoeffDiffuse":  0.1        # [-]
     })

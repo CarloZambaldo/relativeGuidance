@@ -108,8 +108,8 @@ def computeEnvironmentDisturbances(t,SCparam,param):
 						(1 + SCparam["reflCoeffSpecular"] + 2/3 * SCparam["reflCoeffDiffuse"])) * sunVersor
 
 
-	# add 
-
+	# add environment noise
+	
 
 	
 	# adimensionalize:

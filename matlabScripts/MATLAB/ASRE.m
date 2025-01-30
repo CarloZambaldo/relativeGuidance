@@ -3,7 +3,7 @@ function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarge
     % PARAMETERS
     t_i = 0;                   % Initial time
     t_f = TOF;                 % Final time
-    N = 210;                   % Number of time steps
+    N = 250;                   % Number of time steps
 
     % TIME GRID
     tvec = linspace(t_i, t_f, N);
@@ -39,6 +39,9 @@ function optimalTrajectory = ASRE(TOF, initialRelativeState_L, initialStateTarge
             %% NOW TESTING 
             Q = [[8e5 0 0; 0 1e2 0; 0 0 8e5], zeros(3); zeros(3), [5e6 0 0; 0 5e6 0; 0 0 5e6]];      % State cost matrix
             R = [2e1 0 0; 0 2e1 0; 0 0 2e1];                                                         % Control cost matrix  
+
+            Q = [[6e1 0 0; 0 1e-2 0; 0 0 6e1], zeros(3); zeros(3), [1e3 0 0; 0 5e3 0; 0 0 1e3]];      % State cost matrix
+            R = [1e-2 0 0; 0 1e-2 0; 0 0 1e-2];
 
         otherwise
             Q = eye(6);               % State cost matrix
