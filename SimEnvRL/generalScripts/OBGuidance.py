@@ -328,7 +328,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_SS_inside = np.array([5e1, 5e2, 5e1])
-            K_SS_outside = np.array([1e5, 5e6, 1e5])
+            K_SS_outside = np.array([5e5, 6e6, 5e5])
             
             # potential field computation
             if np.linalg.norm(rho)**2 - SphereRadius_SS**2 <= 0:  # if constraint is violated
@@ -346,11 +346,10 @@ def APF(relativeState_L, constraintType, param):
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition FIXME
-            K_C_inside  = np.array([1, 2e-1, 1]) + \
+            K_C_inside  = np.array([1, 1.5e-1, 1]) + \
                           np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))#
-                            # test but not sure: np.array([5e4, 5e-1, 5e4]) * (abs(rho[1])**4/(1e9))
                             # the old one np.array([1, 1e-1, 1]) + np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
-            K_C_outside = np.array([1, 1e-3, 1])
+            K_C_outside = np.array([10, 1e-5, 10])
 
             # approach cone definition
             #h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
@@ -383,5 +382,5 @@ def computeTOF(relativeState, aimAtState, param):
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
     #TOF = deltanorm/5e-4 * o_factor * p_factor # original, tested also: 3e-3
-    TOF = deltanorm/4e-4 * o_factor * p_factor
+    TOF = deltanorm/5.5e-4 * o_factor * p_factor
     return TOF

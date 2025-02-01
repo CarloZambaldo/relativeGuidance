@@ -46,7 +46,7 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
         
     consider the docking standards for phase 2: 
         position:
-                consider docked below 5 cm
+                consider docked below 5 mm
         velocity:
                 along R and H: max 0.04 m/s
                 along V: max 0.1 m/s
@@ -71,21 +71,23 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                 if (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 1.3007e-10):  # when below 5 cm error (5cm = 1.3007e-10)
                     # if also the velocity converges
                     # docking standard: along R and H: max 0.04 m/s; along V: max 0.1 m/s
-                    if (abs(TRUE_relativeState_L[3]-aimAtState[3]) <= 3.9095e-05 and \
-                        abs(TRUE_relativeState_L[5]-aimAtState[5]) <= 3.9095e-05 and \
-                        abs(TRUE_relativeState_L[4]-aimAtState[4]) <= 9.7737e-05):
+                    if (abs(TRUE_relativeState_L[3]) <= 3.9095e-05 and \
+                        abs(TRUE_relativeState_L[5]) <= 3.9095e-05 and \
+                        abs(TRUE_relativeState_L[4]) <= 9.7737e-05):
                         aimReachedBool = True
                     else:
                         crashedBool = True
+                        print(" ! docking velocity constraint NOT satisfied ! ")
                 else:
                     crashedBool = True
             elif (TRUE_relativeState_L[1] - aimAtState[1]) > 0: # if in front of the target
                 # if the velocity has not converget yet
-                if not (abs(TRUE_relativeState_L[3]-aimAtState[3]) <= 3.9095e-05 and \
-                    abs(TRUE_relativeState_L[5]-aimAtState[5]) <= 3.9095e-05 and \
-                    abs(TRUE_relativeState_L[4]-aimAtState[4]) <= 9.7737e-05) or \
+                if not (abs(TRUE_relativeState_L[3]) <= 3.9095e-05 and \
+                    abs(TRUE_relativeState_L[5]) <= 3.9095e-05 and \
+                    abs(TRUE_relativeState_L[4]) <= 9.7737e-05) or \
                     not (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 1.3007e-10):
                     crashedBool = True
+                    print(" ! chaser is in front of the target ! ")
         case _:
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 

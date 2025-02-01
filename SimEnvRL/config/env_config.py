@@ -26,7 +26,7 @@ class physParamClass:
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
     specificImpulse: float = 270                             # [s] specific impulse of the thruster 
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
-    dockingState = np.array([0, 0, 0, 0, 0.02e-3*tc/xc, 0])  # Final relative state similar to Luca Thesis
+    dockingState = np.array([0, -1e-5/xc, 0, 0, 0.04e-3*tc/xc, 0])  # Final relative state
     freqGNC : float = 5 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
 

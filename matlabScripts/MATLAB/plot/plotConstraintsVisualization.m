@@ -55,15 +55,15 @@ function [] = plotConstraintsVisualization(DeltaIC_meters,type,colore)
         %% CONE %% 
         case 'C'
             z = @(RbarX,VbarX) real(sqrt(acone^2*bcone^3 - 3*acone^2*bcone^2.*VbarX + 3*acone^2*bcone.*VbarX.^2 - acone^2.*VbarX.^3 - RbarX.^2));
-            pointsR = linspace(-3*DeltaIC_meters,3*DeltaIC_meters,1071);
-            pointsV =  linspace(-DeltaIC_meters,0,1001);
+            pointsR = linspace(-DeltaIC_meters,DeltaIC_meters,1771);
+            pointsV =  linspace(-DeltaIC_meters,0,501);
             [X,Y] = meshgrid(pointsR,pointsV);
            
             halfCone = z(X,Y); % [m]
-            toll = max(max(diff(pointsR)),max(diff(pointsV)))*1.9;
+            toll = max(max(abs(Y)));
             for i = 1:size(X,1)
                 for j = 1:size(X,2)
-                    if -(Y(i,j)-toll-bcone)^3 < ((X(i,j).^2/acone^2))
+                    if -acone^2*(Y(i,j) - 3.1*(toll+100)/abs(Y(i,j)-100) - bcone)^3 < (X(i,j))^2
                         halfCone(i,j) = NaN;
                     end
                 end

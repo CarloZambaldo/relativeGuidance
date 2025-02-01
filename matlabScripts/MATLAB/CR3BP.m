@@ -7,7 +7,7 @@ function dstate = CR3BP(t, state, param, controlAction, disturbAction)
         controlAction = [0 0 0]';
     end
     if nargin < 5
-        disturbAction =[0;0;0];
+        disturbAction = [0;0;0];
     end
     
     x = state(1);

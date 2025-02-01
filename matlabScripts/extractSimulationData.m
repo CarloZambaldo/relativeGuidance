@@ -14,7 +14,7 @@ function dataExtracted = extractSimulationData(data, simulationID)
     end
 
     % Extract data for the specified simulation
-    dataExtracted = struct();
+    dataExtracted = data;
     dataExtracted.n_population = length(simulationID);
     dataExtracted.phaseID = data.phaseID;
     dataExtracted.param = data.param;

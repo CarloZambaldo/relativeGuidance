@@ -6,6 +6,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import sys
 
+
+# to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# tensorboard --logdir="AgentModels//" --host localhost --port 6006
+
+## SYSTEM INPUT PARAMETERS ##
 if len(sys.argv) < 4:
     phaseID = 2
     modelName = "TEST_AGENT"
@@ -20,7 +25,7 @@ else:
     if len(sys.argv) == 5:
         renderingBool = 0 if (sys.argv[4] == "False" or sys.argv[4] == "0") else 1
 
-## CHANGE HERE ##
+## TRAINING MODES ##
 if taip == "new":
     trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
 elif taip == "old":
@@ -29,8 +34,7 @@ else:
     raise Exception("training Type not defined. Please use 'new' or 'old'.")
 #modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
 deviceType   = "cpu"                           # "cuda" or "cpu"
-normalisation = True                           # True or False
-discountFactor = 0.99                          # discount factor for the reward
+
 #phaseID = 1
 if phaseID == 1:
     tspan = np.array([0, 0.06])
@@ -38,31 +42,48 @@ else:
     tspan = np.array([0, 0.03])
 
 
-# to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# tensorboard --logdir="AgentModels//" --host localhost --port 6006
-
-## ENV
+## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 1e-4 * progress_remaining  # Decreases as training progresses
+    return 3e-3 * progress_remaining    # Decreases as training progresses
 
-ent_coef=0.02
+# recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+# normalisation = True         # True or False
+# discountFactor = 0.99        # discount factor for the reward
+# ent_coef = 0.02              # entropy coefficient
+# n_steps = 5000               # abot 4 trajectories
+# batch_size = 250             # divisor of n_steps for efficiency
+# n_epochs = 25                # every value is used 5 times for training
+normalisation = True        # True or False
+discountFactor = 0.99       # discount factor for the reward
+ent_coef = 0.025            # entropy coefficient
+n_steps = 4500              # consider different trajectories
+batch_size = 250            # divisor of n_steps for efficiency
+n_epochs = 15               # every value is used 25 times for training
 
-# Create vectorized environments
+# Create environment (depending on the device and normalisation)
 if deviceType == "cuda": # IF USING GPU
-    #env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
-    raise Exception("GPU not supported.")
+    env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+    raise Exception("GPU not supported on achiral.")
+
 elif deviceType == "cpu": # IF USING CPU
     if not normalisation: # IF USING CPU without vectorized environment
         env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+
     else: # IF USING CPU with vectorized environment
         env = DummyVecEnv([lambda: gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
+        # normalize the environment
         env = VecNormalize(env, norm_obs=True, norm_reward=True)
 
-print("***************************************************************************")
-print(f"Training: {modelName} on {deviceType} with normalisation: {normalisation}")
-print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
-print(f"Discount Factor: {discountFactor},\nent_coef: {ent_coef},\nlearning_rate: linear from {lr_schedule(1)}")
-print("***************************************************************************")
+print("\n***************************************************************************")
+print("-- AGENT TRAINING PARAMETERS --")
+if trainingType == "TRAIN_NEW_MODEL":
+    print(f"Training: {modelName} (new) on {deviceType} with normalisation: {normalisation}")
+    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+    print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+else:
+    print(f"Training: {modelName} (continue) on {deviceType}.\nNOTE: training parameters are not used.")
+print("***************************************************************************\n")
 # Reset the environment
 env.reset()
 
@@ -72,7 +93,13 @@ match trainingType:
         # definition of the learning parameters
         RLagent = config.RL_config.get(modelName)
         # create the model
-        model = PPO('MlpPolicy', env=env, learning_rate=lr_schedule, ent_coef=ent_coef, device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
+        model = PPO('MlpPolicy', env=env,
+                    learning_rate=lr_schedule,
+                    ent_coef=ent_coef,
+                    n_steps=n_steps,
+                    batch_size=batch_size,
+                    n_epochs=n_epochs,
+                    device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
 
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
@@ -91,3 +118,12 @@ model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_l
 model.save(RLagent.modelFileNameDir)
 #print(f"> TRAINING ITERATION {iter} COMPLETED")
 print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
+
+if trainingType == "TRAIN_NEW_MODEL":
+    print("\n***************************************************************************")
+    print("-- TRAINED (NEW) AGENT USING FOLLOWING PARAMETERS --")
+    print(f"Training: {modelName} on {deviceType} with normalisation: {normalisation}")
+    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+    print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+    print("***************************************************************************\n")

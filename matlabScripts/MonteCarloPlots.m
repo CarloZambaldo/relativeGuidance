@@ -102,9 +102,9 @@ function [] = MonteCarloPlots(data,eachplotbool)
             plotConstraintsVisualization(1e3,'C')
         end
         if phaseID == 1
-            legend("Target LVLH","","","Target Position","Holding State","","Chaser Initial Positions",'Location','best')
+            legend("Target LVLH","","","Target Position","Holding State","Chaser Initial Positions",'Location','best')
         else
-            legend("Target LVLH","","","Target Position","","Chaser Initial Positions",'Location','best')
+            legend("Target LVLH","","","Target Position","Chaser Initial Positions","Relative Trajectory",'Location','best')
         end
         
         axis equal

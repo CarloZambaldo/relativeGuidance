@@ -9,7 +9,7 @@ from gymnasium import spaces
 #import colorama
 #colorama.init()
 
-## REINFORCEMENT LEARNING selfRONMENT ##
+## REINFORCEMENT LEARNING ENVIRONMENT ##
 class SimEnv(gym.Env):
     metadata = {"render_modes": ["ansi"]}
 
@@ -25,7 +25,7 @@ class SimEnv(gym.Env):
         # simulation initialization dataclasses
         self.initialValue: config.env_config.InitialValues = None
 
-        # physical selfronment
+        # physical environment
         self.timeIndex: int = 0                                 # current time step index
         self.timeNow: float = 0.                                # current time
         self.targetState_S: np.ndarray = None                   # target state in Synodic (for physical environment)
@@ -46,7 +46,7 @@ class SimEnv(gym.Env):
         self.constraintViolationHistory: np.ndarray = None      # boolean if constraint violations occurred during the simulation
         self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
 
-        # create the selfronment simulation parameters dataclass
+        # create the environment simulation parameters dataclass
         options = options or {}
 
         # if rendering is required
@@ -95,7 +95,7 @@ class SimEnv(gym.Env):
 
         RLstepAgentAction = AgentAction
         GNCiterID = 0
-        while GNCiterID < self.param.RLGNCratio: # loop for the GNC cycles
+        while (GNCiterID < self.param.RLGNCratio) and (self.terminated is False and self.truncated is False): # loop for the GNC cycles
             GNCiterID += 1
         # execute "RLGNCratio" times the GNC and then let the agent decide following action
         # note that after the first GNC cycle the AgentAction is set to 0 (SKIP) for the following cycles until a new action is taken
@@ -136,7 +136,7 @@ class SimEnv(gym.Env):
                 controlAction_S, controlAction_L = OBControl(self.targetState_S,controlAction_L,self.param)
                 self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
 
-                # PHYSICAL selfRONMENT #
+                # PHYSICAL ENVIRONMENT #
                 # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
                 distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(self.timeNow, self.param.chaser, self.param)
                 odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
@@ -150,7 +150,15 @@ class SimEnv(gym.Env):
                 self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
                 self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
                 AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
-                self.truncated = False
+                
+                # compute the TRUE relative state in synodic and LVLH
+                TRUE_relativeState_S = self.chaserState_S - self.targetState_S
+                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
+
+                # check if the aim is reached
+                aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, self.param.constraint["aimAtState"], self.param)
+                if aimReachedBool or crashedBool:
+                    self.terminated = True
             else:
                 GNCiterID = self.param.RLGNCratio + 1 # to end the GNC loop
                 # END OF SIMULATION # (out of time)
@@ -163,8 +171,14 @@ class SimEnv(gym.Env):
         # RL AGENT OBSERVATION #
         self.observation = self.computeRLobservation()
 
+        # compute the TRUE relative state in synodic and LVLH
+        TRUE_relativeState_S = self.chaserState_S - self.targetState_S
+        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
+        # check if the aim is reached
+        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, self.param.constraint["aimAtState"], self.param)
+        
         # REWARD COMPUTATION #
-        self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, self.param.phaseID, self.param)
+        self.stepReward, self.terminated = self.computeReward(TRUE_relativeState_L, RLstepAgentAction, aimReachedBool, crashedBool, OBoTAge)
         
         # rendering the environment if required
         if self.renderingBool:
@@ -220,7 +234,7 @@ class SimEnv(gym.Env):
         self.terminationCause = "Unknown"
         self.stepReward = 0.
 
-        # physical selfronment related parameters
+        # physical environment related parameters
         self.timeIndex = 0
         self.timeNow = 0.
 
@@ -281,30 +295,24 @@ class SimEnv(gym.Env):
 
         return observation
 
-    def computeReward(self, AgentAction, OBoTAge, phaseID, param):
+    def computeReward(self, TRUE_relativeState_L, AgentAction, aimReachedBool, crashedBool, OBoTAge):
 
         terminated = False
         self.stepReward = 0. # initialize the reward for the current time step
 
-        # compute the TRUE relative state in synodic and LVLH
-        TRUE_relativeState_S = self.chaserState_S - self.targetState_S
-        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,param)
 
         # translate to meters the relative state, since all the constraints are defined in meters
-        TRUE_relativeState_L_meters = TRUE_relativeState_L*param.xc*1e3 # m
-        TRUE_relativeState_L_meters[3:6] /= param.tc # m/s
+        TRUE_relativeState_L_meters = TRUE_relativeState_L*self.param.xc*1e3 # m
+        TRUE_relativeState_L_meters[3:6] /= self.param.tc # m/s
 
         # check if the constraints are violated and the "entity" of the violation
         constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L_meters, 
-                                                            param.constraint["constraintType"],
-                                                            param.constraint["characteristicSize"], param)
+                                                            self.param.constraint["constraintType"],
+                                                            self.param.constraint["characteristicSize"], self.param)
         self.constraintViolationHistory[self.timeIndex] = constraintViolationBool # save in the history if constraints are violated
     
-        # check if the aim is reached
-        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
-
         # REWARD COMPUTATION DEPENDING ON THE PHASE ID #
-        match phaseID:
+        match self.param.phaseID:
             case 1: # RENDEZVOUS
                 K_trigger = 0#.005
                 K_deleted = 0#.1
@@ -331,18 +339,19 @@ class SimEnv(gym.Env):
 
                 # Precision Reward - give a positive reward for collision avoidance
                 constraintFactor = abs(violationEntity) # observe that if a constraint is violated this reward turns to negative!
-                proximityFactor = 0.5 * (1 + np.tanh(param.constraint["characteristicSize"] - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
+                proximityFactor = 0.5 * (1 + np.tanh(self.param.constraint["characteristicSize"] - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
                 self.stepReward -= K_precisn * (constraintFactor) * proximityFactor
 
                 # Time of Flight - penalize long time of flights
-                self.stepReward -= K_simtime * 1/param.freqGNC  
+                self.stepReward -= K_simtime * 1/self.param.freqGNC  
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.001
-                K_deleted = 0.5
+                K_trigger = 0.0001
+                K_deleted = 0#.5
                 K_control = 0.3
-                K_precisn = 0.35
+                K_precisn = 0.7
+                K_precisn_vel = 1
                 K_simtime = 0.001
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
@@ -371,18 +380,17 @@ class SimEnv(gym.Env):
                     proximityFactorPos = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
                     proximityFactorVel = 1
                 precisionFactor = -violationEntity # observe that if a constraint is violated this reward turns to negative!
-                velocityFactor  = np.exp(-np.linalg.norm(TRUE_relativeState_L[3:6]-param.constraint["aimAtState"][3:6])) 
+                velocityFactor  = np.exp(-np.linalg.norm(TRUE_relativeState_L[3:6]-self.param.constraint["aimAtState"][3:6])) 
                 self.stepReward += K_precisn * (proximityFactorPos * precisionFactor) 
-                self.stepReward += K_precisn * (proximityFactorVel * velocityFactor)
+                self.stepReward += K_precisn_vel * (proximityFactorVel * velocityFactor)
 
                 # Time of Flight - penalize long time of flights
-                timeExpenseFactor = 1/param.freqGNC 
+                timeExpenseFactor = 1/self.param.freqGNC 
                 proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
                 self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
 #
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
-
 
         ## Fuel Efficiency Reward - Penalize large control actions
         # reduce the reward of an amount proportional to the Guidance control effort
@@ -395,12 +403,12 @@ class SimEnv(gym.Env):
 
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:
-            if phaseID == 1:
+            if self.param.phaseID == 1:
                 print(" ################################# ")
                 print(" >>>>> SUCCESSFUL RENDEZVOUS <<<<< ")
                 print(" ################################# ")
                 self.terminationCause = "_AIM_REACHED_"
-            elif phaseID == 2:
+            elif self.param.phaseID == 2:
                 print(" ################################## ")
                 print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                 print(" ################################## ")

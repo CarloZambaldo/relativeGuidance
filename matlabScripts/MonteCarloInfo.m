@@ -52,7 +52,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     
 
     %% MEAN THRUST REQUIRED
-    meanControlAction_dim = zeros(1,3); % THIS IS IN NEWTON!!
+    meanControl_dim = zeros(1,3); % THIS IS IN NEWTON!!
     totalImpulse = zeros(1,3);
     totalMassUsed = 0;
     
@@ -60,22 +60,22 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         time_dim = timeHistory(1:endTimeIx(sim_id)) .* param.tc;
         dt = 1/param.freqGNC .* param.tc;
 
-        control_dim = double(param.chaserMass) .* controlAction(1:endTimeIx(sim_id),:,sim_id) .* param.xc./param.tc^2;
+        control_dim = double(param.chaserMass) .* controlAction(1:endTimeIx(sim_id),:,sim_id) .* param.xc * 1e3 ./ param.tc^2;
         
-        meanControlAction_dim = meanControlAction_dim + trapz(time_dim,control_dim,1);
+        meanControl_dim = meanControl_dim + trapz(time_dim,control_dim,1);
 
         totalImpulse = totalImpulse + sum(control_dim(1:end-1,:) .* dt, 1);
         totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
     
-    meanControlAction_dim = meanControlAction_dim / double(n_population);
+    meanControl_dim = meanControl_dim / double(n_population);
     totalImpulse = totalImpulse / double(n_population);
     totalMassUsed = totalMassUsed / double(n_population);
     
     fprintf("\n-- MEAN CONTROL ACTION --\n");
-    fprintf("Mean Control Action R = %.2f [N]\n", meanControlAction_dim(1));
-    fprintf("Mean Control Action V = %.2f [N]\n", meanControlAction_dim(2));
-    fprintf("Mean Control Action H = %.2f [N]\n", meanControlAction_dim(3));
+    fprintf("Mean Control Action R = %.2f [N]\n", meanControl_dim(1));
+    fprintf("Mean Control Action V = %.2f [N]\n", meanControl_dim(2));
+    fprintf("Mean Control Action H = %.2f [N]\n", meanControl_dim(3));
     
     fprintf("\n-- MEAN TOTAL IMPULSE --\n");
     fprintf("Total Impulse R = %.2f [Ns]\n", totalImpulse(1));

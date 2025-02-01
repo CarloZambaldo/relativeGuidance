@@ -76,20 +76,20 @@ if usingAgentBool:
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
-        "seed": seed,
+        "seed": seed if seed is not None else "None",
         "phaseID" : env.unwrapped.param.phaseID,
         "agentModelName" : agentName,
         "n_population" : None,
         "param" : {
-                    "xc": env.unwrapped.param.xc,
-                    "tc": env.unwrapped.param.tc,
-                    "massRatio": env.unwrapped.param.massRatio,
-                    "freqGNC": env.unwrapped.param.freqGNC,
-                    "RLGNCratio": env.unwrapped.param.RLGNCratio,
-                    "chaserThrust": env.unwrapped.param.maxAdimThrust,
-                    "chaserMass": env.unwrapped.param.chaser["mass"],
-                    "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
-                    },
+            "xc": env.unwrapped.param.xc,
+            "tc": env.unwrapped.param.tc,
+            "massRatio": env.unwrapped.param.massRatio,
+            "freqGNC": env.unwrapped.param.freqGNC,
+            "RLGNCratio": env.unwrapped.param.RLGNCratio,
+            "chaserThrust": env.unwrapped.param.maxAdimThrust,
+            "chaserMass": env.unwrapped.param.chaser["mass"],
+            "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
+            },
         "timeHistory" : np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC),
         
         "trajectory" : None,

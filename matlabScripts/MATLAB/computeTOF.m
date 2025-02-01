@@ -15,7 +15,7 @@ function TOF = computeTOF(relativeState,aimAtState,param)
     delta = ri - aimAtState(1:3);
     p_factor = 2 + delta(2)./norm(delta);
     o_factor = 1.1 - tanh(norm(delta)*param.xc/5);
-    TOF = norm(delta)/4e-4 * o_factor * p_factor;
+    TOF = norm(delta)/5e-4 * o_factor * p_factor;
 
     fprintf("Estimated TOF: %f (%f [hours])",TOF,TOF*param.tc/3600)
 end
