@@ -1,6 +1,6 @@
 import numpy as np
 
-def constraintViolation(TRUE_relativeState_L_meters,constraintType,characteristicSize,param):
+def constraintViolation(TRUE_relativeState_L_meters,constraintType,characteristicSize):
     # default is no violation
     constraintViolationBool = False
     violationEntity = 0 # percentage of the violation (wrt characteristic size)
@@ -49,7 +49,7 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                 consider docked below 5 mm
         velocity:
                 along R and H: max 0.04 m/s
-                along V: max 0.1 m/s
+                along V: max 0.1 m/s            (adim: 9.7737e-05)
 
     """
     crashedBool = False
@@ -77,7 +77,7 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                         aimReachedBool = True
                     else:
                         crashedBool = True
-                        print(" ! docking velocity constraint NOT satisfied ! ")
+                        print(f" ! docking velocity along V-BAR is {TRUE_relativeState_L[4]*param.xc/param.tc*1e3:.3f} m/s : constraint NOT satisfied ! ")
                 else:
                     crashedBool = True
             elif (TRUE_relativeState_L[1] - aimAtState[1]) > 0: # if in front of the target
@@ -87,7 +87,7 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
                     abs(TRUE_relativeState_L[4]) <= 9.7737e-05) or \
                     not (np.linalg.norm(TRUE_relativeState_L[[0,2]]-aimAtState[[0,2]]) <= 1.3007e-10):
                     crashedBool = True
-                    print(" ! chaser is in front of the target ! ")
+                    print(" ! chaser is in front of the target and not converged yet ! ")
         case _:
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 

@@ -28,7 +28,7 @@ class physParamClass:
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
     dockingState = np.array([0, -1e-5/xc, 0, 0, 0.04e-3*tc/xc, 0])  # Final relative state
     freqGNC : float = 5 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
-    RLGNCratio : int = 100                                   # number of GNC steps per RL step
+    RLGNCratio : int = 50                                   # number of GNC steps per RL step
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {

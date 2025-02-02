@@ -54,11 +54,13 @@ def lr_schedule(progress_remaining):
 # batch_size = 250             # divisor of n_steps for efficiency
 # n_epochs = 25                # every value is used 5 times for training
 normalisation = True        # True or False
-discountFactor = 0.99       # discount factor for the reward
-ent_coef = 0.025            # entropy coefficient
-n_steps = 4500              # consider different trajectories
-batch_size = 250            # divisor of n_steps for efficiency
-n_epochs = 15               # every value is used 25 times for training
+norm_reward = False
+norm_obs = True
+discountFactor = 0.985       # discount factor for the reward
+ent_coef = 0.025             # entropy coefficient
+n_steps = 4500               # consider different trajectories
+batch_size = 250             # divisor of n_steps for efficiency
+n_epochs = 15                # every value is used 25 times for training
 
 # Create environment (depending on the device and normalisation)
 if deviceType == "cuda": # IF USING GPU
@@ -66,19 +68,20 @@ if deviceType == "cuda": # IF USING GPU
     raise Exception("GPU not supported on achiral.")
 
 elif deviceType == "cpu": # IF USING CPU
-    if not normalisation: # IF USING CPU without vectorized environment
-        env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
-
-    else: # IF USING CPU with vectorized environment
+    if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
         env = DummyVecEnv([lambda: gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
         # normalize the environment
-        env = VecNormalize(env, norm_obs=True, norm_reward=True)
+        env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward)
 
+    else: # IF USING CPU without vectorized environment
+        env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+        
 print("\n***************************************************************************")
 print("-- AGENT TRAINING PARAMETERS --")
 if trainingType == "TRAIN_NEW_MODEL":
-    print(f"Training: {modelName} (new) on {deviceType} with normalisation: {normalisation}")
+    print(f"Training: {modelName} (new) on {deviceType}")
     print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
     print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
     print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
 else:

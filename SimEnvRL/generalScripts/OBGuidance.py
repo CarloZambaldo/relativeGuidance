@@ -33,7 +33,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
         loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
-    sigma = surface_L2 + (5 * surface_L1_vel + 6e-3 * surface_L1_pos)
+    sigma = surface_L2 + (1e1 * surface_L1_vel + 6e-3 * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
@@ -126,11 +126,16 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
                 #])
                 #R = np.diag([2e1, 2e1, 2e1])
 
+                # Q = np.block([
+                #     [np.diag([6e1, 1e-2, 6e1]), np.zeros((3, 3))],
+                #     [np.zeros((3, 3)), np.diag([1e3, 1e4, 1e3])]
+                # ])
+                # R = np.diag([1e-2, 1e-2, 1e-2])
                 Q = np.block([
                     [np.diag([6e1, 1e-2, 6e1]), np.zeros((3, 3))],
-                    [np.zeros((3, 3)), np.diag([1e3, 5e3, 1e3])]
+                    [np.zeros((3, 3)), np.diag([1e3, 1e4, 1e3])]
                 ])
-                R = np.diag([1e-2, 1e-2, 1e-2])
+                R = np.diag([1e-2, 1e-1, 1e-2])
                 
             case _:
                 Q = np.eye(6)
@@ -153,7 +158,7 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
 
         #PHIT = odeint(compute_PHIT, initial_conditions, tvec, args=(B, Q, R, param))
         M12 = -B @ np.linalg.solve(R, B.T)
-        solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='DOP853')
+        solution = solve_ivp(compute_PHIT, [t_i, t_f], initial_conditions, args=(B,Q,R,M12,param), t_eval=tvec, method='RK45')
         PHIT = solution.y.T
         PHI = PHIT[-1, :144].reshape(12, 12)
 
@@ -345,11 +350,11 @@ def APF(relativeState_L, constraintType, param):
             acone = param.constraint["characteristicSize"]["acone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
-            # coefficients definition FIXME
-            K_C_inside  = np.array([1, 1.5e-1, 1]) + \
-                          np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))#
-                            # the old one np.array([1, 1e-1, 1]) + np.array([1.5, 5e-1, 1.5]) * (abs(rho[1])**3/(1e9))
-            K_C_outside = np.array([10, 1e-5, 10])
+            # coefficients definition
+            K_C_inside  = np.array([1, 1e-1, 1]) + \
+                          np.array([1.15, 5e-1, 1.15]) * (abs(rho[1])**3/(1e9))#
+                            # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
+            K_C_outside = np.array([10, 0, 10])
 
             # approach cone definition
             #h = lambda r: r[0]**2 + acone**2 * (r[1] - bcone)**3 + r[2]**2
@@ -362,7 +367,7 @@ def APF(relativeState_L, constraintType, param):
             # potential fields computation (if contract is violated a constant repulsive field is applied),
             # otherwise the repulsive field is computed as the gradient of the repulsive potential
             if h_eval_rho >= 0: #rho[0]**2 + rho[2]**2 + acone**2 * (rho[1] - bcone)**3 >= 0:  # if constraint is violated
-                NablaU_APF = K_C_outside * np.array([1, 0, 1]) * (rho / np.linalg.norm(rho))
+                NablaU_APF = K_C_outside * (rho / np.linalg.norm(rho))
             else:
                 NablaU_APF = K_C_inside * (rho / h_eval_rho**2 - (rho.T @ rho) * Nablah_eval_rho / h_eval_rho**3)
 
