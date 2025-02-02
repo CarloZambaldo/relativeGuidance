@@ -11,7 +11,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fail = data.fail;
     success = data.success;
     terminalState = data.terminalState;
-    endTimeIx = data.terminalTimeIndex;
+    endTimeIx = data.terminalTimeIndex+1;
     
     if isfield(data,"agentModelName")
         agentModelName = data.agentModelName;

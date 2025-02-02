@@ -58,8 +58,8 @@ norm_reward = False
 norm_obs = True
 discountFactor = 0.98       # discount factor for the reward
 ent_coef = 0.03             # entropy coefficient
-n_steps = 6480              # consider different trajectories
-batch_size = 80             # divisor of n_steps for efficiency try 128
+n_steps = 5400              # consider different trajectories
+batch_size = 90             # divisor of n_steps for efficiency try 128
 n_epochs = 15               # every value is used n times for training
 
 # Create environment (depending on the device and normalisation)
