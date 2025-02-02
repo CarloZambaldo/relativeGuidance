@@ -39,7 +39,7 @@ deviceType   = "cpu"                           # "cuda" or "cpu"
 if phaseID == 1:
     tspan = np.array([0, 0.06])
 else:
-    tspan = np.array([0, 0.03])
+    tspan = np.array([0, 0.028745]) # about 3 hours of simulation
 
 
 ## TRAINING PARAMETERS ##
@@ -56,26 +56,26 @@ def lr_schedule(progress_remaining):
 normalisation = True        # True or False
 norm_reward = False
 norm_obs = True
-discountFactor = 0.985       # discount factor for the reward
-ent_coef = 0.025             # entropy coefficient
-n_steps = 4500               # consider different trajectories
-batch_size = 250             # divisor of n_steps for efficiency
-n_epochs = 15                # every value is used 25 times for training
+discountFactor = 0.98       # discount factor for the reward
+ent_coef = 0.03             # entropy coefficient
+n_steps = 6480              # consider different trajectories
+batch_size = 80             # divisor of n_steps for efficiency try 128
+n_epochs = 15               # every value is used n times for training
 
 # Create environment (depending on the device and normalisation)
-if deviceType == "cuda": # IF USING GPU
-    env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
-    raise Exception("GPU not supported on achiral.")
-
-elif deviceType == "cpu": # IF USING CPU
+if deviceType == "cpu": # IF USING CPU
     if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
         env = DummyVecEnv([lambda: gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
         # normalize the environment
         env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward)
-
     else: # IF USING CPU without vectorized environment
         env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
-        
+
+elif deviceType == "cuda": # IF USING GPU
+    env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+    raise Exception("GPU not supported on achiral.")
+
+
 print("\n***************************************************************************")
 print("-- AGENT TRAINING PARAMETERS --")
 if trainingType == "TRAIN_NEW_MODEL":
@@ -87,6 +87,7 @@ if trainingType == "TRAIN_NEW_MODEL":
 else:
     print(f"Training: {modelName} (continue) on {deviceType}.\nNOTE: training parameters are not used.")
 print("***************************************************************************\n")
+
 # Reset the environment
 env.reset()
 
@@ -112,16 +113,18 @@ match trainingType:
     case _:
         raise Exception("training Type not defined.")
 
+# save the starting model to ensure it will save
 model.save(RLagent.modelFileNameDir)
 
 ## TRAINING ##
 print("TRAINING ...")
-#for iter in range(RLagent.maxIterations):
 model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
 model.save(RLagent.modelFileNameDir)
-#print(f"> TRAINING ITERATION {iter} COMPLETED")
 print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
+
+
+# output to recall which model was trained in that window
 if trainingType == "TRAIN_NEW_MODEL":
     print("\n***************************************************************************")
     print("-- TRAINED (NEW) AGENT USING FOLLOWING PARAMETERS --")

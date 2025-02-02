@@ -91,6 +91,14 @@ def aimReached(TRUE_relativeState_L, aimAtState, param):
         case _:
             raise ValueError("The termination condition for the given phaseID has not been implemented yet.")
 
+    if aimReachedBool or crashedBool:
+        print(f"Final Position R-BAR = {TRUE_relativeState_L[0]*1e2*param.xc*1e3:.2f} [cm]")
+        print(f"Final Position V-BAR = {TRUE_relativeState_L[1]*1e2*param.xc*1e3:.2f} [cm]")
+        print(f"Final Position H-BAR = {TRUE_relativeState_L[2]*1e2*param.xc*1e3:.2f} [cm]")
+        print(f"Final Velocity R-BAR = {TRUE_relativeState_L[3]*1e2*param.xc/param.tc*1e3:.2f} [cm/s]")
+        print(f"Final Velocity V-BAR = {TRUE_relativeState_L[4]*1e2*param.xc/param.tc*1e3:.2f} [cm/s]")
+        print(f"Final Velocity H-BAR = {TRUE_relativeState_L[5]*1e2*param.xc/param.tc*1e3:.2f} [cm/s]")
+    
     return aimReachedBool, crashedBool
 
 

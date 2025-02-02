@@ -79,11 +79,12 @@ class SimEnv(gym.Env):
         # (the first 6 values are OBStateRelative_L, 
         # the next 3 are the control action,
         # the last one is OBoTAge) NOTE THAT OBoTAge is expressed is ADIMENSIONAL in the observation space
+        margine = 2 # 100% margin on control action
         self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
-                                                          -self.param.maxAdimThrust*1.1, -self.param.maxAdimThrust*1.1, -self.param.maxAdimThrust*1.1,
+                                                          -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine,
                                                           -1]),
                                             high=np.array([1, 1, 1, 1, 1, 1,
-                                                           self.param.maxAdimThrust*1.1, self.param.maxAdimThrust*1.1, self.param.maxAdimThrust*1.1,
+                                                           self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine,
                                                           1]),
                                             dtype=np.float64)
 
@@ -153,7 +154,7 @@ class SimEnv(gym.Env):
                 # compute the TRUE relative state in synodic and LVLH
                 TRUE_relativeState_S = self.chaserState_S - self.targetState_S
                 TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
-                self.trueRelativeStateHistory_L[self.timeIndex+1, :] = TRUE_relativeState_L
+                self.trueRelativeStateHistory_L[self.timeIndex, :] = TRUE_relativeState_L
 
                 # check if the aim is reached
                 aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, self.param.constraint["aimAtState"], self.param)
@@ -258,6 +259,11 @@ class SimEnv(gym.Env):
         self.targetState_S = self.initialValue.fullInitialState[0:6]
         self.chaserState_S = self.initialValue.fullInitialState[6:12]
 
+        # compute the TRUE relative state in synodic and LVLH
+        TRUE_relativeState_S = self.chaserState_S - self.targetState_S
+        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
+        self.trueRelativeStateHistory_L[self.timeIndex, :] = TRUE_relativeState_L
+
         # saving the initial states inside the fullStateHistory vector
         self.fullStateHistory[0,:] = self.initialValue.fullInitialState
 
@@ -326,12 +332,12 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.001
+                K_trigger = 0.01
                 K_deleted = 0#.5
-                K_control = 0.3 # 0.3
-                K_precisn = 0.1
-                K_precisn_vel = 1 # 1
-                K_simtime = 0.0005
+                K_control = 0.35 # 0.3
+                K_precisn = 0.7
+                K_precisn_vel = 0.1 # 1
+                K_simtime = 0#.0005
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
 
@@ -351,10 +357,10 @@ class SimEnv(gym.Env):
 
                         # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
                         proximityFactorPos = max(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        proximityFactorVel = max(np.exp(historicalRS__met[1]/20), 1) # the closer to the target on V BAR
+                        proximityFactorVel = max(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
                         
                         positionFactor = -violationEntity # observe that if a constraint is violated positionFactor turns to negative! 
-                        velocityFactor  = 0.9 - np.tanh(0.02 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 25))
+                        velocityFactor  = 0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
                         #np.exp( - (np.linalg.norm(historicalRS__met[3:6]) / np.linalg.norm(self.param.constraint["aimAtState"][3:6]))**2 ) 
                         
                         positionReward += K_precisn * (proximityFactorPos * positionFactor) 
@@ -363,7 +369,6 @@ class SimEnv(gym.Env):
                     # compute the "mean" to avoid numerical problems
                     self.stepReward += positionReward / self.param.RLGNCratio
                     self.stepReward += velocityReward / self.param.RLGNCratio
-#
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
 
@@ -389,13 +394,14 @@ class SimEnv(gym.Env):
         # reduce the reward of an amount proportional to the Guidance control effort
         controlReward = 0.
         for ix in range(self.param.RLGNCratio):
-            controlReward += K_control * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
+            proximityFactor = 1 + max(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
+            controlReward += K_control * proximityFactor * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
         self.stepReward -= controlReward / self.param.RLGNCratio
 
         # Time of Flight - penalize long time of flights
         timeExpenseFactor = self.param.RLGNCratio/self.param.freqGNC 
-        #proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
-        self.stepReward -= K_simtime * timeExpenseFactor # * proximityFactor 
+        proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
+        self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
         
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:

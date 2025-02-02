@@ -12,18 +12,14 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
     # Define phase-specific constraints and target state
     constraintType = param.constraint["constraintType"]
     aimAtState = param.constraint["aimAtState"]
-    # characteristicSize = param.constraint["characteristicSize"]
 
     # Loop 1: Optimal Trajectory Computation
     match AgentAction:
         case 0: # if not AgentActioned, skip optimal trajectory computation
-            #print(" AgentAction = SKIP")
             pass
         case 1: # if AgentActioned, compute optimal trajectory
-            #print(" AgentAction = COMPUTE")
             OBoptimalTrajectory = loopOne(envTime, OBrelativeState, OBtargetState, aimAtState, phaseID, param)
         case 2: # delete the optimal Trajectory
-            #print(" AgentAction = DELETE")
             OBoptimalTrajectory = None
         case _:
             raise ValueError("Agent Action Not Defined.")
@@ -33,12 +29,13 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
         loopTwo(envTime, OBrelativeState, aimAtState, OBoptimalTrajectory, constraintType, param)
 
     # Compute sliding surface
-    sigma = surface_L2 + (1e1 * surface_L1_vel + 6e-3 * surface_L1_pos)
+    sigma = surface_L2 + (1e2 * surface_L1_vel + 6e-3 * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
     controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
 
+    #print(f"CONTROL : {controlAction_L}")
     return controlAction_L, OBoptimalTrajectory
 
 
@@ -133,9 +130,9 @@ def ASRE(timeNow, TOF, initialRelativeState_L, initialStateTarget_M, finalAimSta
                 # R = np.diag([1e-2, 1e-2, 1e-2])
                 Q = np.block([
                     [np.diag([6e1, 1e-2, 6e1]), np.zeros((3, 3))],
-                    [np.zeros((3, 3)), np.diag([1e3, 1e4, 1e3])]
+                    [np.zeros((3, 3)), np.diag([1e3, 5e4, 1e3])]
                 ])
-                R = np.diag([1e-2, 1e-1, 1e-2])
+                R = np.diag([1e-2, 2e-1, 1e-2])
                 
             case _:
                 Q = np.eye(6)
@@ -351,8 +348,8 @@ def APF(relativeState_L, constraintType, param):
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([1, 1e-1, 1]) + \
-                          np.array([1.15, 5e-1, 1.15]) * (abs(rho[1])**3/(1e9))#
+            K_C_inside  = np.array([1, 5e-1, 1]) + \
+                          np.array([1.1, 5e-1, 1.1]) * (abs(rho[1])**3/(1e9))#
                             # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([10, 0, 10])
 
@@ -370,6 +367,7 @@ def APF(relativeState_L, constraintType, param):
                 NablaU_APF = K_C_outside * (rho / np.linalg.norm(rho))
             else:
                 NablaU_APF = K_C_inside * (rho / h_eval_rho**2 - (rho.T @ rho) * Nablah_eval_rho / h_eval_rho**3)
+                # print(f"NablaU_APF: {NablaU_APF}")
 
         case _:
             raise ValueError("Constraint not defined properly.")

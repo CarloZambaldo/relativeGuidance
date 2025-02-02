@@ -10,8 +10,8 @@ class RLagentParamClass():
     modelFileNameDir : str = ""
     model_dir : str = ""
     log_dir    : str = ""
-    maxTimeSteps : int = 500000 # 
-    maxIterations : int = 10 # maximum number of iterations (at each iteration save the environment)
+    maxTimeSteps : int = 45360 #  about 840 trajectory for phase 2
+    maxIterations : int = 10 # maximum number of iterations NOT USED!
     
     def define(self, modelName):
         self.modelNumber = f"{int(time.time())}"
