@@ -80,7 +80,7 @@ class SimEnv(gym.Env):
         # (the first 6 values are OBStateRelative_L, 
         # the next 3 are the control action,
         # the last one is OBoTAge) NOTE THAT OBoTAge is expressed is ADIMENSIONAL in the observation space
-        margine = 2 # 100% margin on control action
+        margine = 1.1 # 100% margin on control action
         self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
                                                           -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine,
                                                           -1]),
@@ -225,7 +225,6 @@ class SimEnv(gym.Env):
         
         return ansi_output
 
-
     ## RESET ##
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -319,27 +318,27 @@ class SimEnv(gym.Env):
             case 1: # RENDEZVOUS
                 K_trigger = 0#.005
                 K_deleted = 0#.1
-                K_control = 0.05
-                K_precisn = 0.5
+                K_control = 0.5
+                K_precisn = 0.05
                 K_simtime = 0.01
     
 
                 # Precision Reward - give a positive reward for collision avoidance
-                constraintFactor = abs(violationEntity) # observe that if a constraint is violated this reward turns to negative!
+                constraintFactor = (violationEntity) # observe that if a constraint is violated this reward turns to negative!
                 proximityFactor = 0.5 * (1 + np.tanh(self.param.constraint["characteristicSize"] - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
-                self.stepReward -= K_precisn * (constraintFactor) * proximityFactor
+                self.stepReward += K_precisn * (constraintFactor) * proximityFactor
 
                 # Time of Flight - penalize long time of flights
                 self.stepReward -= K_simtime * 1/self.param.freqGNC  
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.01
+                K_trigger = 0.0005
                 K_deleted = 0#.5
-                K_control = 0.35 # 0.3
-                K_precisn = 0.7
-                K_precisn_vel = 0.2 # 1
-                K_simtime = 0.0005
+                K_control = 0.4 # 0.3
+                K_precisn = 0.65
+                K_precisn_vel = 0.4 # 1
+                K_simtime = 0.001
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
 
@@ -358,8 +357,8 @@ class SimEnv(gym.Env):
                         self.constraintViolationHistory[self.timeIndex - ix] = constraintViolationBool # save in the history if constraints are violated
 
                         # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
-                        proximityFactorPos = max(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        proximityFactorVel = max(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
+                        proximityFactorPos = min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
+                        proximityFactorVel = min(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
                         
                         positionFactor = -violationEntity # observe that if a constraint is violated positionFactor turns to negative! 
                         velocityFactor  = 0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
@@ -382,7 +381,10 @@ class SimEnv(gym.Env):
                 pass
             case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
                 # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                self.stepReward -= K_trigger * np.exp(-120*OBoTAge)
+                if OBoTAge == -1:
+                    self.stepReward += K_trigger * 10
+                else:
+                    self.stepReward -= K_trigger * np.exp(-120*OBoTAge)
             case 2: # if the agent deletes the optimal trajectory
                 if OBoTAge>=0:
                     # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
@@ -396,7 +398,7 @@ class SimEnv(gym.Env):
         # reduce the reward of an amount proportional to the Guidance control effort
         controlReward = 0.
         for ix in range(self.param.RLGNCratio):
-            proximityFactor = 1 + max(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
+            proximityFactor = 1 + min(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
             controlReward += K_control * proximityFactor * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
         self.stepReward -= controlReward / self.param.RLGNCratio
 
@@ -445,7 +447,7 @@ class SimEnv(gym.Env):
 
         return truncated
     
-    ## GET THE HISTORY ##
+    ## GET THE HISTORY ## -- not really used.
     def getHistory(self):
         savedDictionary = {
             "phaseID": self.param.phaseID,

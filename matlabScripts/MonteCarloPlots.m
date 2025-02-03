@@ -146,47 +146,51 @@ function [] = MonteCarloPlots(data,eachplotbool)
     %% other plot
     figure()
     % convert to m/s
-    terminalState_conv = terminalState.*1e3; % meters
-    terminalState_conv(4:6,:) = terminalState_conv(4:6,:);
+    terminalState_met = terminalState.*param.xc.*1e3; % meters
+    terminalState_met(4:6,:) = terminalState_met(4:6,:) ./ param.tc;
 
     % plots (terminal state precision)
     for sim_id = 1:n_population
         subplot(2,2,1)
-        plot(terminalState_conv(3,sim_id)*1e2,terminalState_conv(1,sim_id)*1e2,'b.','MarkerSize',8);
+        plot(terminalState_met(3,sim_id)*1e2,terminalState_met(1,sim_id)*1e2,'b.','MarkerSize',8);
         hold on;
         subplot(2,2,2)
-        plot(terminalState_conv(2,sim_id)*1e2,terminalState_conv(1,sim_id)*1e2,'b.','MarkerSize',8);
+        plot(terminalState_met(2,sim_id)*1e2,terminalState_met(1,sim_id)*1e2,'b.','MarkerSize',8);
         hold on;
         subplot(2,2,3)
-        plot(terminalState_conv(6,sim_id),terminalState_conv(4,sim_id),'b.','MarkerSize',8);
+        plot(terminalState_met(6,sim_id),terminalState_met(4,sim_id),'b.','MarkerSize',8);
         hold on;
         subplot(2,2,4)
-        plot(terminalState_conv(5,sim_id),terminalState_conv(4,sim_id),'b.','MarkerSize',8);
+        plot(terminalState_met(5,sim_id),terminalState_met(4,sim_id),'b.','MarkerSize',8);
         hold on;
     end
 
     subplot(2,2,1); 
     grid minor; axis equal; 
     xline(0,'Color','black'); yline(0,'Color','black'); 
-    xlim([-11, 11]); ylim([-11, 11]); 
+    xlim([-15, 15]); ylim([-15, 15]);
+    rectangle('Position', [-10, -10, 20, 20], 'Curvature', [1, 1], 'EdgeColor', 'r');
     xlabel("H-BAR [cm]"); ylabel("R-BAR [cm]"); 
     title("position")
     subplot(2,2,2)
     grid minor; axis equal; 
     xline(0,'Color','black'); yline(0,'Color','black'); 
-    xlim([-11, 11]); ylim([-11, 11]); 
+    yline(10,'Color','red'); yline(-10,'Color','red');
+    xlim([-15, 15]); ylim([-15, 15]); 
     xlabel("V-BAR [cm]"); ylabel("R-BAR [cm]");
     title("position")
     subplot(2,2,3)
     grid minor; axis equal; 
     xline(0,'Color','black'); yline(0,'Color','black'); 
-    xlim([-.1, .1]); ylim([-.1, .1]);
+    xlim([-.07, .07]); ylim([-.07, .07]);
+    rectangle('Position', [-0.04, -0.04, 0.08, 0.08], 'Curvature', [1, 1], 'EdgeColor', 'r');
     xlabel("H-BAR [m/s]"); ylabel("R-BAR [m/s]");
     title("velocity")
     subplot(2,2,4)
-    grid minor; axis equal; 
+    grid minor; pbaspect([1 1 1]);%axis equal; 
     xline(0,'Color','black'); yline(0,'Color','black'); 
-    xlim([-.1, .1]); ylim([-.1, .1]);
+    xline(0.1,'Color','red');
+    xlim([-.05, .15]); ylim([-.07, .07]);
     xlabel("V-BAR [m/s]"); ylabel("R-BAR [m/s]");
     title("velocity")
 
@@ -369,6 +373,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     binCenters_vbar = (binEdges_vbar(1:end-1) + binEdges_vbar(2:end)) / 2;
 
     usage_frequency = NaN(nBins);
+    pointsPerBin = zeros(nBins);
 
     % Calcolo della frequenza di utilizzo per ciascun bin
     for i = 1:nBins
@@ -379,13 +384,16 @@ function [] = MonteCarloPlots(data,eachplotbool)
     
             % Calcola la frequenza di utilizzo della traiettoria ottimale
             if any(inBin)
-                usage_frequency(j, i) = mean(usage_flags(inBin)) * 100; % Percentuale
+                usage_frequency(j, i) = sum(usage_flags(inBin));
             else
                 usage_frequency(j, i) = NaN; % Gestione di bin vuoti
             end
+
+            pointsPerBin(j, i) = pointsPerBin(j, i) + length(inBin);
         end
     end
     
+    usage_frequency = usage_frequency./pointsPerBin * 100;
     % Plot 3D con bar3
     subplot(3,2,[2 4 6]);
     heatmap(binCenters_rh, binCenters_vbar, usage_frequency); % Istogramma 3D

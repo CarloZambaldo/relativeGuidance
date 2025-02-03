@@ -262,7 +262,7 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["terminalTimeIndex"][sim_id] = env.unwrapped.timeIndex
         data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.unwrapped.terminationCause == "_AIM_REACHED_" else 0
-        data["CPUExecTimeHistory"][sim_id + trgt_id] = env.unwrapped.CPUExecTimeHistory
+        data["CPUExecTimeHistory"][:, sim_id + trgt_id] = env.unwrapped.CPUExecTimeHistory
 
         print(f" DONE.\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 

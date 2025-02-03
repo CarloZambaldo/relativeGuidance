@@ -44,15 +44,14 @@ else:
 
 ## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 1e-4 #3e-3 * progress_remaining    # Decreases as training progresses
+    return 5e-4 * progress_remaining    # Decreases as training progresses
 norm_reward = True 
 norm_obs = True
-discountFactor = 0.99       # discount factor for the reward
+discountFactor = 0.995       # discount factor for the reward
 ent_coef = 0.0005            # entropy coefficient
 n_steps = 5000              # consider different trajectories
 batch_size = 200            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-n_epochs = 15               # every value is used n times for training
-
+n_epochs = 10               # every value is used n times for training
 
 
 # Create environment (depending on the device and normalisation)
@@ -82,6 +81,7 @@ else:
 print("***************************************************************************\n")
 
 # Reset the environment
+print("RESETTING THE ENVIRONMENT...")
 env.reset()
 
 # switch case to select between training new model and continue training the old one

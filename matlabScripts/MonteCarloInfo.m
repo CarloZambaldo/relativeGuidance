@@ -12,7 +12,12 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     success = data.success;
     terminalState = data.terminalState;
     endTimeIx = data.terminalTimeIndex+1;
-    execTime = data.CPUExecTimeHistory;
+
+    if isfield(data,"CPUExecTimeHistory")
+        execTime = data.CPUExecTimeHistory;
+    else
+        execTime = 0;
+    end
     
     if isfield(data,"agentModelName")
         agentModelName = data.agentModelName;
@@ -61,7 +66,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
 
-    meanExecTime = sum(sum(execTime)) / double(n_population);
+    meanExecTime = mean(execTime(execTime~=0));
     meanControl_dim = meanControl_dim / double(n_population);
     totalImpulse = totalImpulse / double(n_population);
     totalMassUsed = totalMassUsed / double(n_population);
@@ -91,7 +96,8 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("Total Impulse H = %.2f [Ns]\n", totalImpulse(3));
     
     fprintf("\n-- MEAN TOTAL MASS USED --\n");
-    fprintf("Total Mass Used = %.2g [kg]\n", totalMassUsed);
+    fprintf("Total  Mass  Used = %.2f [kg]\n", totalMassUsed);
+    fprintf("Total DeltaV Used = %.2f [m/s]\n", totalMassUsed / dt);
 
     %% OPTIMAL TRAJECTORY UTILIZATION
     
