@@ -44,23 +44,16 @@ else:
 
 ## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 3e-3 * progress_remaining    # Decreases as training progresses
-
-# recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-# normalisation = True         # True or False
-# discountFactor = 0.99        # discount factor for the reward
-# ent_coef = 0.02              # entropy coefficient
-# n_steps = 5000               # abot 4 trajectories
-# batch_size = 250             # divisor of n_steps for efficiency
-# n_epochs = 25                # every value is used 5 times for training
-normalisation = True        # True or False
-norm_reward = False
+    return 1e-4 #3e-3 * progress_remaining    # Decreases as training progresses
+norm_reward = True 
 norm_obs = True
-discountFactor = 0.98       # discount factor for the reward
-ent_coef = 0.03             # entropy coefficient
-n_steps = 5400              # consider different trajectories
-batch_size = 90             # divisor of n_steps for efficiency try 128
+discountFactor = 0.99       # discount factor for the reward
+ent_coef = 0.0005            # entropy coefficient
+n_steps = 5000              # consider different trajectories
+batch_size = 200            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
 n_epochs = 15               # every value is used n times for training
+
+
 
 # Create environment (depending on the device and normalisation)
 if deviceType == "cpu": # IF USING CPU
@@ -104,12 +97,10 @@ match trainingType:
                     batch_size=batch_size,
                     n_epochs=n_epochs,
                     device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
-
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
         RLagent = config.RL_config.recall(modelName,"latest") # recall latest trained model saved under the given model Name
         model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
-
     case _:
         raise Exception("training Type not defined.")
 
@@ -128,7 +119,8 @@ print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 if trainingType == "TRAIN_NEW_MODEL":
     print("\n***************************************************************************")
     print("-- TRAINED (NEW) AGENT USING FOLLOWING PARAMETERS --")
-    print(f"Training: {modelName} on {deviceType} with normalisation: {normalisation}")
+    print(f"Trained: {modelName} on {deviceType}")
+    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
     print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
     print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
     print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")

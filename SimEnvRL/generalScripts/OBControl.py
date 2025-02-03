@@ -10,7 +10,7 @@ def OBControl(targetState_S,uToBeRotated_L,param):
     # first clip the control action (maxThrust)
     #if any(np.abs(uToBeRotated_L) > param.maxAdimThrust):
     #    print("Control action clipped!!")
-    uToBeRotated_L = np.clip(uToBeRotated_L, -param.maxAdimThrust*2, param.maxAdimThrust*2)
+    uToBeRotated_L = np.clip(uToBeRotated_L, -param.maxAdimThrust*1.1, param.maxAdimThrust*1.1)
 
     # get the target state in Moon Centered Synodic
     # translate from Synodic to Moon

@@ -295,7 +295,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     grid on;
     xlabel('norm of relative distance ||\rho|| [km]');
     ylabel('AgentAction distrubution [%]');
-    title('Distribuzione delle azioni dell''agente rispetto alla norma della distanza');
+    title('Agent Action distribution');
     legend('SKIP (0)', 'COMPUTE (1)', 'DELETE (2)', 'Location', 'best');
     ylim([0 100]);
     xlim([0 maxDist]);

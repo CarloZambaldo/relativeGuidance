@@ -91,11 +91,11 @@ data : dict = {
             "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
             },
         "timeHistory" : np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC),
-        
         "trajectory" : None,
         "AgentAction" : None,
         "controlAction" : None,
         "constraintViolation" : None,
+        "CPUExecTimeHistory" : None,
         "terminalState" : None,
         "terminalTimeIndex" : None,
         "fail" : None,
@@ -130,6 +130,7 @@ data["terminalTimeIndex"] = np.zeros(data["n_population"])
 data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["OBoTUsage"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["constraintViolation"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
+data["CPUExecTimeHistory"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 
 # GENERATE THE POPULATION (states) - DEPENDING ON THE PHASE ID
 match phaseID:
@@ -261,6 +262,7 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["terminalTimeIndex"][sim_id] = env.unwrapped.timeIndex
         data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.unwrapped.terminationCause == "_AIM_REACHED_" else 0
+        data["CPUExecTimeHistory"][sim_id + trgt_id] = env.unwrapped.CPUExecTimeHistory
 
         print(f" DONE.\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 

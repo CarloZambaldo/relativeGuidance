@@ -46,6 +46,7 @@ class SimEnv(gym.Env):
         self.AgentActionHistory: np.ndarray = None              # sequence of the AgentActions (0,1,2)
         self.constraintViolationHistory: np.ndarray = None      # boolean if constraint violations occurred during the simulation
         self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
+        self.CPUExecTimeHistory : np.ndarray = None             # execution time required for the CPU to run the guidance
 
         # create the environment simulation parameters dataclass
         options = options or {}
@@ -119,11 +120,11 @@ class SimEnv(gym.Env):
                 else:
                     OBoTAge = -1 # default value to say that the optimal trajectory does not exist
 
-                #executionTime_start = time.time()
+                executionTime_start = time.time()
                 controlAction_L, self.OBoptimalTrajectory = \
                                         OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
                                             self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
-                #executionTime = time.time() - executionTime_start
+                self.CPUExecTimeHistory[self.timeIndex] = time.time() - executionTime_start
                 #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
                 if self.OBoptimalTrajectory: # save if for the current time step the optimal trajectory was used
                     self.OBoTUsageHistory[self.timeIndex] = True
@@ -254,6 +255,7 @@ class SimEnv(gym.Env):
         self.AgentActionHistory = np.zeros((len(self.timeHistory),))
         self.constraintViolationHistory = np.zeros((len(self.timeHistory),))
         self.OBoTUsageHistory = np.zeros((len(self.timeHistory),)).astype(bool)
+        self.CPUExecTimeHistory = np.zeros((len(self.timeHistory),))
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]
@@ -336,8 +338,8 @@ class SimEnv(gym.Env):
                 K_deleted = 0#.5
                 K_control = 0.35 # 0.3
                 K_precisn = 0.7
-                K_precisn_vel = 0.1 # 1
-                K_simtime = 0#.0005
+                K_precisn_vel = 0.2 # 1
+                K_simtime = 0.0005
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
 

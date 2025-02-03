@@ -27,4 +27,5 @@ function dataExtracted = extractSimulationData(data, simulationID)
     dataExtracted.fail = data.fail(simulationID);
     dataExtracted.success = data.success(simulationID);
     dataExtracted.OBoTUsage = data.OBoTUsage(:, simulationID);
+    dataExtracted.CPUExecTimeHistory = data.CPUExecTimeHistory(:, simulationID);
 end

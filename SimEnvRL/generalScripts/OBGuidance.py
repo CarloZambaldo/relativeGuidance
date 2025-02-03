@@ -349,7 +349,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_C_inside  = np.array([5e-3, 4e-2, 5e-3]) + \
-                          np.array([1.1, 5e-1, 1.1]) * (abs(rho[1])**3/(1e9))#
+                          np.array([1.4, 5e-1, 1.4]) * (abs(rho[1])**3/(1e9))#
                             # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([10, 0, 10])
 
@@ -385,5 +385,5 @@ def computeTOF(relativeState, aimAtState, param):
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
     #TOF = deltanorm/5e-4 * o_factor * p_factor # original, tested also: 3e-3
-    TOF = deltanorm/5.5e-4 * o_factor * p_factor
+    TOF = deltanorm/4.5e-4 * o_factor * p_factor
     return TOF

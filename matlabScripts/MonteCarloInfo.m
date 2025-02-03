@@ -12,6 +12,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     success = data.success;
     terminalState = data.terminalState;
     endTimeIx = data.terminalTimeIndex+1;
+    execTime = data.CPUExecTimeHistory;
     
     if isfield(data,"agentModelName")
         agentModelName = data.agentModelName;
@@ -41,17 +42,9 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("NOT CONVERGED: %3.2f %%\n",notConverged);
     
     fprintf("\n")
-    %% STATISTICS ON THE FINAL POSITION
-    [sigmaFinalState, meanFinalState] = std(terminalState_dimensional,0,2);
-    fprintf("Final Position R-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(1)*1e2, sigmaFinalState(1)*1e2);
-    fprintf("Final Position V-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(2)*1e2, sigmaFinalState(2)*1e2);
-    fprintf("Final Position H-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(3)*1e2, sigmaFinalState(3)*1e2);
-    fprintf("Final Velocity R-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(4)*1e2, sigmaFinalState(4)*1e2);
-    fprintf("Final Velocity V-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(5)*1e2, sigmaFinalState(5)*1e2);
-    fprintf("Final Velocity H-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(6)*1e2, sigmaFinalState(6)*1e2);
-    
 
-    %% MEAN THRUST REQUIRED
+
+    %% COMPUTE STUFF
     meanControl_dim = zeros(1,3); % THIS IS IN NEWTON!!
     totalImpulse = zeros(1,3);
     totalMassUsed = 0;
@@ -67,11 +60,26 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         totalImpulse = totalImpulse + sum(control_dim(1:end-1,:) .* dt, 1);
         totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
-    
+
+    meanExecTime = sum(sum(execTime)) / double(n_population);
     meanControl_dim = meanControl_dim / double(n_population);
     totalImpulse = totalImpulse / double(n_population);
     totalMassUsed = totalMassUsed / double(n_population);
     
+
+
+
+    %% STATISTICS ON THE FINAL POSITION
+    [sigmaFinalState, meanFinalState] = std(terminalState_dimensional,0,2);
+    fprintf("Final Position R-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(1)*1e2, sigmaFinalState(1)*1e2);
+    fprintf("Final Position V-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(2)*1e2, sigmaFinalState(2)*1e2);
+    fprintf("Final Position H-BAR = %.2f \x00B1 %.2f [cm]\n",  meanFinalState(3)*1e2, sigmaFinalState(3)*1e2);
+    fprintf("Final Velocity R-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(4)*1e2, sigmaFinalState(4)*1e2);
+    fprintf("Final Velocity V-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(5)*1e2, sigmaFinalState(5)*1e2);
+    fprintf("Final Velocity H-BAR = %.2f \x00B1 %.2f [cm/s]\n",meanFinalState(6)*1e2, sigmaFinalState(6)*1e2);
+    
+
+    %% MEAN THRUST REQUIRED
     fprintf("\n-- MEAN CONTROL ACTION --\n");
     fprintf("Mean Control Action R = %.2f [N]\n", meanControl_dim(1));
     fprintf("Mean Control Action V = %.2f [N]\n", meanControl_dim(2));
@@ -85,11 +93,12 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("\n-- MEAN TOTAL MASS USED --\n");
     fprintf("Total Mass Used = %.2g [kg]\n", totalMassUsed);
 
-
-
     %% OPTIMAL TRAJECTORY UTILIZATION
+    
 
-
+    %% GNC Execution Time
+    fprintf("\n-- MEAN GNC EXECUTION TIME --\n")
+    fprintf("Exec Time = %.2g [ms]\n", meanExecTime*1e3);
 
     fprintf("\n===========================================================\n")
 end
