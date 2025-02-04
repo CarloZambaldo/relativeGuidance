@@ -39,7 +39,7 @@ deviceType   = "cpu"                           # "cuda" or "cpu"
 if phaseID == 1:
     tspan = np.array([0, 0.06])
 else:
-    tspan = np.array([0, 0.028745]) # about 3 hours of simulation
+    tspan = np.array([0, 0.031]) # np.array([0, 0.028745]) # about 3 hours of simulation
 
 
 ## TRAINING PARAMETERS ##
@@ -48,9 +48,9 @@ def lr_schedule(progress_remaining):
 norm_reward = False 
 norm_obs = False
 discountFactor = 0.99       # discount factor for the reward
-ent_coef = 0.0001           # entropy coefficient
+ent_coef = 0.0005           # entropy coefficient
 n_steps = 5000              # consider different trajectories
-batch_size = 200            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+batch_size = 125            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
 n_epochs = 10               # every value is used n times for training
 
 

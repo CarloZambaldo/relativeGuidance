@@ -44,9 +44,9 @@ renderingBool  = True # rendering of the simulation
 
 ## ENVIROMENT PARAMETERS
 if phaseID == 1:
-    tspan = np.array([0, 0.04]) # ca 2.5 hours
+    tspan = np.array([0, 0.04]) # ca 4 hours
 elif phaseID == 2:
-    tspan = np.array([0, 0.025]) # ca 5 hours
+    tspan = np.array([0, 0.033]) # ca 3.3 hours
 
 
 print("***************************************************************************")

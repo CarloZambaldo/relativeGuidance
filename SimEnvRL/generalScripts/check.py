@@ -15,7 +15,7 @@ def constraintViolation(TRUE_relativeState_L_meters,constraintType,characteristi
                 constraintViolationBool = True
 
             # compute the relative position (normalized to 1 on the constraint)
-            violationEntity = 1 - (currentRadius2 - maxCurrentRadius2)/maxCurrentRadius2
+            violationEntity = - (currentRadius2 - maxCurrentRadius2)/maxCurrentRadius2
 
         case "CONE":
             currentRadius2 = TRUE_relativeState_L_meters[0]**2 + TRUE_relativeState_L_meters[2]**2 # for a given V-BAR the cone is sliced on R-H plane

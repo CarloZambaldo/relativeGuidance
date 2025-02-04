@@ -352,7 +352,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_C_inside  = np.array([5e-3, 1e-1, 5e-3]) + \
-                          np.array([3.5e2, 5e-1, 3.5e2]) * (abs(rho[1])**3/(1e9))#
+                          np.array([3.e2, 5e-1, 3.e2]) * (abs(rho[1])**3/(1e9))#
                             # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([10, 0, 10])
 

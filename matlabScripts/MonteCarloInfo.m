@@ -53,6 +53,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     meanControl_dim = zeros(1,3); % THIS IS IN NEWTON!!
     totalImpulse = zeros(1,3);
     totalMassUsed = 0;
+    simulationMass = zeros(n_population,1);
     
     for sim_id = 1:n_population  
         time_dim = timeHistory(1:endTimeIx(sim_id)) .* param.tc;
@@ -63,14 +64,16 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         meanControl_dim = meanControl_dim + trapz(time_dim,control_dim,1);
 
         totalImpulse = totalImpulse + sum(control_dim(1:end-1,:) .* dt, 1);
-        totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
+        simulationMass(sim_id) = sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
 
-    meanTOF = mean(timeHistory(endTimeIx));
-    meanExecTime = mean(execTime(execTime~=0));
+    [sigmaICp, meanICp] = std(vecnorm(trajectory(1,7:9,:)-trajectory(1,1:3,:),2,2)*param.xc);
+    [sigmaICv, meanICv] = std(vecnorm(trajectory(1,10:12,:)-trajectory(1,4:6,:),2,2)*param.xc/param.tc);
+    [sigmaTOF, meanTOF] = std(timeHistory(endTimeIx));
+    [sigmaMass, meanMass] = std(simulationMass);
+    [sigmaExecTime, meanExecTime] = std(execTime(execTime~=0));
     meanControl_dim = meanControl_dim / double(n_population);
     totalImpulse = totalImpulse / double(n_population);
-    totalMassUsed = totalMassUsed / double(n_population);
     
 
 
@@ -96,20 +99,22 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("Total Impulse V = %.2f [Ns]\n", totalImpulse(2));
     fprintf("Total Impulse H = %.2f [Ns]\n", totalImpulse(3));
     
-    fprintf("\n-- MEAN TOTAL MASS USED --\n");
-    fprintf("Total  Mass  Used = %.2f [kg]\n", totalMassUsed);
-    fprintf("Total DeltaV Used = %.2f [m/s]\n", totalMassUsed / dt);
+    fprintf("\n-- MEAN MANOEUVRE COST --\n");
+    fprintf("Total  Mass  Used = %.2f \x00B1 %.2f [kg]\n", meanMass, sigmaMass);
+    fprintf("Total DeltaV Used = %.2f \x00B1 %.2f [m/s]\n", meanMass/dt, sigmaMass/dt);
 
     %% OPTIMAL TRAJECTORY UTILIZATION
     
 
     %% GNC Execution Time
     fprintf("\n-- MEAN GNC EXECUTION TIME --\n")
-    fprintf("Exec Time = %.2g [ms]\n", meanExecTime*1e3);
+    fprintf("Exec Time = %.2g \x00B1 %.2g [ms]\n", meanExecTime*1e3, sigmaExecTime*1e3);
 
     %% TOF
-    fprintf("\n-- MEAN FLIGHT TIME --\n")
-    fprintf("TOF = %.2f [min]\n", meanTOF*param.tc/60);
+    fprintf("\n-- MEAN FLIGHT DATA --\n")
+    fprintf("MEAN TIME OF FLIGHT   = %.2f \x00B1 %.2f [min]\n", meanTOF*param.tc/60, sigmaTOF*param.tc/60);
+    fprintf("MEAN INITIAL DISTANCE = %.2f \x00B1 %.2f [km]\n", meanICp, sigmaICp);
+    fprintf("MEAN INITIAL VELOCITY = %.2f \x00B1 %.2f [m/s]\n", meanICv*1e3, sigmaICv*1e3);
 
 
     fprintf("\n===========================================================\n")
