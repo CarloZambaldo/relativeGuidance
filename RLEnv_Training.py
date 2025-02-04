@@ -44,11 +44,11 @@ else:
 
 ## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 5e-4 * progress_remaining    # Decreases as training progresses
-norm_reward = True 
-norm_obs = True
-discountFactor = 0.995       # discount factor for the reward
-ent_coef = 0.0005            # entropy coefficient
+    return 1e-4 #* progress_remaining    # Decreases as training progresses
+norm_reward = False 
+norm_obs = False
+discountFactor = 0.99       # discount factor for the reward
+ent_coef = 0.0001           # entropy coefficient
 n_steps = 5000              # consider different trajectories
 batch_size = 200            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
 n_epochs = 10               # every value is used n times for training
@@ -57,14 +57,14 @@ n_epochs = 10               # every value is used n times for training
 # Create environment (depending on the device and normalisation)
 if deviceType == "cpu": # IF USING CPU
     if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
-        env = DummyVecEnv([lambda: gym.make('SimEnv-v4',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
+        env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
         # normalize the environment
         env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward)
     else: # IF USING CPU without vectorized environment
-        env = gym.make('SimEnv-v4', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+        env = gym.make('SimEnv-v4.8', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
 
 elif deviceType == "cuda": # IF USING GPU
-    env = make_vec_env('SimEnv-v4', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+    env = make_vec_env('SimEnv-v4.8', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
     raise Exception("GPU not supported on achiral.")
 
 

@@ -389,7 +389,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
                 usage_frequency(j, i) = NaN; % Gestione di bin vuoti
             end
 
-            pointsPerBin(j, i) = pointsPerBin(j, i) + length(inBin);
+            pointsPerBin(j, i) = pointsPerBin(j, i) + sum(inBin);
         end
     end
     

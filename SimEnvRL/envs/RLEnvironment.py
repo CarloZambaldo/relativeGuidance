@@ -319,26 +319,33 @@ class SimEnv(gym.Env):
                 K_trigger = 0#.005
                 K_deleted = 0#.1
                 K_control = 0.5
-                K_precisn = 0.05
+                K_precisn = 0.8
                 K_simtime = 0.01
     
 
                 # Precision Reward - give a positive reward for collision avoidance
-                constraintFactor = (violationEntity) # observe that if a constraint is violated this reward turns to negative!
-                proximityFactor = 0.5 * (1 + np.tanh(self.param.constraint["characteristicSize"] - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
-                self.stepReward += K_precisn * (constraintFactor) * proximityFactor
+                #constraintFactor = abs(violationEntity) # observe that if a constraint is violated this reward turns to negative!
+                #proximityFactor = 0.5 * (1 + np.tanh(self.param.constraint["characteristicSize"] \
+                #                                     - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
+                # self.stepReward += K_precisn * (constraintFactor) * proximityFactor
 
-                # Time of Flight - penalize long time of flights
-                self.stepReward -= K_simtime * 1/self.param.freqGNC  
+                positionReward = 0.
+                velocityReward = 0.
+                if self.timeIndex >= self.param.RLGNCratio:
+                    for ix in range(self.param.RLGNCratio):
+                        historicalRS__met = self.trueRelativeStateHistory_L[self.timeIndex - ix, :] * 1e3 * self.param.xc
+                        historicalRS__met[3:] /= self.param.tc 
+
+                        positionReward += K_precisn * np.tanh( historicalRS__met[0:3]**2 - self.param.constraint["characteristicSize"]**2 ) 
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.0005
-                K_deleted = 0#.5
+                K_trigger = 0.005
+                K_deleted = 0.0001#.5
                 K_control = 0.4 # 0.3
-                K_precisn = 0.65
-                K_precisn_vel = 0.4 # 1
-                K_simtime = 0.001
+                K_precisn = 0.6
+                K_precisn_vel = 0.6 # 1
+                K_simtime = 0.0005
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
 
@@ -360,6 +367,7 @@ class SimEnv(gym.Env):
                         proximityFactorPos = min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
                         proximityFactorVel = min(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
                         
+                        # possible test: positionFactor = np.tanh(-violationEntity)
                         positionFactor = -violationEntity # observe that if a constraint is violated positionFactor turns to negative! 
                         velocityFactor  = 0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
                         #np.exp( - (np.linalg.norm(historicalRS__met[3:6]) / np.linalg.norm(self.param.constraint["aimAtState"][3:6]))**2 ) 
@@ -382,9 +390,9 @@ class SimEnv(gym.Env):
             case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
                 # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
                 if OBoTAge == -1:
-                    self.stepReward += K_trigger * 10
+                    self.stepReward += K_trigger
                 else:
-                    self.stepReward -= K_trigger * np.exp(-120*OBoTAge)
+                    self.stepReward -= K_trigger * np.exp(-150*OBoTAge)
             case 2: # if the agent deletes the optimal trajectory
                 if OBoTAge>=0:
                     # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
@@ -398,14 +406,16 @@ class SimEnv(gym.Env):
         # reduce the reward of an amount proportional to the Guidance control effort
         controlReward = 0.
         for ix in range(self.param.RLGNCratio):
-            proximityFactor = 1 + min(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
-            controlReward += K_control * proximityFactor * ( 1 - np.exp( -np.linalg.norm( self.controlActionHistory_L[self.timeIndex - ix] ) / self.param.maxAdimThrust ) **2 )
+            proximityFuelFactor = 1 # + min(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
+            #controlReward += K_control * proximityFuelFactor * ( 1 - np.exp( -np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix]) / self.param.maxAdimThrust ) **2 )
+            controlReward += K_control *  proximityFuelFactor * \
+                            (1 - np.exp( - ( 2*np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])\
+                                            / self.param.maxAdimThrust )**2 ))
         self.stepReward -= controlReward / self.param.RLGNCratio
 
         # Time of Flight - penalize long time of flights
-        timeExpenseFactor = self.param.RLGNCratio/self.param.freqGNC 
-        proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
-        self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
+        proximityFactor = 1 # - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
+        self.stepReward -= K_simtime * self.param.RLGNCratio/self.param.freqGNC  * proximityFactor 
         
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:
@@ -435,6 +445,7 @@ class SimEnv(gym.Env):
 
         return self.stepReward, terminated
     
+
     ## END OF SIMULATION ##
     def EOS(self,timeNow,param):
         # determine if the simulation run out of time [reached final tspan]

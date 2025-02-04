@@ -66,6 +66,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         totalMassUsed = totalMassUsed + sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
 
+    meanTOF = mean(timeHistory(endTimeIx));
     meanExecTime = mean(execTime(execTime~=0));
     meanControl_dim = meanControl_dim / double(n_population);
     totalImpulse = totalImpulse / double(n_population);
@@ -105,6 +106,11 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     %% GNC Execution Time
     fprintf("\n-- MEAN GNC EXECUTION TIME --\n")
     fprintf("Exec Time = %.2g [ms]\n", meanExecTime*1e3);
+
+    %% TOF
+    fprintf("\n-- MEAN FLIGHT TIME --\n")
+    fprintf("TOF = %.2f [min]\n", meanTOF*param.tc/60);
+
 
     fprintf("\n===========================================================\n")
 end

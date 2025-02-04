@@ -65,7 +65,7 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = gym.make("SimEnv-v4", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
+env = gym.make("SimEnv-v4.8", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
 if seed is not None:
     env.action_space.seed(seed)  # Seed the Gym action space
     env.observation_space.seed(seed)  # Seed the Gym observation space
