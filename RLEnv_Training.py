@@ -24,7 +24,7 @@ else:
     taip = sys.argv[3]
     if len(sys.argv) == 5:
         renderingBool = 0 if (sys.argv[4] == "False" or sys.argv[4] == "0") else 1
-
+ 
 ## TRAINING MODES ##
 if taip == "new":
     trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
@@ -72,12 +72,13 @@ print("\n***********************************************************************
 print("-- AGENT TRAINING PARAMETERS --")
 if trainingType == "TRAIN_NEW_MODEL":
     print(f"Training: {modelName} (new) on {deviceType}")
-    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
-    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
-    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
-    print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
 else:
-    print(f"Training: {modelName} (continue) on {deviceType}.\nNOTE: training parameters are not used.")
+    print(f"Training: {modelName} (continue) on {deviceType}.")
+print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
+print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+
 print("***************************************************************************\n")
 
 # Reset the environment
@@ -100,7 +101,13 @@ match trainingType:
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
         RLagent = config.RL_config.recall(modelName,"latest") # recall latest trained model saved under the given model Name
-        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
+        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env,
+                         learning_rate=lr_schedule,
+                        ent_coef=ent_coef,
+                        n_steps=n_steps,
+                        batch_size=batch_size,
+                        n_epochs=n_epochs,
+                        device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
     case _:
         raise Exception("training Type not defined.")
 

@@ -9,7 +9,7 @@ from gymnasium import spaces
 #import colorama
 #colorama.init()
 
-## REINFORCEMENT LEARNING ENVIRONMENT ##
+## REINFORCEMENT LEARNING selfRONMENT ##
 class SimEnv(gym.Env):
     metadata = {"render_modes": ["ansi"]}
 
@@ -25,7 +25,7 @@ class SimEnv(gym.Env):
         # simulation initialization dataclasses
         self.initialValue: config.env_config.InitialValues = None
 
-        # physical environment
+        # physical selfronment
         self.timeIndex: int = 0                                 # current time step index
         self.timeNow: float = 0.                                # current time
         self.targetState_S: np.ndarray = None                   # target state in Synodic (for physical environment)
@@ -41,14 +41,12 @@ class SimEnv(gym.Env):
         self.timeHistory: np.ndarray = None                     # time stamp for each step
         self.controlActionHistory_L: np.ndarray = None          # array containing the control action required (adimensional)
         self.fullStateHistory: np.ndarray = None                # array containing the full state history (target + chaser) in Synodic
-        self.trueRelativeStateHistory_L: np.ndarray = None      # array containing the true relative state history in LVLH
         self.terminalState: np.ndarray = None                   # array containing the terminal state of chaser in LVLH (real state not OB!)
         self.AgentActionHistory: np.ndarray = None              # sequence of the AgentActions (0,1,2)
         self.constraintViolationHistory: np.ndarray = None      # boolean if constraint violations occurred during the simulation
         self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
-        self.CPUExecTimeHistory : np.ndarray = None             # execution time required for the CPU to run the guidance
 
-        # create the environment simulation parameters dataclass
+        # create the selfronment simulation parameters dataclass
         options = options or {}
 
         # if rendering is required
@@ -78,15 +76,11 @@ class SimEnv(gym.Env):
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, 
-        # the next 3 are the control action,
         # the last one is OBoTAge) NOTE THAT OBoTAge is expressed is ADIMENSIONAL in the observation space
-        margine = 1.1 # 100% margin on control action
         self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
-                                                          -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine, -self.param.maxAdimThrust*margine,
                                                           -1]),
                                             high=np.array([1, 1, 1, 1, 1, 1,
-                                                           self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine,
-                                                          1]),
+                                                           1]),
                                             dtype=np.float64)
 
         ## ACTION SPACE
@@ -95,13 +89,13 @@ class SimEnv(gym.Env):
 
     ## STEP ##
     def step(self, AgentAction):
-        # save the agent action at the current step
+
         RLstepAgentAction = AgentAction
         GNCiterID = 0
-        while (GNCiterID < self.param.RLGNCratio) and (not self.terminated and not self.truncated): # loop for the GNC cycles
+        while GNCiterID < self.param.RLGNCratio: # loop for the GNC cycles
             GNCiterID += 1
-            # execute "RLGNCratio" times the GNC and then let the agent decide following action
-            # note that after the first GNC cycle the AgentAction is set to 0 (SKIP) for the following cycles until a new action is taken
+        # execute "RLGNCratio" times the GNC and then let the agent decide following action
+        # note that after the first GNC cycle the AgentAction is set to 0 (SKIP) for the following cycles until a new action is taken
             if (self.timeIndex < len(self.timeHistory)-1): # check if the simulation is not over (still space inside the History vectors)
                 # extract parameters for the current time step
                 self.timeNow = self.timeHistory[self.timeIndex]
@@ -113,6 +107,7 @@ class SimEnv(gym.Env):
 
                 # GUIDANCE ALGORITHM # 
                 # compute the control action and output the optimal trajectory (if re-computed)
+
                 # compute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, before applying the AgentAction
                 if self.OBoptimalTrajectory:
                     # OBoTAge is expressed in HOURS!!!
@@ -120,11 +115,11 @@ class SimEnv(gym.Env):
                 else:
                     OBoTAge = -1 # default value to say that the optimal trajectory does not exist
 
-                executionTime_start = time.time()
+                #executionTime_start = time.time()
                 controlAction_L, self.OBoptimalTrajectory = \
                                         OBGuidance(self.timeNow, self.OBStateRelative_L, self.OBStateTarget_M,
                                             self.param.phaseID, self.param, AgentAction, self.OBoptimalTrajectory)       
-                self.CPUExecTimeHistory[self.timeIndex] = time.time() - executionTime_start
+                #executionTime = time.time() - executionTime_start
                 #print(f"  > Guidance Step Execution Time: {executionTime*1e3:.2f} [ms]")
                 if self.OBoptimalTrajectory: # save if for the current time step the optimal trajectory was used
                     self.OBoTUsageHistory[self.timeIndex] = True
@@ -132,12 +127,12 @@ class SimEnv(gym.Env):
                     self.OBoTUsageHistory[self.timeIndex] = False
 
                 # CONTROL ACTION #
+                
                 # rotate the control action from the local frame to the synodic frame
-                # observe that the OBControl function also clips the control action if it exceeds the maximum value
                 controlAction_S, controlAction_L = OBControl(self.targetState_S,controlAction_L,self.param)
                 self.controlActionHistory_L[self.timeIndex+1,:] = controlAction_L
 
-                # PHYSICAL ENVIRONMENT #
+                # PHYSICAL selfRONMENT #
                 # propagate the dynamics of the chaser for one time step (depends on Guidance Frequency)
                 distAcceleration_S = ReferenceFrames.computeEnvironmentDisturbances(self.timeNow, self.param.chaser, self.param)
                 odesol = solve_ivp(lambda t, state: dynamicsModel.CR3BP(t, state, self.param, controlAction_S, distAcceleration_S),
@@ -151,18 +146,11 @@ class SimEnv(gym.Env):
                 self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
                 self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
                 AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
-                
-                # compute the TRUE relative state in synodic and LVLH
-                TRUE_relativeState_S = self.chaserState_S - self.targetState_S
-                TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
-                self.trueRelativeStateHistory_L[self.timeIndex, :] = TRUE_relativeState_L
-
-                # check if the aim is reached
-                aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, self.param.constraint["aimAtState"], self.param)
-                if aimReachedBool or crashedBool:
-                    self.terminated = True
+                self.truncated = False
             else:
-                GNCiterID = self.param.RLGNCratio + 1 # to end the GNC loop  
+                GNCiterID = self.param.RLGNCratio + 1 # to end the GNC loop
+                # END OF SIMULATION # (out of time)
+                # self.truncated = self.EOS(self.timeHistory[self.timeIndex],self.param)        
                 self.terminationCause = "_OUT_OF_TIME_"
                 print("\n <<<<<<<<<<<<<<< OUT OF TIME >>>>>>>>>>>>>>> \n")
                 self.truncated = True
@@ -171,20 +159,14 @@ class SimEnv(gym.Env):
         # RL AGENT OBSERVATION #
         self.observation = self.computeRLobservation()
 
-        ## compute the TRUE relative state in synodic and LVLH
-        #TRUE_relativeState_S = self.chaserState_S - self.targetState_S
-        #TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
-        #
-        ## check if the aim is reached
-        #aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, self.param.constraint["aimAtState"], self.param)
-        
         # REWARD COMPUTATION #
-        self.stepReward, self.terminated = self.computeReward(TRUE_relativeState_L, RLstepAgentAction, aimReachedBool, crashedBool, OBoTAge)
+        self.stepReward, self.terminated = self.computeReward(RLstepAgentAction, OBoTAge, controlAction_L,
+                                                              self.param.phaseID, self.param)
         
         # rendering the environment if required
         if self.renderingBool:
             print(self.render())
-
+            
         info = {} #{"param": self.param, "timeNow": self.timeNow}
 
         return self.observation, self.stepReward, self.terminated, self.truncated, info
@@ -207,7 +189,7 @@ class SimEnv(gym.Env):
         
         # Retrieve the agent's action from history
         action = self.AgentActionHistory[self.timeIndex - self.param.RLGNCratio]
-        action_text = {0: "SKIP    ", 1: "COMPUTE ", 2: "DELETE  "}.get(action, "UNKNOWN")
+        action_text = {0: "SKIP", 1: "COMPUTE", 2: "DELETE"}.get(action, "UNKNOWN")
         color = colors["reset"]  # Default color
         
         # Assign color based on the action and conditions
@@ -221,9 +203,10 @@ class SimEnv(gym.Env):
             raise ValueError("Agent Action Not Defined.")
         
         # Format the output string with color
-        ansi_output = f"[envTime = {self.timeNow:.5f}] AgentAction: {color}{action_text}{colors['reset']}\t(reward = {self.stepReward:.10f})"
+        ansi_output = f"[envTime = {self.timeNow:.5f}] AgentAction: {color}{action_text}{colors['reset']} (reward = {self.stepReward})"
         
         return ansi_output
+
 
     ## RESET ##
     def reset(self, seed=None, options=None):
@@ -234,7 +217,7 @@ class SimEnv(gym.Env):
         self.terminationCause = "Unknown"
         self.stepReward = 0.
 
-        # physical environment related parameters
+        # physical selfronment related parameters
         self.timeIndex = 0
         self.timeNow = 0.
 
@@ -250,20 +233,13 @@ class SimEnv(gym.Env):
         # INITIALIZATION OF THE MAIN VALUES FOR FULL SIMULATION HISTORY (definition of the solution vectors)
         self.controlActionHistory_L = np.zeros((len(self.timeHistory)+1, 3))
         self.fullStateHistory = np.zeros((len(self.timeHistory),12))
-        self.trueRelativeStateHistory_L = np.zeros((len(self.timeHistory),6))
         self.AgentActionHistory = np.zeros((len(self.timeHistory),))
         self.constraintViolationHistory = np.zeros((len(self.timeHistory),))
         self.OBoTUsageHistory = np.zeros((len(self.timeHistory),)).astype(bool)
-        self.CPUExecTimeHistory = np.zeros((len(self.timeHistory),))
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]
         self.chaserState_S = self.initialValue.fullInitialState[6:12]
-
-        # compute the TRUE relative state in synodic and LVLH
-        TRUE_relativeState_S = self.chaserState_S - self.targetState_S
-        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,self.param)
-        self.trueRelativeStateHistory_L[self.timeIndex, :] = TRUE_relativeState_L
 
         # saving the initial states inside the fullStateHistory vector
         self.fullStateHistory[0,:] = self.initialValue.fullInitialState
@@ -285,162 +261,149 @@ class SimEnv(gym.Env):
     def computeRLobservation(self):
         # compute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, set to -1 if not
         if self.OBoptimalTrajectory and "envStartTime" in self.OBoptimalTrajectory:
-            trajAGE = (self.timeNow - self.OBoptimalTrajectory["envStartTime"]) ## FIXME : ADDED 10 * let's see
+            trajAGE = self.timeNow - self.OBoptimalTrajectory["envStartTime"]
         else:
             trajAGE = -1 # setting to -1 if the optimal trajectory does not exist
 
-        # the observation is composed by the relative state in LVLH, the control action and the trajectory age
-        if self.timeIndex < self.param.RLGNCratio:
-            meanControlAction = np.zeros((3,))
-        else:
-            meanControlAction = self.controlActionHistory_L[self.timeIndex-self.param.RLGNCratio+1:self.timeIndex+1].mean(axis=0)
-            #print(f"meanControlAction: {meanControlAction}")
-        observation = np.hstack([self.OBStateRelative_L, meanControlAction, trajAGE])
-
-        # if np.isnan(observation).any() or np.isinf(observation).any():
-        #     raise ValueError("Error: NaN or Inf detected in observations!")
+        # the observation is composed by the relative state in LVLH, and the trajectory age
+        observation = np.hstack([self.OBStateRelative_L, trajAGE])
 
         return observation
 
-    ## REWARD COMPUTATION ##
-    def computeReward(self, TRUE_relativeState_L, AgentAction, aimReachedBool, crashedBool, OBoTAge):
-
+    def computeReward(self, AgentAction, OBoTAge, controlAction, phaseID, param):
         terminated = False
-        self.stepReward = 0. # initialize the reward for the current time step
 
+        # compute the TRUE relative state in synodic and LVLH
+        TRUE_relativeState_S = self.chaserState_S - self.targetState_S
+        TRUE_relativeState_L = ReferenceFrames.convert_S_to_LVLH(self.targetState_S,TRUE_relativeState_S,param)
 
         # translate to meters the relative state, since all the constraints are defined in meters
-        TRUE_relativeState_L_meters = TRUE_relativeState_L*self.param.xc*1e3 # m
-        TRUE_relativeState_L_meters[3:6] /= self.param.tc # m/s
+        TRUE_relativeState_L_meters = TRUE_relativeState_L*param.xc*1e3 # m
+        TRUE_relativeState_L_meters[3:6] /= param.tc # m/s
+
+        # check if the constraints are violated and the "entity" of the violation
+        constraintViolationBool, violationEntity = check.constraintViolation(TRUE_relativeState_L_meters, 
+                                                            param.constraint["constraintType"],
+                                                            param.constraint["characteristicSize"], param)
+        self.constraintViolationHistory[self.timeIndex] = constraintViolationBool # save in the history if constraints are violated
+    
+        # check if the aim is reached
+        aimReachedBool, crashedBool = check.aimReached(TRUE_relativeState_L, param.constraint["aimAtState"], self.param)
 
         # REWARD COMPUTATION DEPENDING ON THE PHASE ID #
-        match self.param.phaseID:
+        match phaseID:
             case 1: # RENDEZVOUS
-                K_trigger = 0.005
-                K_deleted = 0.0001
-                K_control = 0.8
-                K_precisn = 0.8
+                K_trigger = 1e-4
+                K_deleted = 1
+                K_control = 0.2
+                K_precisn = 0.5
                 K_simtime = 0.01
     
-                # Proximity factors
-                proximityTOFFactor = 1 
+                ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
+                self.stepReward = 0.
 
-                # Precision Reward - give a positive reward for good convergence
-                positionReward = 0.
-                if self.timeIndex >= self.param.RLGNCratio:
-                    for ix in range(self.param.RLGNCratio):
-                        historicalRS__met = self.trueRelativeStateHistory_L[self.timeIndex - ix, :] * 1e3 * self.param.xc
-                        historicalRS__met[3:] /= self.param.tc
+                # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
+                match AgentAction:
+                    case 0: # no action means no reward nor penalization
+                        pass
+                    case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
+                        # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
+                        self.stepReward -= K_trigger * np.exp(-120*OBoTAge)
+                    case 2: # if the agent deletes the optimal trajectory
+                        if OBoTAge>=0:
+                            # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
+                            self.stepReward -= K_deleted * np.exp(-10*OBoTAge)
+                        else: # avoid "deleting" an inexistant trajectory
+                            self.stepReward -= 1
+                    case _:
+                        pass
 
-                        # check if the constraints are violated and the "entity" of the violation
-                        constraintViolationBool, violationEntity = check.constraintViolation(historicalRS__met, 
-                                                                self.param.constraint["constraintType"],
-                                                                self.param.constraint["characteristicSize"])
-                        self.constraintViolationHistory[self.timeIndex - ix] = constraintViolationBool # save in the history if constraints are violated
+                # Precision Reward - give a positive reward for collision avoidance
+                constraintFactor = abs(violationEntity) # observe that if a constraint is violated this reward turns to negative!
+                proximityFactor = 0.5 * (1 + np.tanh(param.constraint["characteristicSize"] - np.linalg.norm(TRUE_relativeState_L_meters[0:3])))
+                self.stepReward -= K_precisn * (constraintFactor) * proximityFactor
 
-                        # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
-                        proximityFactorPos = 1#min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        positionFactor = -(2**(violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
-                        positionReward += K_precisn * proximityFactorPos * positionFactor
-                    
-                    # compute the "mean" to avoid numerical problems
-                    self.stepReward += positionReward / self.param.RLGNCratio
+                # Time of Flight - penalize long time of flights
+                self.stepReward -= K_simtime * 1/param.freqGNC  
+
+                ## Fuel Efficiency Reward - Penalize large control actions
+                # reduce the reward of an amount proportional to the Guidance control effort
+                self.stepReward -= K_control * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+
+                ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
+                if controlAction[0] > param.maxAdimThrust \
+                or controlAction[1] > param.maxAdimThrust \
+                or controlAction[2] > param.maxAdimThrust:
+                    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.05    # other values: K_trigger = 0.005
-                K_deleted = 0.02 #.5    # other values: K_deleted = 0.0001#.5
-                K_control = 0.85 # 0.3    # other values: K_control = 0.6 # 0.3
-                K_precisn = 0.6    # other values: K_precisn = 0.8
-                K_precisn_vel = 0.8 # 1    # other values: K_precisn_vel = 0.8 # 1
-                K_simtime = 0.01    # other values: K_simtime = 0.01
-
-                # Proximity factors
-                proximityTOFFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
-
+                K_trigger = 1e-4
+                K_deleted = 1
+                K_control = 0.01
+                K_precisn = 1
+                K_simtime = 0.01
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
+                self.stepReward = 0.
+
+                # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
+                match AgentAction:
+                    case 0: # no action means no reward nor penalization
+                        pass
+                    case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
+                        # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
+                        self.stepReward -= K_trigger * np.exp(-120*OBoTAge)
+                    case 2: # if the agent deletes the optimal trajectory
+                        if OBoTAge>=0:
+                            # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
+                            self.stepReward -= K_deleted * np.exp(-10*OBoTAge)
+                        else: # avoid "deleting" an inexistant trajectory
+                            self.stepReward -= 1
+                    case _:
+                        pass
+
                 # Precision Reward - give a positive reward for good convergence
-                positionReward = 0.
-                velocityReward = 0.
-                if self.timeIndex >= self.param.RLGNCratio:
-                    for ix in range(self.param.RLGNCratio):
-                        historicalRS__met = self.trueRelativeStateHistory_L[self.timeIndex - ix, :] * 1e3 * self.param.xc
-                        historicalRS__met[3:] /= self.param.tc
+                if TRUE_relativeState_L[1] <= 0:
+                    proximityFactor = np.exp(TRUE_relativeState_L_meters[1]/30) # the closer to the target on V BAR
+                else:
+                    proximityFactor = 1 # ceiling value for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
+                precisionFactor = -violationEntity # observe that if a constraint is violated this reward turns to negative!
+                velocityFactor  = np.exp(-np.linalg.norm(TRUE_relativeState_L[3:6]-param.constraint["aimAtState"][3:6])) 
+                self.stepReward += K_precisn * (precisionFactor + velocityFactor) * proximityFactor
 
-                        # check if the constraints are violated and the "entity" of the violation
-                        constraintViolationBool, violationEntity = check.constraintViolation(historicalRS__met, 
-                                                                self.param.constraint["constraintType"],
-                                                                self.param.constraint["characteristicSize"])
-                        self.constraintViolationHistory[self.timeIndex - ix] = constraintViolationBool # save in the history if constraints are violated
+                # Time of Flight - penalize long time of flights
+                timeExpenseFactor = 1/param.freqGNC 
+                proximityFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target
+                self.stepReward -= K_simtime * timeExpenseFactor * proximityFactor 
 
-                        # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
-                        proximityFactorPos = min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        proximityFactorVel = min(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
-                        
-                        positionFactor = (2**(-violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
-                        velocityFactor  = -np.tanh( 30 * (np.linalg.norm(historicalRS__met[3:]) - (0.1 - 0.0035 * historicalRS__met[1])) )
-                        #0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
-                        #np.exp( - (np.linalg.norm(historicalRS__met[3:6]) / np.linalg.norm(self.param.constraint["aimAtState"][3:6]))**2 ) 
-                        
-                        positionReward += K_precisn * proximityFactorPos * positionFactor
-                        velocityReward += K_precisn_vel * (proximityFactorVel * velocityFactor)
-                    
-                    # compute the "mean" to avoid numerical problems
-                    self.stepReward += positionReward / self.param.RLGNCratio
-                    self.stepReward += velocityReward / self.param.RLGNCratio
+                ## Fuel Efficiency Reward - Penalize large control actions
+                # reduce the reward of an amount proportional to the Guidance control effort
+                self.stepReward -= K_control * (1 - np.exp(-np.linalg.norm(controlAction)/self.param.maxAdimThrust)**2)
+
+                ## Maximum Control Action Reward - Penalize control actions that exceed the maximum available
+                if controlAction[0] > param.maxAdimThrust \
+                or controlAction[1] > param.maxAdimThrust \
+                or controlAction[2] > param.maxAdimThrust:
+                    self.stepReward -= .5 # penalize the agent for exceeding the maximum control action
+#
             case _:
                 raise ValueError("reward function for this phaseID has not been implemented yet")
-
-
-        ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
-        # Triggering Reward - Penalize frequent, unnecessary recomputation of trajectories
-        match AgentAction:
-            case 0: # no action means no reward nor penalization
-                pass
-            case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
-                # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                if OBoTAge == -1:
-                    self.stepReward += K_trigger
-                else:
-                    self.stepReward -= K_trigger * np.exp(-150*OBoTAge)
-            case 2: # if the agent deletes the optimal trajectory
-                if OBoTAge>=0:
-                    # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                    self.stepReward -= K_deleted * np.exp(-10*OBoTAge)
-                else: # avoid "deleting" an inexistant trajectory
-                    self.stepReward -= 1
-            case _:
-                pass
-
-        ## Fuel Efficiency Reward - Penalize large control actions
-        # reduce the reward of an amount proportional to the Guidance control effort
-        controlReward = 0.
-        for ix in range(self.param.RLGNCratio):
-            proximityFuelFactor = 1 # + min(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
-            #controlReward += K_control * proximityFuelFactor * ( 1 - np.exp( -np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix]) / self.param.maxAdimThrust ) **2 )
-            controlReward += K_control *  proximityFuelFactor * \
-                            (1 - np.exp( - ( 2*np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])\
-                                            / self.param.maxAdimThrust )**2 ))
-        self.stepReward -= controlReward / self.param.RLGNCratio
-
-        # Time of Flight - penalize long time of flights
-        self.stepReward -= K_simtime * self.param.RLGNCratio/self.param.freqGNC  * proximityTOFFactor 
         
         ## Docking Successful / Aim Reached - reached goal :)
         if aimReachedBool:
-            if self.param.phaseID == 1:
+            if phaseID == 1:
                 print(" ################################# ")
                 print(" >>>>> SUCCESSFUL RENDEZVOUS <<<<< ")
                 print(" ################################# ")
                 self.terminationCause = "_AIM_REACHED_"
-            elif self.param.phaseID == 2:
+            elif phaseID == 2:
                 print(" ################################## ")
                 print(" >>>>>>> SUCCESSFUL DOCKING <<<<<<< ")
                 print(" ################################## ")
                 self.terminationCause = "_AIM_REACHED_"
             terminated = True
-            self.stepReward += 10
+            self.stepReward += 1
             self.terminalState = TRUE_relativeState_L
 
         ## Crash Reward - crash into the target
@@ -449,13 +412,15 @@ class SimEnv(gym.Env):
             print(" ############# CRASHED ############# ")
             print(" ################################### ")
             terminated = True
-            self.stepReward -= 10
+            self.stepReward -= 1
             self.terminationCause = "__CRASHED__"
             self.terminalState = TRUE_relativeState_L
 
+
+        # TODO: here normalize the reward
+
         return self.stepReward, terminated
     
-
     ## END OF SIMULATION ##
     def EOS(self,timeNow,param):
         # determine if the simulation run out of time [reached final tspan]
@@ -468,7 +433,7 @@ class SimEnv(gym.Env):
 
         return truncated
     
-    ## GET THE HISTORY ## -- not really used.
+    ## GET THE HISTORY ##
     def getHistory(self):
         savedDictionary = {
             "phaseID": self.param.phaseID,
