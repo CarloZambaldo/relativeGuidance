@@ -318,7 +318,7 @@ class SimEnv(gym.Env):
             case 1: # RENDEZVOUS
                 K_trigger = 0.005
                 K_deleted = 0.0001
-                K_control = 0.8
+                K_control = 0.9
                 K_precisn = 0.8
                 K_simtime = 0.01
     
@@ -335,25 +335,27 @@ class SimEnv(gym.Env):
                         # check if the constraints are violated and the "entity" of the violation
                         constraintViolationBool, violationEntity = check.constraintViolation(historicalRS__met, 
                                                                 self.param.constraint["constraintType"],
-                                                                self.param.constraint["characteristicSize"])
+                                                                2e3) # NOTE: instead of self.param.constraint["characteristicSize"] I pass the R_SS
                         self.constraintViolationHistory[self.timeIndex - ix] = constraintViolationBool # save in the history if constraints are violated
 
                         # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
-                        proximityFactorPos = 1#min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        positionFactor = -(2**(violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
-                        positionReward += K_precisn * proximityFactorPos * positionFactor
+                        proximityFactorPos = 1 #min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
+                        positionFactor = 2**(violationEntity - 1) #-(2**(violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
+                        positionReward -= K_precisn * proximityFactorPos * positionFactor
+                        positionReward += K_precisn * np.exp( - np.linalg.norm(historicalRS__met[0:3] - self.param.holdingState[:3])**2 )
+                        
                     
                     # compute the "mean" to avoid numerical problems
                     self.stepReward += positionReward / self.param.RLGNCratio
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.05    # other values: K_trigger = 0.005
-                K_deleted = 0.02 #.5    # other values: K_deleted = 0.0001#.5
-                K_control = 0.85 # 0.3    # other values: K_control = 0.6 # 0.3
-                K_precisn = 0.6    # other values: K_precisn = 0.8
-                K_precisn_vel = 0.8 # 1    # other values: K_precisn_vel = 0.8 # 1
-                K_simtime = 0.01    # other values: K_simtime = 0.01
+                K_trigger = 0.085    # other values: K_trigger = 0.005
+                K_deleted = 0.08    #.5    # other values: K_deleted = 0.0001#.5
+                K_control = 0.8     # 0.3    # other values: K_control = 0.6 # 0.3
+                K_precisn = 0.6     # other values: K_precisn = 0.8
+                K_precisn_vel = 1 # 1    # other values: K_precisn_vel = 0.8 # 1
+                K_simtime = 0.08    # other values: K_simtime = 0.01
 
                 # Proximity factors
                 proximityTOFFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
@@ -379,7 +381,7 @@ class SimEnv(gym.Env):
                         proximityFactorVel = min(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
                         
                         positionFactor = (2**(-violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
-                        velocityFactor  = -np.tanh( 30 * (np.linalg.norm(historicalRS__met[3:]) - (0.1 - 0.0035 * historicalRS__met[1])) )
+                        velocityFactor  = -np.tanh( 30 * (historicalRS__met[4] - (0.1 - 0.0035 * historicalRS__met[1])) )
                         #0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
                         #np.exp( - (np.linalg.norm(historicalRS__met[3:6]) / np.linalg.norm(self.param.constraint["aimAtState"][3:6]))**2 ) 
                         
@@ -400,10 +402,10 @@ class SimEnv(gym.Env):
                 pass
             case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
                 # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                if OBoTAge == -1:
+                if OBoTAge == -1: # if no trajectory exists, incentive the computation
                     self.stepReward += K_trigger
-                else:
-                    self.stepReward -= K_trigger * np.exp(-150*OBoTAge)
+                else: # if the trajectory already exist, disincentive it
+                    self.stepReward -= K_trigger * np.exp(-130*OBoTAge)
             case 2: # if the agent deletes the optimal trajectory
                 if OBoTAge>=0:
                     # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
@@ -440,7 +442,7 @@ class SimEnv(gym.Env):
                 print(" ################################## ")
                 self.terminationCause = "_AIM_REACHED_"
             terminated = True
-            self.stepReward += 10
+            self.stepReward += 1
             self.terminalState = TRUE_relativeState_L
 
         ## Crash Reward - crash into the target
@@ -449,7 +451,7 @@ class SimEnv(gym.Env):
             print(" ############# CRASHED ############# ")
             print(" ################################### ")
             terminated = True
-            self.stepReward -= 10
+            self.stepReward -= 1
             self.terminationCause = "__CRASHED__"
             self.terminalState = TRUE_relativeState_L
 

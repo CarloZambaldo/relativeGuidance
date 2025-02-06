@@ -10,17 +10,23 @@ function [] = MonteCarloPlots(data,eachplotbool)
     param = data.param;
     n_population = data.n_population;
     timeHistory = data.timeHistory;
-    trajectory = data.trajectory;
+    %trajectory = data.trajectory;
+    trueRelativeStateHistory_L = data.trueRelativeStateHistory_L;
     controlAction = data.controlAction;
     OBoTUsage = [zeros(1,n_population); data.OBoTUsage];
     AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
     terminalState = data.terminalState;
+    terminalTimeIndex = data.terminalTimeIndex+1;
     if isfield(data,"RLGNCratio")
         RLGNCratio = data.RLGNCratio;
     else
         RLGNCratio = 100;
     end
 
+    if isfield(data,"trueRelativeStateHistory_L")
+        useTrueRSH = 1;
+    end
+    
     %% print general data information
     [meanFinalState, sigmaFinalState] = MonteCarloInfo(data);
 
@@ -34,20 +40,21 @@ function [] = MonteCarloPlots(data,eachplotbool)
         fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
 
         %% REMOVE EXTRA VALUES
-        soluz = trajectory(:,:,sim_id);
-        indicezeri = soluz(:,7:12) == 0;
-        soluz(indicezeri,1:6) = 0;
-        indiceValori = ~(soluz(:,1) == 0 & soluz(:,2) == 0 & soluz(:,3) == 0);
-        soluz = soluz(indiceValori,:);
-        time = timeHistory(indiceValori);
-        control = controlAction(indiceValori,:,sim_id);
+        %soluz = trueRelativeStateHistory_L(:,:,sim_id);
+        %indicezeri = soluz(:,7:12) == 0;
+        %soluz(indicezeri,1:6) = 0;
+        %indiceValori = ~(soluz(:,1) == 0 & soluz(:,2) == 0 & soluz(:,3) == 0);
+        %soluz = soluz(indiceValori,:);
+        time = timeHistory(1:terminalTimeIndex(sim_id));
+
+        control = controlAction(1:terminalTimeIndex(sim_id),:,sim_id);
 
         %% ROTATE REAL DYNAMICS TO LVLH
-        relDynami = zeros(length(time),6);
-        for id = 1:length(time)
-            [rotatedRelativeState] = convert_S_to_LVLH(soluz(id,1:6)',soluz(id,7:12)'-soluz(id,1:6)',param);
-            relDynami(id,1:6) = rotatedRelativeState;
-        end
+        relDynami = trueRelativeStateHistory_L(1:terminalTimeIndex(sim_id),:,sim_id);
+        %for id = 1:length(time)
+        %    [rotatedRelativeState] = convert_S_to_LVLH(soluz(id,1:6)',soluz(id,7:12)'-soluz(id,1:6)',param);
+        %    relDynami(id,1:6) = rotatedRelativeState;
+        %end
 
         relDynami = relDynami.*param.xc;
         relDynami(:,4:6) = relDynami(:,4:6)./param.tc;
@@ -352,7 +359,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
 
         % Calcolare la distanza sul piano R-H e lungo V-BAR
         distances_rh_sim = sqrt(positions(:, 1).^2 + positions(:, 3).^2); % rho_R^2 + rho_H^2
-        distances_vbar_sim = abs(positions(:, 2)); % Norma lungo V-BAR
+        distances_vbar_sim = positions(:, 2); % posizione assoluta (con segno) lungo V-BAR
 
         % Flag di uso della traiettoria ottimale
         usage_sim = OBoTUsage(:, sim_id);
@@ -402,7 +409,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     colormap(parula);
     colorbar;
     xlabel('R-H-BAR distance sqrt(\rho_R^2 + \rho_H^2) [km]');
-    ylabel('V-BAR distance ||\rho_V|| [km]');
+    ylabel('V-BAR distance \rho_V [km]');
     title('Usage of Optimal Trajectory [%]');
     grid on;
     

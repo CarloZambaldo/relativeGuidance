@@ -4,7 +4,8 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     param = data.param;
     n_population = data.n_population;
     timeHistory = data.timeHistory;
-    trajectory = data.trajectory;
+    %trajectory = data.trajectory;
+    trueRelativeStateHistory_L = data.trueRelativeStateHistory_L;
     controlAction = data.controlAction;
     OBoTUsage = [zeros(1,n_population); data.OBoTUsage];
     AgentAction = data.AgentAction; % Azione agente: (timestep, n_simulation)
@@ -67,8 +68,8 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
         simulationMass(sim_id) = sum(vecnorm(control_dim(1:end-1,:), 2, 1) .* dt) / double(param.chaserSpecificImpulse) / 9.81;
     end
 
-    [sigmaICp, meanICp] = std(vecnorm(trajectory(1,7:9,:)-trajectory(1,1:3,:),2,2)*param.xc);
-    [sigmaICv, meanICv] = std(vecnorm(trajectory(1,10:12,:)-trajectory(1,4:6,:),2,2)*param.xc/param.tc);
+    [sigmaICp, meanICp] = std(vecnorm(trueRelativeStateHistory_L(1,1:3,:),2,2)*param.xc);
+    [sigmaICv, meanICv] = std(vecnorm(trueRelativeStateHistory_L(1,4:6,:),2,2)*param.xc/param.tc);
     [sigmaTOF, meanTOF] = std(timeHistory(endTimeIx));
     [sigmaMass, meanMass] = std(simulationMass);
     [sigmaExecTime, meanExecTime] = std(execTime(execTime~=0));

@@ -91,7 +91,8 @@ data : dict = {
             "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
             },
         "timeHistory" : np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC),
-        "trajectory" : None,
+        "targetTrajectory_S" : None,
+        "trueRelativeStateHistory_L" : None,
         "AgentAction" : None,
         "controlAction" : None,
         "constraintViolation" : None,
@@ -123,7 +124,8 @@ data["n_population"] = n_ICs + n_targets_pos - 1
 # Initialize the variables for "faster" exec time
 data["fail"] = np.zeros(data["n_population"])
 data["success"] = np.zeros(data["n_population"])
-data["trajectory"] = np.zeros((len(data["timeHistory"])-1, 12, data["n_population"]))
+data["targetTrajectory_S"] = np.zeros((len(data["timeHistory"])-1, 6, data["n_population"]))
+data["trueRelativeStateHistory_L"] = np.zeros((len(data["timeHistory"])-1, 6, data["n_population"]))
 data["controlAction"] = np.zeros((len(data["timeHistory"]), 3, data["n_population"]))
 data["terminalState"] = np.zeros((6, data["n_population"]))
 data["terminalTimeIndex"] = np.zeros(data["n_population"])
@@ -137,9 +139,9 @@ match phaseID:
     case 2: # FOR PHASE ID 2
         if n_samples_speed is not None:
             val = {}
-            val['R_BAR'] = -0.5 + 1 * np.random.rand(1, n_samples)  # from -0.5 to +0.5 km
-            val['V_BAR'] = -4 + 3 * np.random.rand(1, n_samples)   # from -4 to -1 km
-            val['H_BAR'] = -0.5 + 1 * np.random.rand(1, n_samples) # from -0.5 to +0.5 km
+            val['R_BAR'] = -1 +2 * np.random.rand(1, n_samples)  # from -1 to +1 km
+            val['V_BAR'] = -4.5 + 3 * np.random.rand(1, n_samples)   # from -4.5 to -1.5 km
+            val['H_BAR'] = -1 + 2 * np.random.rand(1, n_samples) # from -1 to +1 km
             val['speed_R_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
             val['speed_V_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
             val['speed_H_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
@@ -182,7 +184,7 @@ match phaseID:
             val = {}
 
             # Generate points in the annulus
-            R_inner = 1.5  # minimum radius in km
+            R_inner = 2  # minimum radius in km
             R_outer = 9  # maximum radius in km
             r = np.cbrt(np.random.uniform(R_inner**3, R_outer**3, n_ICs))  # Uniform in volume
             theta = np.random.uniform(0, np.pi, n_ICs)  # Polar angle
@@ -253,7 +255,8 @@ for trgt_id in range(n_targets_pos): # for each target position
         tstartcomptime = time.time() - tstartcomptime
         print("COPYING THE SIMULATION INSIDE 'data' STRUCTURE: ",end='')
         # save the simulation data for future use:
-        data["trajectory"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory
+        data["targetTrajectory_S"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory[:,0:6]
+        data["trueRelativeStateHistory_L"][:, :, sim_id + trgt_id] = env.unwrapped.trueRelativeStateHistory_L
         data["controlAction"][:, :, sim_id + trgt_id] = env.unwrapped.controlActionHistory_L
         data["AgentAction"][:, sim_id + trgt_id] = env.unwrapped.AgentActionHistory
         data["OBoTUsage"][:, sim_id + trgt_id] = env.unwrapped.OBoTUsageHistory

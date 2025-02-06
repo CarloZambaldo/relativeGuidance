@@ -329,7 +329,7 @@ def APF(relativeState_L, constraintType, param):
     match constraintType:
         case 'SPHERE': # PHASE 1
             # constraints characteristic dimensions definition
-            SphereRadius_SS = 2.5e3  # [m]
+            SphereRadius_SS = 2e3  # [m]
 
             # coefficients definition
             K_SS_inside = np.array([5e1, 5e2, 5e1])

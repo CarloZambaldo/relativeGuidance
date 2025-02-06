@@ -5,33 +5,40 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import sys
-
+import argparse
 
 # to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
 
+# Create Argument Parser
+parser = argparse.ArgumentParser(description="Reinforcement Learning Experiment")
+
+# Add argument for reward normalization
+parser.add_argument("-p", "--phase", type=int, default="None", help="Mission Phase")
+parser.add_argument("-m", "--model", type=str, default="None", help="Mission Phase")
+parser.add_argument("-r", "--render", type=str, default="False", help="Rendering bool")
+parser.add_argument("-f","--start-from", type=str, default="new", help="Name of the agent from which continue training")
+# Parse arguments
+argspar = parser.parse_args()
+
 ## SYSTEM INPUT PARAMETERS ##
-if len(sys.argv) < 4:
-    phaseID = 2
-    modelName = "TEST_AGENT"
-    taip = "new"
-    renderingBool = True
-    print("Usage: python3 RLEnv_Training.py <phaseID> <'modelName'> <'new'/'old'> <optional:renderingBool>")
-else:
-    phaseID = int(sys.argv[1])
-    modelName = sys.argv[2]
-    renderingBool = False
-    taip = sys.argv[3]
-    if len(sys.argv) == 5:
-        renderingBool = 0 if (sys.argv[4] == "False" or sys.argv[4] == "0") else 1
- 
+# if len(sys.argv) < 3:
+#     phaseID = 2
+#     modelName = "TEST_AGENT"
+#     taip = argspar.render
+#     renderingBool = True
+#     print("Usage: python3 RLEnv_Training.py --phase <phaseID> --model <'modelName'> --start-from <OldAgentName> --render <renderingBool>")
+# else:
+phaseID = argspar.phase
+modelName = argspar.model
+renderingBool = False if argspar.render == "False" else True
+
 ## TRAINING MODES ##
-if taip == "new":
+if argspar.start_from == "new":
     trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
-elif taip == "old":
-    trainingType = "CONTINUE_TRAINING_OLD_MODEL"
 else:
-    raise Exception("training Type not defined. Please use 'new' or 'old'.")
+    trainingType = "CONTINUE_TRAINING_OLD_MODEL"
+    modelNameOLD = argspar.start_from
 #modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
 deviceType   = "cpu"                           # "cuda" or "cpu"
 
@@ -44,16 +51,18 @@ else:
 
 ## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 1e-4 #* progress_remaining    # Decreases as training progresses
-norm_reward = False 
-norm_obs = False
-discountFactor = 0.99       # discount factor for the reward
-ent_coef = 0.0005           # entropy coefficient
-n_steps = 5000              # consider different trajectories
-batch_size = 125            # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-n_epochs = 10               # every value is used n times for training
-
-
+    return 1e-5#(1e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
+norm_reward     = False 
+norm_obs        = False
+discountFactor  = 0.99    # discount factor for the reward
+ent_coef        = 0.0001  # entropy coefficient
+n_steps         = 5000    # consider different trajectories
+batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+n_epochs        = 15      # every value is used n times for training
+vf_coef         = 0.6     # value function coefficient
+clip_range      = 0.15    # default: 0.2
+gae_lambda      = 0.95    # default: 0.95
+total_timesteps = 1e6 #563200*2
 # Create environment (depending on the device and normalisation)
 if deviceType == "cpu": # IF USING CPU
     if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
@@ -73,13 +82,18 @@ print("-- AGENT TRAINING PARAMETERS --")
 if trainingType == "TRAIN_NEW_MODEL":
     print(f"Training: {modelName} (new) on {deviceType}")
 else:
-    print(f"Training: {modelName} (continue) on {deviceType}.")
+    print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
 print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+print(f"total_timesteps: {total_timesteps}")
 print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
 print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}")
 print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
 
 print("***************************************************************************\n")
+
+print("please check the parameters and press enter to start the training...")
+input()
 
 # Reset the environment
 print("RESETTING THE ENVIRONMENT...")
@@ -97,16 +111,23 @@ match trainingType:
                     n_steps=n_steps,
                     batch_size=batch_size,
                     n_epochs=n_epochs,
-                    device=deviceType, verbose=1, gamma = discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
+                    vf_coef=vf_coef,
+                    clip_range=clip_range,
+                    gae_lambda=gae_lambda,
+                    device=deviceType, verbose=1, gamma=discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
     case "CONTINUE_TRAINING_OLD_MODEL":
         # definition of the learning parameters
-        RLagent = config.RL_config.recall(modelName,"latest") # recall latest trained model saved under the given model Name
-        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env,
+        RLagentOLD = config.RL_config.recall(modelNameOLD,"latest") # recall latest trained model saved under the given model Name
+        RLagent = config.RL_config.get(modelName) # generate the new model from the old one
+        model = PPO.load(f"{RLagentOLD.model_dir}/{RLagentOLD.modelNumber}", env=env,
                          learning_rate=lr_schedule,
                         ent_coef=ent_coef,
                         n_steps=n_steps,
                         batch_size=batch_size,
                         n_epochs=n_epochs,
+                        vf_coef=vf_coef,
+                        clip_range=clip_range,
+                        gae_lambda=gae_lambda,
                         device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
     case _:
         raise Exception("training Type not defined.")
@@ -116,19 +137,24 @@ model.save(RLagent.modelFileNameDir)
 
 ## TRAINING ##
 print("TRAINING ...")
-model.learn(total_timesteps=RLagent.maxTimeSteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
+model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
 model.save(RLagent.modelFileNameDir)
 print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
 
 
 # output to recall which model was trained in that window
+print("\n***************************************************************************")
+print("-- AGENT TRAINING PARAMETERS --")
 if trainingType == "TRAIN_NEW_MODEL":
-    print("\n***************************************************************************")
-    print("-- TRAINED (NEW) AGENT USING FOLLOWING PARAMETERS --")
-    print(f"Trained: {modelName} on {deviceType}")
-    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
-    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
-    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
-    print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
-    print("***************************************************************************\n")
+    print(f"Training: {modelName} (new) on {deviceType}")
+else:
+    print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
+print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+print(f"total_timesteps: {total_timesteps}")
+print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
+print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}")
+print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+
+print("***************************************************************************\n")
