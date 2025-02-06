@@ -26,7 +26,7 @@ class physParamClass:
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
     specificImpulse: float = 270                             # [s] specific impulse of the thruster 
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
-    dockingState = np.array([0, 5e-3/xc, 0, 0, 0.05e-3*tc/xc, 0])  # Final relative state
+    dockingState = np.array([0, 0, 0, 0, 0.05e-3*tc/xc, 0])  # Final relative state
     freqGNC : float = 5 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
 
@@ -123,7 +123,7 @@ class initialValueClass():
             case 2: # DOCKING #########################################
                 # defining the random initial relative state (IN LVLH!)
                 rand_position_L = np.array([(-1+2*np.random.rand()),              # R-BAR # position range along R-BAR [-1,+1] km
-                                            (-5+3.5*np.random.rand()),              # V-BAR # position range along V-BAR [-5,-1.5] km
+                                            (-5+3.3*np.random.rand()),              # V-BAR # position range along V-BAR [-5,-1.7] km
                                             (-1+2*np.random.rand())]) / param.xc  # H-BAR # position range along H-BAR [-1,+1] km
                 rand_velocity_L = (-2+2*np.random.rand(3)) * 1e-3 / param.xc * param.tc    # velocity range
                 

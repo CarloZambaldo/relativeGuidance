@@ -1,46 +1,86 @@
 from SimEnvRL import *
 from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 #import matlab.engine
 from datetime import datetime
-import sys
+#import sys
+import argparse
 # TODO: the initial target state is always exact periselene. It should be randomized.
 
 # allow for terminal variables to be passed as arguments
 # syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
-# agentName in the form: "Agent_P2-PPO-v12-achiral"
-if len(sys.argv) < 3:
-    phaseID = 2
-    n_samples = 1
-    usingAgentBool = True
-    agentName = "Agent_P2-PPO-v4.0-achiral-stable"
-    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName] [seed]")
-else:
-    phaseID = int(sys.argv[1])
-    n_samples = int(sys.argv[2])
-    if len(sys.argv) > 3: # means the agent is being used
-        agentName = sys.argv[3]
-        if agentName == "_NO_AGENT_":
-            usingAgentBool = False
-            print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
-            print("Please press enter to continue...")
-            input()
-        else:
-            usingAgentBool = True
-        seed = int(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional seed
-        print(f"Agent {agentName} is used to control the chaser.")
-    else:
-        usingAgentBool = False 
-        print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
-        print("Please press enter to continue...")
-        input()
-        agentName = "_NO_AGENT_"
         
+# Create Argument Parser
+parser = argparse.ArgumentParser(description="Monte Carlo Analysis parameters")
+
+# Add argument for reward normalization
+parser.add_argument("-p", "--phase", type=int, default=2, help="Mission Phase")
+parser.add_argument("-m", "--model", type=str, default="_NO_AGENT_", help="Model Name")
+parser.add_argument("-s","--seed", type=str, default="None", help="Seed value used to initialize the simulations")
+parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Monte Carlo samples")
+parser.add_argument("-r", "--render", type=str, default=True, help="Rendering bool")
+# Parse arguments
+argspar = parser.parse_args()
+
+phaseID = argspar.phase
+n_samples = argspar.n_samples
+agentName = argspar.model
+seed = argspar.seed
+if argspar.render == "True":
+    renderingBool  = True # rendering of the simulation
+else:
+    renderingBool  = False # rendering of the simulation
+
+if seed != 'None':
+    seed = int(seed)
+else:
+    seed = None
+
+if agentName == "_NO_AGENT_":
+    usingAgentBool = False
+    print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
+else:
+    usingAgentBool = True
+    print(f"Agent {agentName} is used to control the chaser.")
+
+print(f"Running MC simulation (phase {phaseID})")
+print(f"number of samples: {n_samples}")
+print(f"Using seed: {seed}")
+print(f"Rendering: {renderingBool}")
+print("Please press enter to continue...")
+input()
+# agentName in the form: "Agent_P2-PPO-v12-achiral"
+#if len(sys.argv) < 3:
+#    phaseID = 2
+#    n_samples = 1
+#    usingAgentBool = True
+#    agentName = "Agent_P2-PPO-v4.0-achiral-stable"
+#    raise ValueError("Parameters not provided. Please use the syntax: python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName] [seed]")
+#else:
+#    phaseID = int(sys.argv[1])
+#    n_samples = int(sys.argv[2])
+#    if len(sys.argv) > 3: # means the agent is being used
+#        agentName = sys.argv[3]
+#        if agentName == "_NO_AGENT_":
+#            usingAgentBool = False
+#            print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
+#            print("Please press enter to continue...")
+#            input()
+#        else:
+#            usingAgentBool = True
+#        seed = int(sys.argv[4]) if len(sys.argv) > 4 else None  # Optional seed
+#        print(f"Agent {agentName} is used to control the chaser.")
+#    else:
+#        usingAgentBool = False 
+#        print("Agent is NOT used to control the chaser. SIMULATING SAFE MODE.")
+#        print("Please press enter to continue...")
+#        input()
+#        agentName = "_NO_AGENT_"
 
 ## GENREAL DATA
 # phaseID = 2
 # usingAgentBool = False 
 # agentName = "_NO_AGENT_"
-renderingBool  = True # rendering of the simulation
 
 ## ENVIROMENT PARAMETERS
 if phaseID == 1:
@@ -66,6 +106,8 @@ print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
 env = gym.make("SimEnv-v4.8", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
+#env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
+
 if seed is not None:
     env.action_space.seed(seed)  # Seed the Gym action space
     env.observation_space.seed(seed)  # Seed the Gym observation space
@@ -73,6 +115,14 @@ if seed is not None:
 if usingAgentBool:
     RLagent = config.RL_config.recall(agentName,"latest")
     model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
+
+    try: # load the normalization stuff if normalization is true
+        env = VecNormalize.load(f"{RLagent.model_dir}/vec_normalize.pkl", env)
+        # Disable training mode to prevent statistics from updating
+        env.training = False
+        env.norm_reward = False
+    except Exception as e:
+        print(e)
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {

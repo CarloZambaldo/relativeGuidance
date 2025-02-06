@@ -4,7 +4,7 @@ import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
-import sys
+#import sys
 import argparse
 
 # to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -51,18 +51,18 @@ else:
 
 ## TRAINING PARAMETERS ##
 def lr_schedule(progress_remaining):
-    return 1e-5#(1e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
-norm_reward     = False 
-norm_obs        = False
+    return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
+norm_reward     = True 
+norm_obs        = True
 discountFactor  = 0.99    # discount factor for the reward
-ent_coef        = 0.0001  # entropy coefficient
+ent_coef        = 0.0005  # entropy coefficient
 n_steps         = 5000    # consider different trajectories
 batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
 n_epochs        = 15      # every value is used n times for training
-vf_coef         = 0.6     # value function coefficient
-clip_range      = 0.15    # default: 0.2
+vf_coef         = 0.5     # value function coefficient
+clip_range      = 0.17    # default: 0.2
 gae_lambda      = 0.95    # default: 0.95
-total_timesteps = 1e6 #563200*2
+total_timesteps = 1e6     #563200*2
 # Create environment (depending on the device and normalisation)
 if deviceType == "cpu": # IF USING CPU
     if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
@@ -134,13 +134,21 @@ match trainingType:
 
 # save the starting model to ensure it will save
 model.save(RLagent.modelFileNameDir)
-
+########################################################################################################
 ## TRAINING ##
 print("TRAINING ...")
 model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
-model.save(RLagent.modelFileNameDir)
+model.save(RLagent.modelFileNameDir) # save the model
+try:
+    if norm_obs or norm_reward:
+        env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
+except Exception as e:
+    print(e)
+
 print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
+
+#########################################################################################################
 
 
 # output to recall which model was trained in that window
@@ -156,5 +164,4 @@ print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
 print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
 print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}")
 print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
-
 print("***************************************************************************\n")

@@ -34,8 +34,9 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("data contains:    %d [simulations]\n", n_population);
     fprintf("Simulated Phase:  %d\n",phaseID)
     fprintf("Agent model used: %s\n", agentModelName);
-
+    fprintf("Seed used: %s\n", data.seed);
     fprintf("\n")
+    
     %%
     fprintf("-- DATA STATISTICS --\n")
     successRate = sum(success)/double(n_population)*100;

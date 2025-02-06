@@ -37,7 +37,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     dynamicsHistory = NaN(length(timeHistory),6,length(n_population));
 
     for sim_id = 1:n_population
-        fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
+        %fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
 
         %% REMOVE EXTRA VALUES
         %soluz = trueRelativeStateHistory_L(:,:,sim_id);
@@ -76,23 +76,24 @@ function [] = MonteCarloPlots(data,eachplotbool)
             end
 
             %% 1 Plot Control Action, Controlled Relative Dynamics, and Velocity
-            figure(2)
-            % Subplot 1: Control Action
-            subplot(3,1,1)
-            plot(time * param.tc / 60, control(:,1), 'LineWidth', 1.1); hold on
-            plot(time * param.tc / 60, control(:,2), 'LineWidth', 1.1);
-            plot(time * param.tc / 60, control(:,3), 'LineWidth', 1.1);
-            % Subplot 2: Controlled Relative Dynamics
-            subplot(3,1,2)
-            plot(time * param.tc / 60, relDynami(:,1), 'LineWidth', 1); hold on
-            plot(time * param.tc / 60, relDynami(:,2), 'LineWidth', 1);
-            plot(time * param.tc / 60, relDynami(:,3), 'LineWidth', 1);
-            % Subplot 3: Controlled Relative Velocity
-            subplot(3,1,3)
-            plot(time * param.tc / 60, relDynami(:,4).*1e3, 'LineWidth', 1); hold on
-            plot(time * param.tc / 60, relDynami(:,5).*1e3, 'LineWidth', 1);
-            plot(time * param.tc / 60, relDynami(:,6).*1e3, 'LineWidth', 1);
-    
+            if eachplotbool > 1
+                figure(2)
+                % Subplot 1: Control Action
+                subplot(3,1,1)
+                plot(time * param.tc / 60, control(:,1), 'LineWidth', 1.1); hold on
+                plot(time * param.tc / 60, control(:,2), 'LineWidth', 1.1);
+                plot(time * param.tc / 60, control(:,3), 'LineWidth', 1.1);
+                % Subplot 2: Controlled Relative Dynamics
+                subplot(3,1,2)
+                plot(time * param.tc / 60, relDynami(:,1), 'LineWidth', 1); hold on
+                plot(time * param.tc / 60, relDynami(:,2), 'LineWidth', 1);
+                plot(time * param.tc / 60, relDynami(:,3), 'LineWidth', 1);
+                % Subplot 3: Controlled Relative Velocity
+                subplot(3,1,3)
+                plot(time * param.tc / 60, relDynami(:,4).*1e3, 'LineWidth', 1); hold on
+                plot(time * param.tc / 60, relDynami(:,5).*1e3, 'LineWidth', 1);
+                plot(time * param.tc / 60, relDynami(:,6).*1e3, 'LineWidth', 1);
+            end
             %% 2
             figure(1)
             plot3(relDynami(1,1),relDynami(1,2),relDynami(1,3),'ok','LineWidth',1)
@@ -123,31 +124,33 @@ function [] = MonteCarloPlots(data,eachplotbool)
         grid on
     
         % Plot Control Action, Controlled Relative Dynamics, and Velocity
-        figure(2)
-        
-        % Subplot 1: Control Action
-        subplot(3,1,1)
-        grid on;
-        title("Control Action [LVLH]");
-        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-        xlabel("Time [min]");
-        ylabel("Control Action [-]");
-        
-        % Subplot 2: Controlled Relative Dynamics
-        subplot(3,1,2)
-        grid on;
-        title("Controlled Relative Dynamics [LVLH]");
-        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-        xlabel("Time [min]");
-        ylabel("Position [km]");
-        
-        % Subplot 3: Controlled Relative Velocity
-        subplot(3,1,3)
-        grid on;
-        title("Controlled Relative Velocity [LVLH]");
-        legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
-        xlabel("Time [min]");
-        ylabel("Velocity [m/s]");
+        if eachplotbool > 1
+            figure(2)
+            
+            % Subplot 1: Control Action
+            subplot(3,1,1)
+            grid on;
+            title("Control Action [LVLH]");
+            legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+            xlabel("Time [min]");
+            ylabel("Control Action [-]");
+            
+            % Subplot 2: Controlled Relative Dynamics
+            subplot(3,1,2)
+            grid on;
+            title("Controlled Relative Dynamics [LVLH]");
+            legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+            xlabel("Time [min]");
+            ylabel("Position [km]");
+            
+            % Subplot 3: Controlled Relative Velocity
+            subplot(3,1,3)
+            grid on;
+            title("Controlled Relative Velocity [LVLH]");
+            legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
+            xlabel("Time [min]");
+            ylabel("Velocity [m/s]");
+        end
     end
  
     %% other plot

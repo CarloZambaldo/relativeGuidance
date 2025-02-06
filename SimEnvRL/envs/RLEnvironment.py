@@ -88,7 +88,12 @@ class SimEnv(gym.Env):
                                                            self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine,
                                                           1]),
                                             dtype=np.float64)
-
+        #self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
+        #                                                  -1]),
+        #                                    high=np.array([1, 1, 1, 1, 1, 1,
+        #                                                   1]),
+        #                                    dtype=np.float64)
+        
         ## ACTION SPACE
         # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1] or 2 [delete OBoptimalTrajectory]
         self.action_space = spaces.Discrete(3)
@@ -295,10 +300,9 @@ class SimEnv(gym.Env):
         else:
             meanControlAction = self.controlActionHistory_L[self.timeIndex-self.param.RLGNCratio+1:self.timeIndex+1].mean(axis=0)
             #print(f"meanControlAction: {meanControlAction}")
+        meanControlAction /= self.param.maxAdimThrust # normalize wrt the max thrust available
         observation = np.hstack([self.OBStateRelative_L, meanControlAction, trajAGE])
-
-        # if np.isnan(observation).any() or np.isinf(observation).any():
-        #     raise ValueError("Error: NaN or Inf detected in observations!")
+        #observation = np.hstack([self.OBStateRelative_L, trajAGE])
 
         return observation
 
@@ -350,12 +354,12 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.085    # other values: K_trigger = 0.005
+                K_trigger = 0.008   # other values: K_trigger = 0.005
                 K_deleted = 0.08    #.5    # other values: K_deleted = 0.0001#.5
                 K_control = 0.8     # 0.3    # other values: K_control = 0.6 # 0.3
                 K_precisn = 0.6     # other values: K_precisn = 0.8
-                K_precisn_vel = 1 # 1    # other values: K_precisn_vel = 0.8 # 1
-                K_simtime = 0.08    # other values: K_simtime = 0.01
+                K_precisn_vel = 1   # 1    # other values: K_precisn_vel = 0.8 # 1
+                K_simtime = 0.035   # other values: K_simtime = 0.01
 
                 # Proximity factors
                 proximityTOFFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
@@ -442,7 +446,7 @@ class SimEnv(gym.Env):
                 print(" ################################## ")
                 self.terminationCause = "_AIM_REACHED_"
             terminated = True
-            self.stepReward += 1
+            self.stepReward += 10
             self.terminalState = TRUE_relativeState_L
 
         ## Crash Reward - crash into the target
@@ -451,7 +455,7 @@ class SimEnv(gym.Env):
             print(" ############# CRASHED ############# ")
             print(" ################################### ")
             terminated = True
-            self.stepReward -= 1
+            self.stepReward -= 10
             self.terminationCause = "__CRASHED__"
             self.terminalState = TRUE_relativeState_L
 
