@@ -2,125 +2,124 @@ from SimEnvRL import *
 from stable_baselines3 import PPO
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, SubprocVecEnv
 from datetime import datetime
-#import sys
+import torch
 import argparse
+from torch.utils.data import DataLoader
+import os
 
 # to run tensorboard use: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # tensorboard --logdir="AgentModels//" --host localhost --port 6006
 
-# Create Argument Parser
-parser = argparse.ArgumentParser(description="Reinforcement Learning Experiment")
+if __name__ == "__main__":
+    # Create Argument Parser
+    parser = argparse.ArgumentParser(description="Reinforcement Learning Experiment")
 
-# Add argument for reward normalization
-parser.add_argument("-p", "--phase", type=int, default="None", help="Mission Phase")
-parser.add_argument("-m", "--model", type=str, default="None", help="Mission Phase")
-parser.add_argument("-r", "--render", type=str, default="False", help="Rendering bool")
-parser.add_argument("-f","--start-from", type=str, default="new", help="Name of the agent from which continue training")
-# Parse arguments
-argspar = parser.parse_args()
+    # Add argument for reward normalization
+    parser.add_argument("-p", "--phase", type=int, default="None", help="Mission Phase")
+    parser.add_argument("-m", "--model", type=str, default="None", help="Mission Phase")
+    parser.add_argument("-r", "--render", type=str, default="False", help="Rendering bool")
+    parser.add_argument("-f","--start-from", type=str, default="new", help="Name of the agent from which continue training")
+    # Parse arguments
+    argspar = parser.parse_args()
 
-## SYSTEM INPUT PARAMETERS ##
-# if len(sys.argv) < 3:
-#     phaseID = 2
-#     modelName = "TEST_AGENT"
-#     taip = argspar.render
-#     renderingBool = True
-#     print("Usage: python3 RLEnv_Training.py --phase <phaseID> --model <'modelName'> --start-from <OldAgentName> --render <renderingBool>")
-# else:
-phaseID = argspar.phase
-modelName = argspar.model
-renderingBool = False if argspar.render == "False" else True
+    ## SYSTEM INPUT PARAMETERS ##
+    # if len(sys.argv) < 3:
+    #     phaseID = 2
+    #     modelName = "TEST_AGENT"
+    #     taip = argspar.render
+    #     renderingBool = True
+    #     print("Usage: python3 RLEnv_Training.py --phase <phaseID> --model <'modelName'> --start-from <OldAgentName> --render <renderingBool>")
+    # else:
+    phaseID = argspar.phase
+    modelName = argspar.model
+    renderingBool = False if argspar.render == "False" else True
 
-## TRAINING MODES ##
-if argspar.start_from == "new":
-    trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
-else:
-    trainingType = "CONTINUE_TRAINING_OLD_MODEL"
-    modelNameOLD = argspar.start_from
-#modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
-deviceType   = "cpu"                           # "cuda" or "cpu"
+    ## TRAINING MODES ##
+    if argspar.start_from == "new":
+        trainingType = "TRAIN_NEW_MODEL"             # "TRAIN_NEW_MODEL" or "CONTINUE_TRAINING_OLD_MODEL"
+    else:
+        trainingType = "CONTINUE_TRAINING_OLD_MODEL"
+        modelNameOLD = argspar.start_from
+    #modelName    = "Agent_P1-PPO-v4.0-achiral"    # name of the model (to store it or to load it)
 
-#phaseID = 1
-if phaseID == 1:
-    tspan = np.array([0, 0.06])
-else:
-    tspan = np.array([0, 0.031]) # np.array([0, 0.028745]) # about 3 hours of simulation
+    deviceType   = "cpu"                           # "cuda" or "cpu"
 
+    #phaseID = 1
+    if phaseID == 1:
+        tspan = np.array([0, 0.06])
+    else:
+        tspan = np.array([0, 0.031]) # np.array([0, 0.028745]) # about 3 hours of simulation
 
-## TRAINING PARAMETERS ##
-def lr_schedule(progress_remaining):
-    return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
-norm_reward     = True 
-norm_obs        = True
-discountFactor  = 0.99    # discount factor for the reward
-ent_coef        = 0.0005  # entropy coefficient
-n_steps         = 5000    # consider different trajectories
-batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-n_epochs        = 15      # every value is used n times for training
-vf_coef         = 0.5     # value function coefficient
-clip_range      = 0.17    # default: 0.2
-gae_lambda      = 0.95    # default: 0.95
-total_timesteps = 1e6     #563200*2
-# Create environment (depending on the device and normalisation)
-if deviceType == "cpu": # IF USING CPU
-    if (norm_reward or norm_obs): # IF USING CPU with vectorized environment
-        env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
-        # normalize the environment
-        env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward)
-    else: # IF USING CPU without vectorized environment
-        env = gym.make('SimEnv-v4.8', options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+    #get maximum number of threads available
+    max_num_threads = torch.get_num_threads()
 
-elif deviceType == "cuda": # IF USING GPU
-    env = make_vec_env('SimEnv-v4.8', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
-    raise Exception("GPU not supported on achiral.")
+    ## TRAINING PARAMETERS ##
+    def lr_schedule(progress_remaining):
+        return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
+    n_envs          = 12      
+    norm_reward     = True 
+    norm_obs        = True
+    discountFactor  = 0.99    # discount factor for the reward
+    ent_coef        = 0.0005  # entropy coefficient
+    n_steps         = int(np.ceil(6480/n_envs))    # consider different trajectories
+    batch_size      = 240     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+    n_epochs        = 15      # every value is used n times for training
+    vf_coef         = 0.5     # value function coefficient
+    clip_range      = 0.17    # default: 0.2
+    gae_lambda      = 0.95    # default: 0.95
+    total_timesteps = 1e6     #563200*2 
 
 
-print("\n***************************************************************************")
-print("-- AGENT TRAINING PARAMETERS --")
-if trainingType == "TRAIN_NEW_MODEL":
-    print(f"Training: {modelName} (new) on {deviceType}")
-else:
-    print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
-print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
-print(f"total_timesteps: {total_timesteps}")
-print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
-print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
-print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}")
-print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+    if n_envs > max_num_threads:
+        raise BrokenPipeError()
+    
+    # Create environment (depending on the device and normalisation)
+    if deviceType == "cpu": # IF USING CPU
+        if (norm_reward or norm_obs): # IF USING CPU with normalized environment
+            #env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
+            env = SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+                                  for _ in range(n_envs)])
+            env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward) # normalize the environment
+        else: # IF USING CPU without normalized environment
+            env =  SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+                                  for _ in range(n_envs)])
+    elif deviceType == "cuda": # IF USING GPU
+        env = make_vec_env('SimEnv-v4.8', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+        raise Exception("GPU not supported on achiral.")
 
-print("***************************************************************************\n")
 
-print("please check the parameters and press enter to start the training...")
-input()
+    print("\n***************************************************************************")
+    print("-- AGENT TRAINING PARAMETERS --")
+    if trainingType == "TRAIN_NEW_MODEL":
+        print(f"Training: {modelName} (new) on {deviceType}")
+    else:
+        print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
+    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"total_timesteps: {total_timesteps}")
+    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
+    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+    print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}")
+    print(f"n_steps:\t{n_steps*n_envs}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
 
-# Reset the environment
-print("RESETTING THE ENVIRONMENT...")
-env.reset()
+    print("***************************************************************************\n")
 
-# switch case to select between training new model and continue training the old one
-match trainingType:
-    case "TRAIN_NEW_MODEL":
-        # definition of the learning parameters
-        RLagent = config.RL_config.get(modelName)
-        # create the model
-        model = PPO('MlpPolicy', env=env,
-                    learning_rate=lr_schedule,
-                    ent_coef=ent_coef,
-                    n_steps=n_steps,
-                    batch_size=batch_size,
-                    n_epochs=n_epochs,
-                    vf_coef=vf_coef,
-                    clip_range=clip_range,
-                    gae_lambda=gae_lambda,
-                    device=deviceType, verbose=1, gamma=discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
-    case "CONTINUE_TRAINING_OLD_MODEL":
-        # definition of the learning parameters
-        RLagentOLD = config.RL_config.recall(modelNameOLD,"latest") # recall latest trained model saved under the given model Name
-        RLagent = config.RL_config.get(modelName) # generate the new model from the old one
-        model = PPO.load(f"{RLagentOLD.model_dir}/{RLagentOLD.modelNumber}", env=env,
-                         learning_rate=lr_schedule,
+    print("please check the parameters and press enter to start the training...")
+    input()
+
+    # Reset the environment
+    print("RESETTING THE ENVIRONMENT...")
+    env.reset()
+
+    # switch case to select between training new model and continue training the old one
+    match trainingType:
+        case "TRAIN_NEW_MODEL":
+            # definition of the learning parameters
+            RLagent = config.RL_config.get(modelName)
+            # create the model
+            model = PPO('MlpPolicy', env=env,
+                        learning_rate=lr_schedule,
                         ent_coef=ent_coef,
                         n_steps=n_steps,
                         batch_size=batch_size,
@@ -128,40 +127,63 @@ match trainingType:
                         vf_coef=vf_coef,
                         clip_range=clip_range,
                         gae_lambda=gae_lambda,
-                        device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
-    case _:
-        raise Exception("training Type not defined.")
+                        device=deviceType, verbose=1, gamma=discountFactor, tensorboard_log=RLagent.log_dir) # USING GPU
+        case "CONTINUE_TRAINING_OLD_MODEL":
+            # definition of the learning parameters
+            RLagentOLD = config.RL_config.recall(modelNameOLD,"latest") # recall latest trained model saved under the given model Name
+            RLagent = config.RL_config.get(modelName) # generate the new model from the old one
+            model = PPO.load(f"{RLagentOLD.model_dir}/{RLagentOLD.modelNumber}", env=env,
+                            learning_rate=lr_schedule,
+                            ent_coef=ent_coef,
+                            n_steps=n_steps,
+                            batch_size=batch_size,
+                            n_epochs=n_epochs,
+                            vf_coef=vf_coef,
+                            clip_range=clip_range,
+                            gae_lambda=gae_lambda,
+                            device=deviceType, verbose=1, tensorboard_log=RLagent.log_dir)
+        case _:
+            raise Exception("training Type not defined.")
 
-# save the starting model to ensure it will save
-model.save(RLagent.modelFileNameDir)
-########################################################################################################
-## TRAINING ##
-print("TRAINING ...")
-model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
-model.save(RLagent.modelFileNameDir) # save the model
-try:
-    if norm_obs or norm_reward:
-        env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
-except Exception as e:
-    print(e)
+    # save the starting model to ensure it will save
+    model.save(RLagent.modelFileNameDir)
+    ########################################################################################################
+    ## TRAINING ##
+    print("TRAINING ...")
+    torch.set_num_threads(max_num_threads) # set the maximum threads available
+    torch.set_num_interop_threads(max_num_threads)  #
+    print(f"Using {max_num_threads} threads. Using {n_envs} in parallel.")
+    #os.environ["OMP_NUM_THREADS"] = str(max_num_threads)
+    #os.environ["MKL_NUM_THREADS"] = str(max_num_threads)
+    #os.environ["OPENBLAS_NUM_THREADS"] = str(max_num_threads)
+    #os.environ["VECLIB_MAXIMUM_THREADS"] = str(max_num_threads)
+    #os.environ["NUMEXPR_NUM_THREADS"] = str(max_num_threads)
 
-print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
+    model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
+    model.save(RLagent.modelFileNameDir) # save the model
+    try:
+        if norm_obs or norm_reward:
+            env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
+    except Exception as e:
+        print(e)
+
+    print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
 
-#########################################################################################################
+    #########################################################################################################
 
 
-# output to recall which model was trained in that window
-print("\n***************************************************************************")
-print("-- AGENT TRAINING PARAMETERS --")
-if trainingType == "TRAIN_NEW_MODEL":
-    print(f"Training: {modelName} (new) on {deviceType}")
-else:
-    print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
-print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
-print(f"total_timesteps: {total_timesteps}")
-print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
-print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
-print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}")
-print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
-print("***************************************************************************\n")
+    # output to recall which model was trained in that window
+    print("\n***************************************************************************")
+    print("-- AGENT TRAINING PARAMETERS --")
+    if trainingType == "TRAIN_NEW_MODEL":
+        print(f"Training: {modelName} (new) on {deviceType}")
+    else:
+        print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
+    print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"total_timesteps: {total_timesteps}")
+    print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
+    print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
+    print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}")
+    print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
+    print("***************************************************************************\n")

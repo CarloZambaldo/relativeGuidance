@@ -2,7 +2,7 @@ import pickle
 from stable_baselines3.common.vec_env import VecNormalize
 from SimEnvRL import *
 
-modelName = "TEST"
+modelName = "Agent_P2-v10-norm-24threads"
 # Load the saved VecNormalize object
 RLagent = config.RL_config.get(modelName)
 with open(f"{RLagent.model_dir}/vec_normalize.pkl", "rb") as file:

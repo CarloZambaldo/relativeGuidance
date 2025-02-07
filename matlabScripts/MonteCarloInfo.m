@@ -13,12 +13,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     success = data.success;
     terminalState = data.terminalState;
     endTimeIx = data.terminalTimeIndex+1;
-
-    if isfield(data,"CPUExecTimeHistory")
-        execTime = data.CPUExecTimeHistory;
-    else
-        execTime = 0;
-    end
+    execTime = data.CPUExecTimeHistory;
     
     if isfield(data,"agentModelName")
         agentModelName = data.agentModelName;
@@ -34,7 +29,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     fprintf("data contains:    %d [simulations]\n", n_population);
     fprintf("Simulated Phase:  %d\n",phaseID)
     fprintf("Agent model used: %s\n", agentModelName);
-    fprintf("Seed used: %s\n", data.seed);
+    fprintf("Seed used: %s\n", string(data.seed));
     fprintf("\n")
     
     %%

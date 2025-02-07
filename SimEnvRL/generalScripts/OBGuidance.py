@@ -32,7 +32,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
     if phaseID == 2:
         sigma = surface_L2 + (np.array([1, 2.11e1, 1]) * surface_L1_vel + 6e-3 * surface_L1_pos)
     elif phaseID == 1:
-        sigma = surface_L2 + (6 * surface_L1_vel + np.array([1e-4, 6e-3, 1e-4]) * surface_L1_pos)
+        sigma = surface_L2 + (6 * surface_L1_vel + np.array([3e-3, 8e-3, 3e-3]) * surface_L1_pos)
     #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
@@ -333,7 +333,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_SS_inside = np.array([2e3, 5e2, 2e3])
-            K_SS_outside = np.array([5e5, 6e6, 5e5])
+            K_SS_outside = np.array([5e6, 8e6, 5e6])
             
             # potential field computation
             if np.linalg.norm(rho)**2 - SphereRadius_SS**2 <= 0:  # if constraint is violated
