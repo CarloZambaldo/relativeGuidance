@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(description="Monte Carlo Analysis parameters")
 
 # Add argument for reward normalization
 parser.add_argument("-p", "--phase", type=int, default=2, help="Mission Phase")
-parser.add_argument("-m", "--model", type=str, default="Agent_P1-v11.3.p1-multi-phase1", help="Model Name") # FIXME
+parser.add_argument("-m", "--model", type=str, default="_NO_AGENT_", help="Model Name")
 parser.add_argument("-s","--seed", type=str, default="None", help="Seed value used to initialize the simulations")
 parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Monte Carlo samples")
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
@@ -64,7 +64,7 @@ print(f"Using {max_num_threads} threads.")
 if phaseID == 1:
     tspan = np.array([0, 0.045]) # ca 4 hours
 elif phaseID == 2:
-    tspan = np.array([0, 0.00033]) # ca 3.3 hours # FIXME
+    tspan = np.array([0, 0.033]) # ca 3.3 hours # FIXME
 
 
 print("***************************************************************************")
@@ -270,6 +270,9 @@ start_time = time.time()
 # RUN THE SIMULATIONS ##################################################################################################
 fileNameSave = f"MC_P{phaseID}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
+if not os.path.exists("./Simulations/"):
+    os.makedirs("./Simulations/")
+
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
     initialStateTarget_S = initialStateTarget_S_batch[trgt_id,:]
@@ -291,8 +294,9 @@ for trgt_id in range(n_targets_pos): # for each target position
             obs = env.envs[0].reset(options={"targetState_S": initialStateTarget_S,
                                             "relativeState_L": POP[:, sim_id + trgt_id].T})
             
+        checkfinished = env.envs[0].needs_reset
         # run the simulation until termination/truncation: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        while (not terminated) and (not truncated):
+        while (not checkfinished):
             if usingAgentBool:
                 action, _ = model.predict(obs, deterministic=True)  # Predict using the agent
                 action = [action]
@@ -300,11 +304,8 @@ for trgt_id in range(n_targets_pos): # for each target position
                 action = [0]  # Default action if no agent is used
 
             # Step through the environment
-            obs, _, terminated, truncated, info = env.step(action)
-            
-            env.envs[0].needs_reset
-            erminated = terminated[0]
-            truncated = truncated[0].get("TimeLimit.truncated", False) 
+            obs, _, _, _ = env.step(action)
+            checkfinished = env.envs[0].needs_reset
 
             # Rendering for debugging
             if renderingBool:
@@ -332,8 +333,6 @@ for trgt_id in range(n_targets_pos): # for each target position
         print("SAVING THE SIMULATION: ",end='')
         # Save the Monte Carlo data to a .mat file
         
-        if not os.path.exists("./Simulations/"):
-            os.makedirs("./Simulations/")
         scipy.io.savemat(f"./Simulations/{fileNameSave}", {"data": data})
         print("DONE.\n")
 

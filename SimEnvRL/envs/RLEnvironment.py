@@ -355,8 +355,8 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.005     # other values: K_trigger = 0.005
-                K_deleted = 0.001      #.5    # other values: K_deleted = 0.0001#.5
+                K_trigger = 0#.005     # other values: K_trigger = 0.005
+                K_deleted = 0#.001      #.5    # other values: K_deleted = 0.0001#.5
                 K_control = 1         # 0.3    # other values: K_control = 0.6 # 0.3
                 K_precisn = 1         # other values: K_precisn = 0.8
                 K_precisn_vel = .9     # 1    # other values: K_precisn_vel = 0.8 # 1
@@ -409,12 +409,12 @@ class SimEnv(gym.Env):
                 # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
                 if OBoTAge == -1: # if no trajectory exists, incentive the computation
                     self.stepReward += eta
-                #else: # if the trajectory already exist, disincentive it
-                #    self.stepReward -= K_trigger * np.exp(-130*OBoTAge)
+                else: # if the trajectory already exist, disincentive it
+                    self.stepReward -= K_trigger * np.exp(-130*OBoTAge)
             case 2: # if the agent deletes the optimal trajectory
                 if OBoTAge>=0:
                     # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                    self.stepReward -= eta #K_deleted * np.exp(-50*OBoTAge)
+                    self.stepReward -= eta if eta > 0 else K_deleted * np.exp(-50*OBoTAge)
                 else: # avoid "deleting" an inexistant trajectory
                     self.stepReward -= 1
             case _:

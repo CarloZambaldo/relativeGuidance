@@ -62,7 +62,7 @@ if __name__ == "__main__":
     norm_reward     = True 
     norm_obs        = True
     discountFactor  = 0.99    # discount factor for the reward
-    ent_coef        = 0.0005  # entropy coefficient
+    ent_coef        = 0.0002  # entropy coefficient
     n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
     batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
     n_epochs        = 15      # every value is used n times for training
