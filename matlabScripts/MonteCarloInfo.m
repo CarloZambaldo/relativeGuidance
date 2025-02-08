@@ -105,14 +105,15 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
 
     %% GNC Execution Time
     fprintf("\n-- MEAN GNC EXECUTION TIME --\n")
-    fprintf("Exec Time = %.2g \x00B1 %.2g [ms]\n", meanExecTime*1e3, sigmaExecTime*1e3);
+    fprintf("Exec Time = %.3f \x00B1 %.3f [ms]\n", meanExecTime*1e3, sigmaExecTime*1e3);
+    conversion = 2.65e3/100*24/2; % if computed from the server
+    fprintf("Equivalent Exec Time = %.2f \x00B1 %.2f [ms]\n", meanExecTime*1e3*conversion, sigmaExecTime*1e3*conversion);
 
     %% TOF
     fprintf("\n-- MEAN FLIGHT DATA --\n")
     fprintf("MEAN TIME OF FLIGHT   = %.2f \x00B1 %.2f [min]\n", meanTOF*param.tc/60, sigmaTOF*param.tc/60);
     fprintf("MEAN INITIAL DISTANCE = %.2f \x00B1 %.2f [km]\n", meanICp, sigmaICp);
     fprintf("MEAN INITIAL VELOCITY = %.2f \x00B1 %.2f [m/s]\n", meanICv*1e3, sigmaICv*1e3);
-
 
     fprintf("\n===========================================================\n")
 end

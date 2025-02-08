@@ -14,8 +14,10 @@ import scipy
 from SimEnvRL import config              # this allows to call config inside a script without importing it
 from SimEnvRL.UserDataDisplay.printSummary import printSummary
 from SimEnvRL.UserDataDisplay.plots import plotty
+from SimEnvRL.UserDataDisplay.see import printNormalization, printNeuralNetwork
 
-
+# custom wrappers
+from SimEnvRL.generalScripts.wrappers import noAutoResetWrapper
 
 ## REGISTER THE ENVIRONMENT ##
 register(

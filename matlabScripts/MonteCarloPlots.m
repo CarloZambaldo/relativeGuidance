@@ -36,6 +36,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
 
     dynamicsHistory = NaN(length(timeHistory),6,length(n_population));
 
+    nCAR = 0;
     for sim_id = 1:n_population
         %fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
 
@@ -61,7 +62,10 @@ function [] = MonteCarloPlots(data,eachplotbool)
         dynamicsHistory(1:length(time),:,sim_id) = relDynami;
 
         if eachplotbool
-            fprintf(" PLOT %d OUT OF %d\n",sim_id,n_population)
+            msg = sprintf(" PLOT %d OUT OF %d\n",sim_id,n_population);
+            fprintf(repmat('\b',1,nCAR));
+            fprintf(msg);
+            nCAR = strlength(msg);
 
             figure(1)
             % plot constraints
@@ -105,7 +109,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
         if phaseID == 1
             plotConstraintsVisualization(1e3,'S','yellow')
             plotConstraintsVisualization(200,'S')
-            plotConstraintsVisualization(2.5e3,'S','black')
+            plotConstraintsVisualization(2e3,'S','black')
         elseif phaseID == 2
             plotConstraintsVisualization(1e3,'C')
         end

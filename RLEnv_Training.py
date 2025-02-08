@@ -2,7 +2,7 @@ from SimEnvRL import *
 from stable_baselines3 import PPO
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize, SubprocVecEnv
+from stable_baselines3.common.vec_env import VecMonitor, VecNormalize, SubprocVecEnv
 from datetime import datetime
 import torch
 import argparse
@@ -58,29 +58,33 @@ if __name__ == "__main__":
     ## TRAINING PARAMETERS ##
     def lr_schedule(progress_remaining):
         return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
-    n_envs          = 12      
+    n_envs          = 15   
     norm_reward     = True 
     norm_obs        = True
     discountFactor  = 0.99    # discount factor for the reward
     ent_coef        = 0.0005  # entropy coefficient
-    n_steps         = int(np.ceil(6480/n_envs))    # consider different trajectories
-    batch_size      = 240     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+    n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
+    batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
     n_epochs        = 15      # every value is used n times for training
-    vf_coef         = 0.5     # value function coefficient
-    clip_range      = 0.17    # default: 0.2
+    vf_coef         = 0.55    # value function coefficient
+    clip_range      = 0.15    # default: 0.2
     gae_lambda      = 0.95    # default: 0.95
-    total_timesteps = 1e6     #563200*2 
+    total_timesteps = 1e6   # <<<<<<<<<<<<<<<<<<<<<<<<
 
 
     if n_envs > max_num_threads:
         raise BrokenPipeError()
     
+    # definition of the learning parameters
+    RLagent = config.RL_config.get(modelName)
+
     # Create environment (depending on the device and normalisation)
     if deviceType == "cpu": # IF USING CPU
         if (norm_reward or norm_obs): # IF USING CPU with normalized environment
             #env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
             env = SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
                                   for _ in range(n_envs)])
+            env = VecMonitor(env, RLagent.log_dir)  # Logs true episode rewards
             env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward) # normalize the environment
         else: # IF USING CPU without normalized environment
             env =  SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
@@ -115,8 +119,6 @@ if __name__ == "__main__":
     # switch case to select between training new model and continue training the old one
     match trainingType:
         case "TRAIN_NEW_MODEL":
-            # definition of the learning parameters
-            RLagent = config.RL_config.get(modelName)
             # create the model
             model = PPO('MlpPolicy', env=env,
                         learning_rate=lr_schedule,
@@ -131,7 +133,6 @@ if __name__ == "__main__":
         case "CONTINUE_TRAINING_OLD_MODEL":
             # definition of the learning parameters
             RLagentOLD = config.RL_config.recall(modelNameOLD,"latest") # recall latest trained model saved under the given model Name
-            RLagent = config.RL_config.get(modelName) # generate the new model from the old one
             model = PPO.load(f"{RLagentOLD.model_dir}/{RLagentOLD.modelNumber}", env=env,
                             learning_rate=lr_schedule,
                             ent_coef=ent_coef,
@@ -164,6 +165,7 @@ if __name__ == "__main__":
     try:
         if norm_obs or norm_reward:
             env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
+            printNormalization(RLagent)
     except Exception as e:
         print(e)
 
@@ -172,6 +174,7 @@ if __name__ == "__main__":
 
     #########################################################################################################
 
+    ##### EXTRA #####
 
     # output to recall which model was trained in that window
     print("\n***************************************************************************")
@@ -187,3 +190,19 @@ if __name__ == "__main__":
     print(f"vf_coef: \t{vf_coef}\n clip_range:\t{clip_range}")
     print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
     print("***************************************************************************\n")
+
+    # save a file containing the learning parameters used
+    with open(f"{RLagent.model_dir}/training_parameters.txt", "w") as f:
+        f.write("-- AGENT TRAINING PARAMETERS --\n")
+        if trainingType == "TRAIN_NEW_MODEL":
+            f.write(f"Training: {modelName} (new) on {deviceType}\n")
+        else:
+            f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
+        f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
+        f.write(f"total_timesteps: {total_timesteps}\n")
+        f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
+        f.write(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\n")
+        f.write(f"learning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}\n")
+        f.write(f"vf_coef: \t{vf_coef}\nclip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}\n")
+        f.write(f"n_steps:\t{n_steps*n_envs}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}\n")
+        f.write("***************************************************************************\n")

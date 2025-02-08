@@ -333,7 +333,7 @@ def APF(relativeState_L, constraintType, param):
 
             # coefficients definition
             K_SS_inside = np.array([2e3, 5e2, 2e3])
-            K_SS_outside = np.array([5e6, 8e6, 5e6])
+            K_SS_outside = np.array([5e6, 1e7, 5e6])
             
             # potential field computation
             if np.linalg.norm(rho)**2 - SphereRadius_SS**2 <= 0:  # if constraint is violated
@@ -388,5 +388,5 @@ def computeTOF(relativeState, aimAtState, param):
     p_factor = (2 + delta[2]/deltanorm)
     o_factor = 1.1 - np.tanh(deltanorm*param.xc/5)
     #TOF = deltanorm/5e-4 * o_factor * p_factor # original, tested also: 3e-3
-    TOF = deltanorm/5e-4 * o_factor * p_factor
+    TOF = deltanorm/4e-4 * o_factor * p_factor
     return TOF
