@@ -220,6 +220,8 @@ function [] = MonteCarloPlots(data,eachplotbool)
         usage_flags = NaN(n_population,length(timeHistory));
 
         % Calcolo delle norme delle distanze e raccolta delle azioni
+        minDist = NaN;
+        maxDist = NaN;
         for sim_id = 1:n_population
 
             % Norma delle distanze (x, y, z)
@@ -242,11 +244,12 @@ function [] = MonteCarloPlots(data,eachplotbool)
             agent_actions(sim_id,:) = actions;
             norm_controls(sim_id,:) = control_norm;
             usage_flags(sim_id,:) = usage;
+
+            minDist = min([min(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), minDist]);
+            maxDist = max([max(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), maxDist]);
         end
     
         % Definizione dei bin per aggregare le distanze
-        minDist = min(min(norm_distances));
-        maxDist = max(max(norm_distances));
         nBins = 50;  % Numero di bin
         binEdges = linspace(minDist, maxDist, nBins+1);
         binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
@@ -362,14 +365,14 @@ function [] = MonteCarloPlots(data,eachplotbool)
     % Calcolo delle metriche per ciascuna simulazione
     for sim_id = 1:n_population
         % Estrarre le componenti della posizione e della velocità
-        positions = dynamicsHistory(:, 1:3, sim_id); % Componenti di posizione (x, y, z)
+        positions = dynamicsHistory(1:terminalTimeIndex(sim_id), 1:3, sim_id); % Componenti di posizione (x, y, z)
 
         % Calcolare la distanza sul piano R-H e lungo V-BAR
         distances_rh_sim = sqrt(positions(:, 1).^2 + positions(:, 3).^2); % rho_R^2 + rho_H^2
         distances_vbar_sim = positions(:, 2); % posizione assoluta (con segno) lungo V-BAR
 
         % Flag di uso della traiettoria ottimale
-        usage_sim = OBoTUsage(:, sim_id);
+        usage_sim = OBoTUsage(1:terminalTimeIndex(sim_id), sim_id);
 
         % Accumula i dati
         distances_rh = [distances_rh; distances_rh_sim];

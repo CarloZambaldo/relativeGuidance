@@ -89,6 +89,8 @@ env = DummyVecEnv([lambda:env])
 if seed is not None:
     env.action_space.seed(seed)  # Seed the Gym action space
     env.observation_space.seed(seed)  # Seed the Gym observation space
+    np.random.seed(seed)
+    
 # load the model
 if usingAgentBool:
     RLagent = config.RL_config.recall(agentName,"latest")

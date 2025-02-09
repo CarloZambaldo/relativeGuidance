@@ -217,6 +217,10 @@ def getInitialValues(param,seed=None,values=None):
     # define the dataclass (with no values)
     initialValue = initialValueClass()
 
+    # seeding np.random
+    if seed is not None:
+        np.random.seed(seed)
+
     # fill the class with the values passed by the used
     values = values or {}
     if values: # if the initial conditions are passed define accordingly the initialValue parameter
