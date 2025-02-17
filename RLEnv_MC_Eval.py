@@ -147,12 +147,21 @@ else:
 
 
 # target positions - see picture to understand the positions
-initialStateTarget_S_batch = np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])] # aposelene
-                                                                                                # before aposelene
-                                                                                                # after aposelene
-                                                                                                # before periselene
-                                                                                                # after periselene   
-                                    )
+# initialStateTarget_S_batch = np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07]), 
+#                                       np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726]) ,   # before aposelene
+#                                       np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757]),    # after aposelene
+#                                       np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])    # periselene
+# ])
+
+# aposelene
+initialStateTarget_S_batch =  np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])])
+# leaving aposelene
+#initialStateTarget_S_batch =  np.vstack([np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726])])
+# approaching aposelene
+#initialStateTarget_S_batch =  np.vstack([np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757])])
+# periselene region
+#initialStateTarget_S_batch =  np.vstack([np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])])
+
 
 n_targets_pos = initialStateTarget_S_batch.shape[0]
 data["n_population"] = n_ICs + n_targets_pos - 1

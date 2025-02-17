@@ -8,8 +8,6 @@ function [dSimState,controlAction_L] = simEquations(t,fullState,param)
     targetState_S = fullState(1:6);
     chaserState_S = fullState(7:12);
 
-    % environment
-    [sunVersor] = sunPositionVersor(t,param);
 
     %% SPACECRAFT GUIDANCE ALGORITHM
     % compute relative dynamics

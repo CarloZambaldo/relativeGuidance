@@ -62,18 +62,18 @@ if __name__ == "__main__":
     norm_reward     = True 
     norm_obs        = True
     discountFactor  = 0.99    # discount factor for the reward
-    ent_coef        = 0.0002  # entropy coefficient
+    ent_coef        = 0.00015  # entropy coefficient
     n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
     batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
     n_epochs        = 15      # every value is used n times for training
-    vf_coef         = 0.55    # value function coefficient
+    vf_coef         = 0.5     # value function coefficient
     clip_range      = 0.15    # default: 0.2
     gae_lambda      = 0.95    # default: 0.95
-    total_timesteps = 1e6   # <<<<<<<<<<<<<<<<<<<<<<<<
+    total_timesteps = 1.5e6   # <<<<<<<<<<<<<<<<<<<<<<<<
 
 
     if n_envs > max_num_threads:
-        raise BrokenPipeError()
+        raise BrokenPipeError("n_envs > max_num_threads")
     
     # definition of the learning parameters
     RLagent = config.RL_config.get(modelName)
@@ -148,6 +148,26 @@ if __name__ == "__main__":
 
     # save the starting model to ensure it will save
     model.save(RLagent.modelFileNameDir)
+    
+    # save a file containing the learning parameters used
+    with open(f"{RLagent.model_dir}/training_parameters.txt", "w") as f:
+        f.write("***************************************************************************\n")
+        f.write("-- AGENT TRAINING PARAMETERS --\n")
+        if trainingType == "TRAIN_NEW_MODEL":
+            f.write(f"Training: {modelName} (new) on {deviceType}\n")
+        else:
+            f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
+        f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
+        f.write(f"total_timesteps: {total_timesteps}\n")
+        f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
+        f.write(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\n")
+        f.write(f"learning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}\n")
+        f.write(f"vf_coef: \t{vf_coef}\nclip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}\n")
+        f.write(f"n_steps:\t{n_steps*n_envs}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}\n")
+        f.write(f"Total time steps: {total_timesteps}\n")
+        f.write("***************************************************************************\n")
+        f.write(f"Started Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}")
+        f.close()
     ########################################################################################################
     ## TRAINING ##
     print("TRAINING ...")
@@ -191,18 +211,7 @@ if __name__ == "__main__":
     print(f"n_steps:\t{n_steps}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}")
     print("***************************************************************************\n")
 
-    # save a file containing the learning parameters used
-    with open(f"{RLagent.model_dir}/training_parameters.txt", "w") as f:
-        f.write("-- AGENT TRAINING PARAMETERS --\n")
-        if trainingType == "TRAIN_NEW_MODEL":
-            f.write(f"Training: {modelName} (new) on {deviceType}\n")
-        else:
-            f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
-        f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
-        f.write(f"total_timesteps: {total_timesteps}\n")
-        f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
-        f.write(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\n")
-        f.write(f"learning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}\n")
-        f.write(f"vf_coef: \t{vf_coef}\nclip_range:\t{clip_range}\ngae_lambda:\t{gae_lambda}\n")
-        f.write(f"n_steps:\t{n_steps*n_envs}\nbatch_size:\t{batch_size}\nn_epochs:\t{n_epochs}\n")
-        f.write("***************************************************************************\n")
+    with open(f"{RLagent.model_dir}/training_parameters.txt", "a") as f:
+        f.write(f"Finished Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
+        f.write(f"  [Trained on {max_num_threads} threads]\n")
+        f.close()

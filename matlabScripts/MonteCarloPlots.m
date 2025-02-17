@@ -1,5 +1,5 @@
 function [] = MonteCarloPlots(data,eachplotbool)
-    
+    close all
     if nargin < 2
         eachplotbool = 0;
     elseif eachplotbool == 1
@@ -250,31 +250,40 @@ function [] = MonteCarloPlots(data,eachplotbool)
         end
     
         % Definizione dei bin per aggregare le distanze
-        nBins = 50;  % Numero di bin
+        nBins = 30;  % Numero di bin
         binEdges = linspace(minDist, maxDist, nBins+1);
         binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
 
         %% Media della norma della control action per bin
-        average_controls = zeros(1, nBins)./0;
+        average_controls = nan(1, nBins);
+        sigma_average_controls = nan(1, nBins);
+
         for b = 1:nBins
             % Trova gli indici delle distanze che appartengono al bin
             inBin = norm_distances >= binEdges(b) & norm_distances < binEdges(b+1);
     
             % Calcola la media della norma della control action per questo bin
             if any(inBin,'all')
-                average_controls(b) = mean(norm_controls(inBin));
+                [sigma_average_controls(b), average_controls(b)] = std(norm_controls(inBin));
             else
                 average_controls(b) = NaN; % Per bin vuoti
+                sigma_average_controls(b) = NaN;
             end
         end
 
         % Plot della media della norma della control action rispetto alla norma della distanza
         figure;
-        plot(binCenters, average_controls, 'b-', 'LineWidth', 1.5);
+        converti = param.xc*1e3/param.tc^2;
+        average_controls = average_controls*converti;
+        sigma_average_controls = sigma_average_controls*converti;
+        errorbar(binCenters, average_controls, average_controls-max(0, average_controls-sigma_average_controls), sigma_average_controls, 'r', 'LineWidth', 0.9); % Sigma in rosso
+        hold on;
+        plot(binCenters, average_controls, 'b.-', 'LineWidth', 1.2);
+        plot(binCenters, average_controls, 'ro', 'LineWidth', 0.5);
         grid on;
         xlabel('||\rho|| [km]');
-        ylabel('Mean of the norm of the control action [-]');
-        title('Mean Control Action');
+        ylabel('Mean ||u|| [m/s^2]');
+        %title('Mean Control Action');
     end
     
     %% add a plot on the AgentAction
