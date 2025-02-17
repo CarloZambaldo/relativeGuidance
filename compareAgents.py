@@ -130,35 +130,6 @@ for i, (act1, act2, layer_name) in enumerate(zip(mean_act1, mean_act2, layers1))
 
 ##########################
 
-
-def compare_action_distributions(model1, model2, env, num_samples=1000):
-    obs, _ = env.reset()
-    action_probs1 = []
-    action_probs2 = []
-
-    for _ in range(num_samples):
-        action1, _ = model1.predict(obs, deterministic=False)
-        action2, _ = model2.predict(obs, deterministic=False)
-        
-        action_probs1.append(action1)
-        action_probs2.append(action2)
-
-        obs, _, _, _, _ = env.step(action1)  # Keep moving in the environment
-
-    return np.array(action_probs1), np.array(action_probs2)
-
-# Compare action distributions
-actions1, actions2 = compare_action_distributions(model1, model2, env1)
-
-# Plot histograms
-import matplotlib.pyplot as plt
-plt.hist(actions1, alpha=0.5, label="Model 1", bins=10)
-plt.hist(actions2, alpha=0.5, label="Model 2", bins=10)
-plt.legend()
-plt.title("Action Distribution Comparison")
-plt.show()
-
-
 # Adjust layout for better readability
 plt.tight_layout()
 plt.show()
