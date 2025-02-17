@@ -7,8 +7,8 @@ from stable_baselines3 import PPO
 
 env1 = gym.make("SimEnv-v4.8", options={"phaseID":1,"tspan":np.array([0, 0.045]),"renderingBool":False})
 env2 = gym.make("SimEnv-v4.8", options={"phaseID":2,"tspan":np.array([0, 0.033]),"renderingBool":False})
-model1 = PPO.load(r"AgentModels/Agent_P1-v11.3.p1-multi-phase1-SEMIDEF/model/1739005750.zip", env=env1, device="cpu")
-model2 = PPO.load(r"AgentModels/Agent_P2-v11.5-multi-SEMIDEF/model/1739048517.zip", env=env2, device="cpu")
+model1 = PPO.load(r"./AgentModels/Agent_P1-v11.3.p1-multi-phase1-SEMIDEF/model/1739005750.zip", env=env1, device="cpu")
+model2 = PPO.load(r"./AgentModels/Agent_P2-v11.5-multi-SEMIDEF/model/1739048517.zip", env=env2, device="cpu")
 
 import torch
 
