@@ -1,4 +1,10 @@
 # _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ #
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=copyright)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![MATLAB](https://img.shields.io/badge/MATLAB-R2024b-orange?logo=mathworks)
+![Gymnasium](https://img.shields.io/badge/Gymnasium-RL%20Env-green?logo=openai)
+![PyTorch](https://img.shields.io/badge/PyTorch-ML-red?logo=pytorch)
+![GitHub last commit](https://img.shields.io/github/last-commit/CarloZambaldo/relativeGuidance?logo=github)
 
 ## Overview
 _relativeGuidance_ is a framework for simulating and analyzing relative guidance algorithms for space applications. This repository contains the code used in my Master's Thesis in Space Engineering at Politecnico di Milano.
@@ -96,9 +102,19 @@ Contributions are welcome! To contribute:
 - Push to your branch (git push origin feature-branch)
 - Open a Pull Request
 
-# License
+## License
 Copyright (c) 2025 Carlo Zambaldo
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-# Contact
+## Contact
 For questions or collaborations, please contact Carlo Zambaldo.
+
+## Citation
+If you use this work, please cite:
+```bibtex
+@thesis{Zambaldo2025,
+  author    = {Zambaldo, Carlo},
+  title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
+  school    = {Politecnico di Milano},
+  year      = {2025}
+}
