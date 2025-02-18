@@ -1,4 +1,10 @@
 # _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ #
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=copyright)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
+![MATLAB](https://img.shields.io/badge/MATLAB-R2024b-orange?logo=mathworks)
+![Gymnasium](https://img.shields.io/badge/Gymnasium-RL%20Env-green?logo=openai)
+![PyTorch](https://img.shields.io/badge/PyTorch-ML-red?logo=pytorch)
+![GitHub last commit](https://img.shields.io/github/last-commit/CarloZambaldo/relativeGuidance?logo=github)
 
 ## Overview
 _relativeGuidance_ is a framework for simulating and analyzing relative guidance algorithms for space applications. This repository contains the code used in my Master's Thesis in Space Engineering at Politecnico di Milano.
@@ -58,29 +64,20 @@ The repository includes two configuration files in the SimEnvRL/config/ director
 
 ### Repository Structure
     relativeGuidance/
-    ├── images/             # Folder for images used in README or documentation
-    │ ├── RLFramework.png   # Framework diagram
-    │
-    ├── matlabScripts/ # MATLAB scripts for simulations and validation
+    ├── matlabScripts/       # MATLAB scripts for simulations and validation
     │ ├── extractSimulationData.m
-    │ ├── MATLAB/           # Core MATLAB functions
-    │ │ ├── APF.m, ASRE.m, ASRE_plus_Constraints.m
-    │ │ ├── checkAimReached.m, checkConstraintViolation.m
-    │ │ ├── computeDisturbances.m, computeRotationMatrixLVLH.m
-    │ │ ├── config/ # Configuration scripts
-    │ │ │ ├── calcolaTraiettoriaStandardTarget.m, initializeSimulation.m
-    │ │ │ ├── refTraj.mat
-    │ │ ├── plot/           # Scripts for visualization and plotting
+    │ ├── MATLAB/            # Core MATLAB functions
+    │ │ ├── config/          # Configuration scripts
+    │ │ ├── plot/            # Scripts for visualization and plotting
     │ │ ├── ReferenceFrames/ # Coordinate transformation functions
     │ │ ├── relativeDynamicsModels/ # Dynamic models
-    │ │ ├── rotateControlAction.m, simEquations.m, sunPositionVersor.m
     │ │ ├── Z_ModelValidationCodes/ # Model validation scripts
     │
     ├── SimEnvRL/           # Custom Gymnasium simulation environment
     │ ├── config/           # Configuration scripts for RL environment
-    │ │ ├── env_config.py, RL_config.py, refTraj.mat, __init__.py
+    │ │ ├── env_config.py, RL_config.py, refTraj.mat
     │ ├── envs/             # RL environment classes
-    │ │ ├── RLEnvironment.py, __init__.py
+    │ │ ├── RLEnvironment.py
     │ ├── generalScripts/   # Core simulation functions
     │ │ ├── check.py, dynamicsModel.py, OBControl.py, OBGuidance.py
     │ │ ├── ReferenceFrames.py, sunPositionVersor.py, wrappers.py
@@ -89,13 +86,13 @@ The repository includes two configuration files in the SimEnvRL/config/ director
     │ ├── pyproject.toml    # Python environment dependencies
     │ ├── __init__.py
     │
+    ├── AgentModels/        # Folder containing trained agent models (not included in this repository)
     ├── Simulations/        # Folder containing Monte Carlo simulations (not included in this repository)
     │
     ├── RLEnv_MC_Eval.py    # Script for evaluating the RL environment via Monte Carlo simulations
     ├── RLEnv_Training.py   # Script for training the RL environment
     ├── LICENSE             # Project license
     └── README.md           # Project documentation
-
 
 ## Contributing
 Contributions are welcome! To contribute:
@@ -105,9 +102,19 @@ Contributions are welcome! To contribute:
 - Push to your branch (git push origin feature-branch)
 - Open a Pull Request
 
-# License
+## License
 Copyright (c) 2025 Carlo Zambaldo
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-# Contact
+## Contact
 For questions or collaborations, please contact Carlo Zambaldo.
+
+## Citation
+If you use this work, please cite:
+```bibtex
+@thesis{Zambaldo2025,
+  author    = {Zambaldo, Carlo},
+  title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
+  school    = {Politecnico di Milano},
+  year      = {2025}
+}
