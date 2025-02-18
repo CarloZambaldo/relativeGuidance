@@ -12,62 +12,101 @@ _relativeGuidance_ is a framework for simulating and analyzing relative guidance
 - Visualization tools for analyzing guidance performance
 
 The code is structured as in figure:
-![Code structure and modularity](images/RLFramework.png){width=10}
+![Code structure and modularity](images/RLFramework.png)
 
-the modularity allows to change any 
+the modularity in the code design allows to change any of the blocks, provided that all the others are fixed accordingly.
 
 ### Installation
-Ensure you have Python 3.10 or later installed. Clone the repository and install dependencies:
+Ensure you have Python 3.10 or later installed.
 
-### Clone the repository
+Clone the repository:
     git clone https://github.com/CarloZambaldo/relativeGuidance.git
     cd relativeGuidance
 
-### Install dependencies
+Install dependencies:
     pip install -r requirements.txt
 
-Usage
+## Usage
 
 ### Running a Simulation 
 To run a simulation, execute the following command:
 
 ```python3 RLEnv_MC_Eval.py -p [PHASE_ID] -m [MODEL_NAME] -n [N_OF_SIMULATIONS] -s [SEED] -r [RENDERING_BOOL]```
 
-note that only PHASE_ID parameter is required, the others are set to default as follows:
- [MODEL_NAME] = "_NO_AGENT_"
- [N_OF_SIMULATIONS] = 1
- [SEED] = None
- [RENDERING_BOOL] = True
+> [!NOTE]
+> only PHASE_ID parameter is required, the others are set to default as follows:
+> ```[MODEL_NAME] = "_NO_AGENT_"```
+> ```[N_OF_SIMULATIONS] = 1```
+> ```[SEED] = None```
+> ```[RENDERING_BOOL] = True```
 
-# Training the RL Agent
-To train a reinforcement learning agent for guidance optimization, use:
+> [!TIP]
+> assign the seed only if reproducibility is required, otherwise avoid seeding
 
-```python RLEnv_Training.py```
+### Training the RL Agent
+To train a reinforcement learning agent for a given environment, use:
 
-# Configuration
-The repository includes multiple configuration files in the configs/ directory, defining simulation parameters, RL training settings, and spacecraft dynamics.
+```python RLEnv_Training.py -p [PHASE_ID] -m [NEW_MODEL_NAME] -r [RENDERING_BOOL]```
+
+> [!IMPORTANT]
+> to continue training an agent set the parameter ```--start-from [OLD_AGENT_NAME]```
+> HOWEVER: this is highly discouraged if for training of the previous agent normalisation was set to True. Indeed, the new training does not load the old normalization!!
+
+### Configuration
+The repository includes two configuration files in the SimEnvRL/config/ directory, defining simulation parameters (env_conf) and RL training settings (RL_config).
 
 
-# Repository Structure
+### Repository Structure
 relativeGuidance/
-├── **SimEnvRL/**         # Custom simulation environments
-├── **matlabScripts/**    # MATLAB scripts for additional analysis
-├── **configs/**          # Configuration files for different scenarios
-├── **models/**           # Pre-trained models and checkpoints
-├── **RLEnv_MC_Eval.py**  # Script for evaluating the RL environment
-├── **RLEnv_Training.py** # Script for training the RL environment
-└── **README.md**         # This file
+├── images/             # Folder for images used in README or documentation
+│ ├── RLFramework.png   # Framework diagram
+│
+├── matlabScripts/ # MATLAB scripts for simulations and validation
+│ ├── extractSimulationData.m
+│ ├── MATLAB/           # Core MATLAB functions
+│ │ ├── APF.m, ASRE.m, ASRE_plus_Constraints.m
+│ │ ├── checkAimReached.m, checkConstraintViolation.m
+│ │ ├── computeDisturbances.m, computeRotationMatrixLVLH.m
+│ │ ├── config/ # Configuration scripts
+│ │ │ ├── calcolaTraiettoriaStandardTarget.m, initializeSimulation.m
+│ │ │ ├── refTraj.mat
+│ │ ├── plot/           # Scripts for visualization and plotting
+│ │ ├── ReferenceFrames/ # Coordinate transformation functions
+│ │ ├── relativeDynamicsModels/ # Dynamic models
+│ │ ├── rotateControlAction.m, simEquations.m, sunPositionVersor.m
+│ │ ├── Z_ModelValidationCodes/ # Model validation scripts
+│
+├── SimEnvRL/           # Custom Gymnasium simulation environment
+│ ├── config/           # Configuration scripts for RL environment
+│ │ ├── env_config.py, RL_config.py, refTraj.mat, __init__.py
+│ ├── envs/             # RL environment classes
+│ │ ├── RLEnvironment.py, __init__.py
+│ ├── generalScripts/   # Core simulation functions
+│ │ ├── check.py, dynamicsModel.py, OBControl.py, OBGuidance.py
+│ │ ├── ReferenceFrames.py, sunPositionVersor.py, wrappers.py
+│ ├── UserDataDisplay/  # Scripts for displaying results
+│ │ ├── plots.py, printSummary.py, see.py
+│ ├── pyproject.toml    # Python environment dependencies
+│ ├── __init__.py
+│
+├── Simulations/        # Folder containing Monte Carlo simulations (not included in this repository)
+│
+├── RLEnv_MC_Eval.py    # Script for evaluating the RL environment via Monte Carlo simulations
+├── RLEnv_Training.py   # Script for training the RL environment
+├── LICENSE             # Project license
+└── README.md           # Project documentation
 
-Contributing
 
+## Contributing
 Contributions are welcome! To contribute:
-- Fork the repository.
-- Create a new branch (git checkout -b feature-branch).
-- Make your changes and commit (git commit -m "Add new feature").
-- Push to your branch (git push origin feature-branch).
-- Open a Pull Request.
+- Fork the repository
+- Create a new branch (git checkout -b feature-branch)
+- Make your changes and commit (git commit -m "Add new feature")
+- Push to your branch (git push origin feature-branch)
+- Open a Pull Request
 
 # License
+Copyright (c) 2025 Carlo Zambaldo
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 # Contact
