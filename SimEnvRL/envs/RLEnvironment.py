@@ -361,7 +361,7 @@ class SimEnv(gym.Env):
                 K_precisn = 1         # other values: K_precisn = 0.8
                 K_precisn_vel = 1     # 1    # other values: K_precisn_vel = 0.8 # 1
                 K_simtime = 0.25       # other values: K_simtime = 0.01
-                eta = 0.08
+                eta = 0.1
                 # Proximity factors
                 proximityTOFFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
 

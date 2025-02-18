@@ -423,6 +423,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     usage_frequency = usage_frequency./pointsPerBin * 100;
     % Plot 3D con bar3
     subplot(3,2,[2 4 6]);
+    figure()
     heatmap(binCenters_rh, binCenters_vbar, usage_frequency); % Istogramma 3D
     
     % Personalizzazione del plot

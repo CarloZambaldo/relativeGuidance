@@ -3,11 +3,11 @@
 ## Overview
 _relativeGuidance_ is a framework for simulating and analyzing relative guidance algorithms for space applications. This repository contains the code used in my Master's Thesis in Space Engineering at Politecnico di Milano.
 
-### Features
-- The main code is coded in python
-- The validation code is 
-- Simulation environment based on Gymnasium for RL applications
-- Integration with Stable-Baselines3 for training RL-based controllers
+### Main Features
+- The main framework is coded in python
+- The validation code is done with MATLAB 
+- Simulation environment is based on Gymnasium, for RL applications
+- Integration with Stable-Baselines3 for training RL agent
 - Support for multi-phase guidance strategies and different constraints
 - Visualization tools for analyzing guidance performance
 
@@ -58,44 +58,44 @@ The repository includes two configuration files in the SimEnvRL/config/ director
 
 ### Repository Structure
     relativeGuidance/
-    in README or documentation
+    ├── images/             # Folder for images used in README or documentation
     │ ├── RLFramework.png   # Framework diagram
     │
-    ns and validation
+    ├── matlabScripts/ # MATLAB scripts for simulations and validation
     │ ├── extractSimulationData.m
     │ ├── MATLAB/           # Core MATLAB functions
     │ │ ├── APF.m, ASRE.m, ASRE_plus_Constraints.m
-    on.m
-    rixLVLH.m
+    │ │ ├── checkAimReached.m, checkConstraintViolation.m
+    │ │ ├── computeDisturbances.m, computeRotationMatrixLVLH.m
     │ │ ├── config/ # Configuration scripts
-    tializeSimulation.m
+    │ │ │ ├── calcolaTraiettoriaStandardTarget.m, initializeSimulation.m
     │ │ │ ├── refTraj.mat
-    on and plotting
-    ion functions
+    │ │ ├── plot/           # Scripts for visualization and plotting
+    │ │ ├── ReferenceFrames/ # Coordinate transformation functions
     │ │ ├── relativeDynamicsModels/ # Dynamic models
-    nPositionVersor.m
-    n scripts
+    │ │ ├── rotateControlAction.m, simEquations.m, sunPositionVersor.m
+    │ │ ├── Z_ModelValidationCodes/ # Model validation scripts
     │
-    tion environment
-    or RL environment
-     __init__.py
+    ├── SimEnvRL/           # Custom Gymnasium simulation environment
+    │ ├── config/           # Configuration scripts for RL environment
+    │ │ ├── env_config.py, RL_config.py, refTraj.mat, __init__.py
     │ ├── envs/             # RL environment classes
     │ │ ├── RLEnvironment.py, __init__.py
-    ns
-     OBGuidance.py
-     wrappers.py
-    results
+    │ ├── generalScripts/   # Core simulation functions
+    │ │ ├── check.py, dynamicsModel.py, OBControl.py, OBGuidance.py
+    │ │ ├── ReferenceFrames.py, sunPositionVersor.py, wrappers.py
+    │ ├── UserDataDisplay/  # Scripts for displaying results
     │ │ ├── plots.py, printSummary.py, see.py
-    ndencies
+    │ ├── pyproject.toml    # Python environment dependencies
     │ ├── __init__.py
     │
-     Carlo simulations (not included in this repository)
+    ├── Simulations/        # Folder containing Monte Carlo simulations (not included in this repository)
     │
-    he RL environment via Monte Carlo simulations
-     RL environment
+    ├── RLEnv_MC_Eval.py    # Script for evaluating the RL environment via Monte Carlo simulations
+    ├── RLEnv_Training.py   # Script for training the RL environment
     ├── LICENSE             # Project license
     └── README.md           # Project documentation
-    
+
 
 ## Contributing
 Contributions are welcome! To contribute:
