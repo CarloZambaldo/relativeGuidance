@@ -5,13 +5,14 @@ _relativeGuidance_ is a framework for simulating and analyzing relative guidance
 
 ### Features
 - The main code is coded in python
+- The validation code is 
 - Simulation environment based on Gymnasium for RL applications
-- Integration with Stable-Baselines3 for training RL-based controllers.
-- Support for multi-phase guidance strategies.
-- Visualization tools for analyzing guidance performance.
+- Integration with Stable-Baselines3 for training RL-based controllers
+- Support for multi-phase guidance strategies and different constraints
+- Visualization tools for analyzing guidance performance
 
 The code is structured as in figure:
-![Code structure and modularity](images/RLFramework.png)
+![Code structure and modularity](images/RLFramework.png){width=10}
 
 the modularity allows to change any 
 
