@@ -54,7 +54,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     simulationMass = zeros(n_population,1);
     
     for sim_id = 1:n_population
-        obotusagetru = obotusagetru + sum(OBoTUsage(1:endTimeIx(sim_id)) / endTimeIx(sim_id) );
+        obotusagetru = obotusagetru + sum(OBoTUsage(1:endTimeIx(sim_id),sim_id)) / endTimeIx(sim_id);
         time_dim = timeHistory(1:endTimeIx(sim_id)) .* param.tc;
         dt = 1/param.freqGNC .* param.tc;
 

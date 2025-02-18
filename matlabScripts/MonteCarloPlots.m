@@ -223,7 +223,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
         minDist = NaN;
         maxDist = NaN;
         for sim_id = 1:n_population
-
+                
             % Norma delle distanze (x, y, z)
             distances = vecnorm(dynamicsHistory(:, 1:3, sim_id), 2, 2);
     
@@ -236,14 +236,15 @@ function [] = MonteCarloPlots(data,eachplotbool)
             control_norm = vecnorm(controlAction(:, :, sim_id), 2, 2); % Norma euclidea dei controlli
     
             % Flag di utilizzo della traiettoria ottimale
-            usage = OBoTUsage(:, sim_id)';
+            usage = [];
+            usage = OBoTUsage(1:terminalTimeIndex(sim_id), sim_id)';
 
             % Salva i risultati
             norm_distances(sim_id,:) = distances;
             norm_distances_agent(sim_id,:) = distancesAgent;
             agent_actions(sim_id,:) = actions;
             norm_controls(sim_id,:) = control_norm;
-            usage_flags(sim_id,:) = usage;
+            usage_flags(sim_id,1:terminalTimeIndex(sim_id)) = usage;
 
             minDist = min([min(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), minDist]);
             maxDist = max([max(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), maxDist]);

@@ -45,23 +45,34 @@ similarities, layer_sizes, layer_names = get_layerwise_similarity(model1, model2
 # Create figure with two columns
 fig, axes = plt.subplots(max(len(similarities["policy"]), len(similarities["value"])), 2, figsize=(12, 10))
 
+
+# Define custom colormap with enhanced colors
+from matplotlib.colors import LinearSegmentedColormap
+colors = ["#3361d4", "#FFFFFF", "#00AA00"]  # Dimmed blue, white, vivid green
+positions = [0, 0.5, 1]  # -1 -> blue, 0 -> white, 1 -> green
+custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(positions, colors)))
+
 # Plot policy network (left column)
 for i, (sim, name) in enumerate(zip(similarities["policy"], layer_names["policy"])):
     sim_array = np.array(sim).reshape(-1, 1)
     ax = axes[i, 0] if len(similarities["policy"]) > 1 else axes[0]
-    sns.heatmap(sim_array, cmap='RdYlGn', annot=False, cbar=False, ax=ax)
+    sns.heatmap(sim_array, cmap=custom_cmap, vmin=-1, vmax=1, annot=False, cbar=True, ax=ax)
     ax.set_title(f'Policy: {name}')
     ax.set_ylabel("Neuron Index")
     ax.set_xticks([])
+    if len(sim_array) > 10:
+        ax.set_yticks([0,8,16,32,48,56,64],[0,8,16,32,48,56,64])
 
 # Plot value network (right column)
 for i, (sim, name) in enumerate(zip(similarities["value"], layer_names["value"])):
     sim_array = np.array(sim).reshape(-1, 1)
     ax = axes[i, 1] if len(similarities["value"]) > 1 else axes[1]
-    sns.heatmap(sim_array, cmap='RdYlGn', annot=False, cbar=False, ax=ax)
+    sns.heatmap(sim_array, cmap=custom_cmap, vmin=-1, vmax=1, annot=False, cbar=True, ax=ax)
     ax.set_title(f'Value: {name}')
     ax.set_ylabel("Neuron Index")
     ax.set_xticks([])
+    if len(sim_array) > 10:
+        ax.set_yticks([0,8,16,32,48,56,64],[0,8,16,32,48,56,64])
 
 # Set column titles
 axes[0, 0].set_title("Policy Network")
@@ -121,10 +132,11 @@ fig, axes = plt.subplots(len(layers1), 2, figsize=(12, len(layers1) * 2))
 for i, (act1, act2, layer_name) in enumerate(zip(mean_act1, mean_act2, layers1)):
     sns.heatmap(act1.reshape(-1, 1), cmap='Blues', ax=axes[i, 0], cbar=False)
     axes[i, 0].set_title(f'Mean {layer_name} Activations - Model 1')
+    axes[i, 0].set_xticks([])
 
     sns.heatmap(act2.reshape(-1, 1), cmap='Greens', ax=axes[i, 1], cbar=False)
     axes[i, 1].set_title(f'Mean {layer_name} Activations - Model 2')
-
+    axes[i, 1].set_xticks([])
 
 
 
