@@ -1,9 +1,9 @@
-### _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ ###
+# _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ #
 
-## Overview ##
+## Overview
 _relativeGuidance_ is a framework for simulating and analyzing relative guidance algorithms for space applications. This repository contains the code used in my Master's Thesis in Space Engineering at Politecnico di Milano.
 
-# Features#
+### Features
 - The main code is coded in python
 - Simulation environment based on Gymnasium for RL applications
 - Integration with Stable-Baselines3 for training RL-based controllers.
@@ -15,19 +15,19 @@ The code is structured as in figure:
 
 the modularity allows to change any 
 
-# Installation
+### Installation
 Ensure you have Python 3.10 or later installed. Clone the repository and install dependencies:
 
-# Clone the repository
+### Clone the repository
     git clone https://github.com/CarloZambaldo/relativeGuidance.git
     cd relativeGuidance
 
-# Install dependencies
+### Install dependencies
     pip install -r requirements.txt
 
 Usage
 
-# Running a Simulation 
+### Running a Simulation 
 To run a simulation, execute the following command:
 
 ```python3 RLEnv_MC_Eval.py -p [PHASE_ID] -m [MODEL_NAME] -n [N_OF_SIMULATIONS] -s [SEED] -r [RENDERING_BOOL]```
