@@ -58,44 +58,35 @@ The repository includes two configuration files in the SimEnvRL/config/ director
 
 ### Repository Structure
     relativeGuidance/
-    in README or documentation
-    │ ├── RLFramework.png   # Framework diagram
-    │
-    ns and validation
+    ├── matlabScripts/       # MATLAB scripts for simulations and validation
     │ ├── extractSimulationData.m
-    │ ├── MATLAB/           # Core MATLAB functions
-    │ │ ├── APF.m, ASRE.m, ASRE_plus_Constraints.m
-    on.m
-    rixLVLH.m
-    │ │ ├── config/ # Configuration scripts
-    tializeSimulation.m
-    │ │ │ ├── refTraj.mat
-    on and plotting
-    ion functions
+    │ ├── MATLAB/            # Core MATLAB functions
+    │ │ ├── config/          # Configuration scripts
+    │ │ ├── plot/            # Scripts for visualization and plotting
+    │ │ ├── ReferenceFrames/ # Coordinate transformation functions
     │ │ ├── relativeDynamicsModels/ # Dynamic models
-    nPositionVersor.m
-    n scripts
+    │ │ ├── Z_ModelValidationCodes/ # Model validation scripts
     │
-    tion environment
-    or RL environment
-     __init__.py
+    ├── SimEnvRL/           # Custom Gymnasium simulation environment
+    │ ├── config/           # Configuration scripts for RL environment
+    │ │ ├── env_config.py, RL_config.py, refTraj.mat
     │ ├── envs/             # RL environment classes
-    │ │ ├── RLEnvironment.py, __init__.py
-    ns
-     OBGuidance.py
-     wrappers.py
-    results
+    │ │ ├── RLEnvironment.py
+    │ ├── generalScripts/   # Core simulation functions
+    │ │ ├── check.py, dynamicsModel.py, OBControl.py, OBGuidance.py
+    │ │ ├── ReferenceFrames.py, sunPositionVersor.py, wrappers.py
+    │ ├── UserDataDisplay/  # Scripts for displaying results
     │ │ ├── plots.py, printSummary.py, see.py
-    ndencies
+    │ ├── pyproject.toml    # Python environment dependencies
     │ ├── __init__.py
     │
-     Carlo simulations (not included in this repository)
+    ├── AgentModels/        # Folder containing trained agent models (not included in this repository)
+    ├── Simulations/        # Folder containing Monte Carlo simulations (not included in this repository)
     │
-    he RL environment via Monte Carlo simulations
-     RL environment
+    ├── RLEnv_MC_Eval.py    # Script for evaluating the RL environment via Monte Carlo simulations
+    ├── RLEnv_Training.py   # Script for training the RL environment
     ├── LICENSE             # Project license
     └── README.md           # Project documentation
-    
 
 ## Contributing
 Contributions are welcome! To contribute:
