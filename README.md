@@ -6,6 +6,12 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-ML-red?logo=pytorch)
 ![GitHub last commit](https://img.shields.io/github/last-commit/CarloZambaldo/relativeGuidance?logo=github)
 
+> [!IMPORTANT]
+> In order to use the MATLAB plots (e.g. see the trajectory in Synodic frame) the ASTRO class is required.
+> This can be found in the dedicated GitHub repository: [github.com/CarloZambaldo/OrbitalMechanics](https://github.com/CarloZambaldo/OrbitalMechanics)
+
+
+
 ## Overview
 _relativeGuidance_ is a framework for simulating and analyzing relative guidance algorithms for space applications. This repository contains the code used in my Master's Thesis in Space Engineering at Politecnico di Milano.
 
