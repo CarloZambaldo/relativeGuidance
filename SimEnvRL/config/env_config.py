@@ -21,6 +21,7 @@ class physParamClass:
     Omega : float = 2*np.pi/2358720                          # [rad/s]
     SolarFlux : float = 1361/299792458                       # [W/m^2 / (m/s)] Solar Flux at 1 AU
     sunInitialAngle : float = 2 * np.pi * np.random.rand()   # random initial angle of the sun
+    distNoise : float = 1e-8                                 # [adim] standard deviation of the noise on the environment disturbances
 
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]
@@ -216,6 +217,10 @@ def getParam(phaseID=None,tspan=None):
 def getInitialValues(param,seed=None,values=None):
     # define the dataclass (with no values)
     initialValue = initialValueClass()
+
+    # seeding np.random
+    if seed is not None:
+        np.random.seed(seed)
 
     # fill the class with the values passed by the used
     values = values or {}

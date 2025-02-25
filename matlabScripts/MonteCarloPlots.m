@@ -1,5 +1,5 @@
 function [] = MonteCarloPlots(data,eachplotbool)
-    
+    close all
     if nargin < 2
         eachplotbool = 0;
     elseif eachplotbool == 1
@@ -36,6 +36,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
 
     dynamicsHistory = NaN(length(timeHistory),6,length(n_population));
 
+    nCAR = 0;
     for sim_id = 1:n_population
         %fprintf(" Computing actual relative dynamics: simulation %d OUT OF %d\n",sim_id,n_population)
 
@@ -61,7 +62,10 @@ function [] = MonteCarloPlots(data,eachplotbool)
         dynamicsHistory(1:length(time),:,sim_id) = relDynami;
 
         if eachplotbool
-            fprintf(" PLOT %d OUT OF %d\n",sim_id,n_population)
+            msg = sprintf(" PLOT %d OUT OF %d\n",sim_id,n_population);
+            fprintf(repmat('\b',1,nCAR));
+            fprintf(msg);
+            nCAR = strlength(msg);
 
             figure(1)
             % plot constraints
@@ -105,7 +109,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
         if phaseID == 1
             plotConstraintsVisualization(1e3,'S','yellow')
             plotConstraintsVisualization(200,'S')
-            plotConstraintsVisualization(2.5e3,'S','black')
+            plotConstraintsVisualization(2e3,'S','black')
         elseif phaseID == 2
             plotConstraintsVisualization(1e3,'C')
         end
@@ -216,8 +220,10 @@ function [] = MonteCarloPlots(data,eachplotbool)
         usage_flags = NaN(n_population,length(timeHistory));
 
         % Calcolo delle norme delle distanze e raccolta delle azioni
+        minDist = NaN;
+        maxDist = NaN;
         for sim_id = 1:n_population
-
+                
             % Norma delle distanze (x, y, z)
             distances = vecnorm(dynamicsHistory(:, 1:3, sim_id), 2, 2);
     
@@ -230,44 +236,55 @@ function [] = MonteCarloPlots(data,eachplotbool)
             control_norm = vecnorm(controlAction(:, :, sim_id), 2, 2); % Norma euclidea dei controlli
     
             % Flag di utilizzo della traiettoria ottimale
-            usage = OBoTUsage(:, sim_id)';
+            usage = [];
+            usage = OBoTUsage(1:terminalTimeIndex(sim_id), sim_id)';
 
             % Salva i risultati
             norm_distances(sim_id,:) = distances;
             norm_distances_agent(sim_id,:) = distancesAgent;
             agent_actions(sim_id,:) = actions;
             norm_controls(sim_id,:) = control_norm;
-            usage_flags(sim_id,:) = usage;
+            usage_flags(sim_id,1:terminalTimeIndex(sim_id)) = usage;
+
+            minDist = min([min(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), minDist]);
+            maxDist = max([max(norm_distances(sim_id,1:terminalTimeIndex(sim_id))), maxDist]);
         end
     
         % Definizione dei bin per aggregare le distanze
-        minDist = min(min(norm_distances));
-        maxDist = max(max(norm_distances));
-        nBins = 50;  % Numero di bin
+        nBins = 30;  % Numero di bin
         binEdges = linspace(minDist, maxDist, nBins+1);
         binCenters = (binEdges(1:end-1) + binEdges(2:end)) / 2;
 
         %% Media della norma della control action per bin
-        average_controls = zeros(1, nBins)./0;
+        average_controls = nan(1, nBins);
+        sigma_average_controls = nan(1, nBins);
+
         for b = 1:nBins
             % Trova gli indici delle distanze che appartengono al bin
             inBin = norm_distances >= binEdges(b) & norm_distances < binEdges(b+1);
     
             % Calcola la media della norma della control action per questo bin
             if any(inBin,'all')
-                average_controls(b) = mean(norm_controls(inBin));
+                [sigma_average_controls(b), average_controls(b)] = std(norm_controls(inBin));
             else
                 average_controls(b) = NaN; % Per bin vuoti
+                sigma_average_controls(b) = NaN;
             end
         end
 
         % Plot della media della norma della control action rispetto alla norma della distanza
         figure;
-        plot(binCenters, average_controls, 'b-', 'LineWidth', 1.5);
+        converti = param.xc*1e3/param.tc^2;
+        average_controls = average_controls*converti;
+        sigma_average_controls = sigma_average_controls*converti;
+        errorbar(binCenters, average_controls, average_controls-max(0, average_controls-sigma_average_controls), sigma_average_controls, 'r', 'LineWidth', 0.9); % Sigma in rosso
+        hold on;
+        plot(binCenters, average_controls, 'b.-', 'LineWidth', 1.2);
+        plot(binCenters, average_controls, 'ro', 'LineWidth', 0.5);
         grid on;
         xlabel('||\rho|| [km]');
-        ylabel('Mean of the norm of the control action [-]');
-        title('Mean Control Action');
+        ylabel('Mean ||u|| [m/s^2]');
+        %title('Mean Control Action');
     end
     
     %% add a plot on the AgentAction
@@ -358,14 +375,14 @@ function [] = MonteCarloPlots(data,eachplotbool)
     % Calcolo delle metriche per ciascuna simulazione
     for sim_id = 1:n_population
         % Estrarre le componenti della posizione e della velocità
-        positions = dynamicsHistory(:, 1:3, sim_id); % Componenti di posizione (x, y, z)
+        positions = dynamicsHistory(1:terminalTimeIndex(sim_id), 1:3, sim_id); % Componenti di posizione (x, y, z)
 
         % Calcolare la distanza sul piano R-H e lungo V-BAR
         distances_rh_sim = sqrt(positions(:, 1).^2 + positions(:, 3).^2); % rho_R^2 + rho_H^2
         distances_vbar_sim = positions(:, 2); % posizione assoluta (con segno) lungo V-BAR
 
         % Flag di uso della traiettoria ottimale
-        usage_sim = OBoTUsage(:, sim_id);
+        usage_sim = OBoTUsage(1:terminalTimeIndex(sim_id), sim_id);
 
         % Accumula i dati
         distances_rh = [distances_rh; distances_rh_sim];
@@ -406,6 +423,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
     usage_frequency = usage_frequency./pointsPerBin * 100;
     % Plot 3D con bar3
     subplot(3,2,[2 4 6]);
+    figure()
     heatmap(binCenters_rh, binCenters_vbar, usage_frequency); % Istogramma 3D
     
     % Personalizzazione del plot

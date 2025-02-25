@@ -13,7 +13,7 @@ function [param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializ
 
     param.maxAdimThrust = (490/param.chaser.mass)*1e-3/param.xc*param.tc^2; % [adimensional]
     param.holdingState = [0;-4; 0; 0; 0; 0]./param.xc; % [-] [.5;-5; 0; 0; 0; 0]./param.xc; % [-]
-    param.dockingState = [0; 0; 0; 0; 0.02e-3*param.tc/param.xc; 0]; % Final relative state similar Luca Thesis
+    param.dockingState = [0; 0; 0; 0; 0.04e-3*param.tc/param.xc; 0]; % Final relative state similar Luca Thesis
     param.freqGNC = 10*param.tc; % [adimensional Hz]
 
     % TARGET
@@ -109,11 +109,15 @@ function [param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializ
         case 2 % DOCKING
             % compute random relative position
             rand_position_L = [(-2+4*rand()),(-5+4.5*rand()),(-2+4*rand())]' / param.xc; % in a radius around the holding point
-            rand_velocity_L = (-1+1*rand(3,1)) * 1e-3 / param.xc * param.tc;
+            rand_velocity_L = (-1+1*rand(3,1)) * 1e-3 / param.xc * param.tc; 
         otherwise
             error("No phase id defined");
     end
-
+    
+    %rand_position_L = [0, -4/param.xc, 0]';
+    %rand_velocity_L = [0, -.005e-3/param.xc*param.tc,0]';
+    rand_velocity_L = [0;0;0];
+    
     % tansform it to Synodic 
     DeltaIC_S = convert_LVLH_to_S(initialStateTarget_S,[rand_position_L; rand_velocity_L],param);
 

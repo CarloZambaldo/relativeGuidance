@@ -2,7 +2,7 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
 
     phaseID = data.phaseID;
     param = data.param;
-    n_population = data.n_population;
+    n_population = double(data.n_population);
     timeHistory = data.timeHistory;
     %trajectory = data.trajectory;
     trueRelativeStateHistory_L = data.trueRelativeStateHistory_L;
@@ -50,9 +50,11 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     meanControl_dim = zeros(1,3); % THIS IS IN NEWTON!!
     totalImpulse = zeros(1,3);
     totalMassUsed = 0;
+    obotusagetru = 0;
     simulationMass = zeros(n_population,1);
     
-    for sim_id = 1:n_population  
+    for sim_id = 1:n_population
+        obotusagetru = obotusagetru + sum(OBoTUsage(1:endTimeIx(sim_id),sim_id)) / endTimeIx(sim_id);
         time_dim = timeHistory(1:endTimeIx(sim_id)) .* param.tc;
         dt = 1/param.freqGNC .* param.tc;
 
@@ -73,6 +75,9 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
     totalImpulse = totalImpulse / double(n_population);
     
 
+    recomputationsBool = sum(AgentAction == 1, 1);
+
+    obotusagetru = obotusagetru/n_population;
 
 
     %% STATISTICS ON THE FINAL POSITION
@@ -105,14 +110,18 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
 
     %% GNC Execution Time
     fprintf("\n-- MEAN GNC EXECUTION TIME --\n")
-    fprintf("Exec Time = %.2g \x00B1 %.2g [ms]\n", meanExecTime*1e3, sigmaExecTime*1e3);
+    fprintf("Exec Time = %.3f \x00B1 %.3f [ms]\n", meanExecTime*1e3, sigmaExecTime*1e3);
+    conversion = 2.65e3/100*24/2; % if computed from the server
+    fprintf("Equivalent Exec Time = %.2f \x00B1 %.2f [ms]\n", meanExecTime*1e3*conversion, sigmaExecTime*1e3*conversion);
+    fprintf("Avarage number of recomputations per episode: %.2f\n", mean(recomputationsBool));
+    fprintf("Avarage use of OBoT per episode: %.2f%%\n", obotusagetru*100);
+    %figure();semilogy(data.CPUExecTimeHistory(:,1)*1e3*conversion,'LineWidth',0.9); grid minor;
 
     %% TOF
     fprintf("\n-- MEAN FLIGHT DATA --\n")
     fprintf("MEAN TIME OF FLIGHT   = %.2f \x00B1 %.2f [min]\n", meanTOF*param.tc/60, sigmaTOF*param.tc/60);
     fprintf("MEAN INITIAL DISTANCE = %.2f \x00B1 %.2f [km]\n", meanICp, sigmaICp);
     fprintf("MEAN INITIAL VELOCITY = %.2f \x00B1 %.2f [m/s]\n", meanICv*1e3, sigmaICv*1e3);
-
 
     fprintf("\n===========================================================\n")
 end

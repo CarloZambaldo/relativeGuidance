@@ -64,7 +64,7 @@ print(f"Using {max_num_threads} threads.")
 if phaseID == 1:
     tspan = np.array([0, 0.045]) # ca 4 hours
 elif phaseID == 2:
-    tspan = np.array([0, 0.033]) # ca 3.3 hours
+    tspan = np.array([0, 0.033]) # ca 3.3 hours # FIXME
 
 
 print("***************************************************************************")
@@ -83,42 +83,50 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = gym.make("SimEnv-v4.8", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool})
+env = noAutoResetWrapper(gym.make("SimEnv-v4.8", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool}))
+env = DummyVecEnv([lambda:env])
 
 if seed is not None:
     env.action_space.seed(seed)  # Seed the Gym action space
     env.observation_space.seed(seed)  # Seed the Gym observation space
+    np.random.seed(seed)
+    
 # load the model
 if usingAgentBool:
     RLagent = config.RL_config.recall(agentName,"latest")
-    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
-
+    normalizationBool = False
     try: # load the normalization stuff if normalization is true
-        print("TRYING TO LOAD ENV NORMALIZATIONS...")
+        print("TRYING TO LOAD ENV NORMALIZATIONS... ",end='')
         env = VecNormalize.load(f"{RLagent.model_dir}/vec_normalize.pkl", env)
         # Disable training mode to prevent statistics from updating
         env.training = False
         env.norm_reward = False
+        print("NORMALIZATION LOADED.")
+        normalizationBool = True
     except Exception as e:
-        print(e)
+        print(f"ERROR: {e}. Please press enter to acknowledge...")
+        input()
+
+    # load the model according to the environment
+    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
         "seed": seed if seed is not None else "None",
-        "phaseID" : env.unwrapped.param.phaseID,
+        "phaseID" : env.envs[0].unwrapped.param.phaseID,
         "agentModelName" : agentName,
         "n_population" : None,
         "param" : {
-            "xc": env.unwrapped.param.xc,
-            "tc": env.unwrapped.param.tc,
-            "massRatio": env.unwrapped.param.massRatio,
-            "freqGNC": env.unwrapped.param.freqGNC,
-            "RLGNCratio": env.unwrapped.param.RLGNCratio,
-            "chaserThrust": env.unwrapped.param.maxAdimThrust,
-            "chaserMass": env.unwrapped.param.chaser["mass"],
-            "chaserSpecificImpulse": env.unwrapped.param.specificImpulse,
+            "xc": env.envs[0].unwrapped.param.xc,
+            "tc": env.envs[0].unwrapped.param.tc,
+            "massRatio": env.envs[0].unwrapped.param.massRatio,
+            "freqGNC": env.envs[0].unwrapped.param.freqGNC,
+            "RLGNCratio": env.envs[0].unwrapped.param.RLGNCratio,
+            "chaserThrust": env.envs[0].unwrapped.param.maxAdimThrust,
+            "chaserMass": env.envs[0].unwrapped.param.chaser["mass"],
+            "chaserSpecificImpulse": env.envs[0].unwrapped.param.specificImpulse,
             },
-        "timeHistory" : np.arange(env.unwrapped.param.tspan[0], env.unwrapped.param.tspan[1] + (1/env.unwrapped.param.freqGNC), 1/env.unwrapped.param.freqGNC),
+        "timeHistory" : np.arange(env.envs[0].unwrapped.param.tspan[0], env.envs[0].unwrapped.param.tspan[1] + (1/env.envs[0].unwrapped.param.freqGNC), 1/env.envs[0].unwrapped.param.freqGNC),
         "targetTrajectory_S" : None,
         "trueRelativeStateHistory_L" : None,
         "AgentAction" : None,
@@ -139,12 +147,21 @@ else:
 
 
 # target positions - see picture to understand the positions
-initialStateTarget_S_batch = np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])] # aposelene
-                                                                                                # before aposelene
-                                                                                                # after aposelene
-                                                                                                # before periselene
-                                                                                                # after periselene   
-                                    )
+# initialStateTarget_S_batch = np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07]), 
+#                                       np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726]) ,   # before aposelene
+#                                       np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757]),    # after aposelene
+#                                       np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])    # periselene
+# ])
+
+# aposelene
+initialStateTarget_S_batch =  np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])])
+# leaving aposelene
+#initialStateTarget_S_batch =  np.vstack([np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726])])
+# approaching aposelene
+#initialStateTarget_S_batch =  np.vstack([np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757])])
+# periselene region
+#initialStateTarget_S_batch =  np.vstack([np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])])
+
 
 n_targets_pos = initialStateTarget_S_batch.shape[0]
 data["n_population"] = n_ICs + n_targets_pos - 1
@@ -252,8 +269,8 @@ match phaseID:
         raise ValueError("given phaseID not defined correctly")
     
 # Adimensionalize the initial conditions
-POP = POP / env.unwrapped.param.xc
-POP[3:6, :] = POP[3:6, :] * env.unwrapped.param.tc
+POP = POP / env.envs[0].unwrapped.param.xc
+POP[3:6, :] = POP[3:6, :] * env.envs[0].unwrapped.param.tc
 
 print("DONE.")
 
@@ -261,13 +278,15 @@ print("DONE.")
 print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_population"]*4/60} [hours]")
 start_time = time.time()
 
-# RUN THE SIMULATIONS
+# RUN THE SIMULATIONS ##################################################################################################
 fileNameSave = f"MC_P{phaseID}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
+
+if not os.path.exists("./Simulations/"):
+    os.makedirs("./Simulations/")
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
     initialStateTarget_S = initialStateTarget_S_batch[trgt_id,:]
-
     for sim_id in range(n_ICs): # for each initial condition
         tstartcomptime = time.time()
         print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
@@ -276,42 +295,60 @@ for trgt_id in range(n_targets_pos): # for each target position
         # resetting the initial conditions and the environment
         terminated = False
         truncated = False
-        obs, info = env.reset(options={"targetState_S": initialStateTarget_S,
-                                    "relativeState_L": POP[:, sim_id + trgt_id].T})
-
-        # run the simulation until termination/truncation:
-        while ((not terminated) and (not truncated)):
+        
+        # RESETTING THE ENVIONMENT
+        if isinstance(env, VecNormalize):
+            obs, _ = env.venv.envs[0].reset(options={"targetState_S": initialStateTarget_S,
+                                                "relativeState_L": POP[:, sim_id + trgt_id].T})
+            obs = env.normalize_obs(obs)  # Normalize and ensure batch shape
+        else:
+            obs = env.envs[0].reset(options={"targetState_S": initialStateTarget_S,
+                                            "relativeState_L": POP[:, sim_id + trgt_id].T})
+            
+        checkfinished = env.envs[0].needs_reset
+        # run the simulation until termination/truncation: <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        while (not checkfinished):
             if usingAgentBool:
-                action, _ = model.predict(obs, deterministic=True) # predict the action using the agent
+                action, _ = model.predict(obs, deterministic=True)  # Predict using the agent
+                action = [action]
             else:
-                action = 0 # if the agent is not used, the action is 0 (SKIP)
-            obs, reward, terminated, truncated, info = env.step(action) # step
+                action = [0]  # Default action if no agent is used
+
+            # Step through the environment
+            obs, _, _, _ = env.step(action)
+            checkfinished = env.envs[0].needs_reset
+
+            # Rendering for debugging
             if renderingBool:
-                print(f"[sim:{sim_id+1}/{data["n_population"]}]",end='')
+                print(f"[sim:{sim_id+1}/{data['n_population']}]", end='')
+
+        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
         tstartcomptime = time.time() - tstartcomptime
         print("COPYING THE SIMULATION INSIDE 'data' STRUCTURE: ",end='')
         # save the simulation data for future use:
-        data["targetTrajectory_S"][:, :, sim_id + trgt_id] = env.unwrapped.fullStateHistory[:,0:6]
-        data["trueRelativeStateHistory_L"][:, :, sim_id + trgt_id] = env.unwrapped.trueRelativeStateHistory_L
-        data["controlAction"][:, :, sim_id + trgt_id] = env.unwrapped.controlActionHistory_L
-        data["AgentAction"][:, sim_id + trgt_id] = env.unwrapped.AgentActionHistory
-        data["OBoTUsage"][:, sim_id + trgt_id] = env.unwrapped.OBoTUsageHistory
-        data["constraintViolation"][:, sim_id + trgt_id] = env.unwrapped.constraintViolationHistory
-        data["terminalState"][:, sim_id + trgt_id] = env.unwrapped.terminalState
-        data["terminalTimeIndex"][sim_id] = env.unwrapped.timeIndex
-        data["fail"][sim_id + trgt_id] = 1 if env.unwrapped.terminationCause == "__CRASHED__" else 0
-        data["success"][sim_id + trgt_id] = 1 if  env.unwrapped.terminationCause == "_AIM_REACHED_" else 0
-        data["CPUExecTimeHistory"][:, sim_id + trgt_id] = env.unwrapped.CPUExecTimeHistory
-
+        data["targetTrajectory_S"][:, :, sim_id + trgt_id] = env.envs[0].unwrapped.fullStateHistory[:,0:6]
+        data["trueRelativeStateHistory_L"][:, :, sim_id + trgt_id] = env.envs[0].unwrapped.trueRelativeStateHistory_L
+        data["controlAction"][:, :, sim_id + trgt_id] = env.envs[0].unwrapped.controlActionHistory_L
+        data["AgentAction"][:, sim_id + trgt_id] = env.envs[0].unwrapped.AgentActionHistory
+        data["OBoTUsage"][:, sim_id + trgt_id] = env.envs[0].unwrapped.OBoTUsageHistory
+        data["constraintViolation"][:, sim_id + trgt_id] = env.envs[0].unwrapped.constraintViolationHistory
+        data["terminalState"][:, sim_id + trgt_id] = env.envs[0].unwrapped.terminalState
+        data["terminalTimeIndex"][sim_id] = env.envs[0].unwrapped.timeIndex
+        data["fail"][sim_id + trgt_id] = 1 if env.envs[0].unwrapped.terminationCause == "__CRASHED__" else 0
+        data["success"][sim_id + trgt_id] = 1 if  env.envs[0].unwrapped.terminationCause == "_AIM_REACHED_" else 0
+        data["CPUExecTimeHistory"][:, sim_id + trgt_id] = env.envs[0].unwrapped.CPUExecTimeHistory
         print(f" DONE.\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 
         # saving at each time step not to lose any of the simulation (in case of crash)
         print("SAVING THE SIMULATION: ",end='')
         # Save the Monte Carlo data to a .mat file
-        if not os.path.exists("./Simulations/"):
-            os.makedirs("./Simulations/")
+        
         scipy.io.savemat(f"./Simulations/{fileNameSave}", {"data": data})
         print("DONE.\n")
-        
+
 print(f"\n >>> ALL SIMULATION DATA IS SAVED IN './Simulations/{fileNameSave}' <<<\n")
+
+
+
+

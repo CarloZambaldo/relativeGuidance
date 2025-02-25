@@ -170,6 +170,7 @@ class SimEnv(gym.Env):
                 GNCiterID = self.param.RLGNCratio + 1 # to end the GNC loop  
                 self.terminationCause = "_OUT_OF_TIME_"
                 print("\n <<<<<<<<<<<<<<< OUT OF TIME >>>>>>>>>>>>>>> \n")
+                print(f" RELATIVE DISTANCE: {np.linalg.norm(TRUE_relativeState_S)*self.param.xc*1e3} [m]")
                 self.truncated = True
             # ---- end of GNC loop ----- #
 
@@ -320,9 +321,9 @@ class SimEnv(gym.Env):
         # REWARD COMPUTATION DEPENDING ON THE PHASE ID #
         match self.param.phaseID:
             case 1: # RENDEZVOUS
-                K_trigger = 0.005
-                K_deleted = 0.0001
-                K_control = 0.9
+                K_trigger = 0.01
+                K_deleted = 0.01
+                K_control = 1
                 K_precisn = 0.8
                 K_simtime = 0.01
     
@@ -346,7 +347,7 @@ class SimEnv(gym.Env):
                         proximityFactorPos = 1 #min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
                         positionFactor = 2**(violationEntity - 1) #-(2**(violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
                         positionReward -= K_precisn * proximityFactorPos * positionFactor
-                        positionReward += K_precisn * np.exp( - np.linalg.norm(historicalRS__met[0:3] - self.param.holdingState[:3])**2 )
+                        positionReward += K_precisn * np.exp( - np.linalg.norm(historicalRS__met[0:3] - self.param.holdingState[:3])/10)**2
                         
                     
                     # compute the "mean" to avoid numerical problems
@@ -354,15 +355,15 @@ class SimEnv(gym.Env):
 
             case 2: # APPROACH AND DOCKING <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 # reward tunable parameters 
-                K_trigger = 0.01   # other values: K_trigger = 0.005
-                K_deleted = 0.08    #.5    # other values: K_deleted = 0.0001#.5
-                K_control = 1      # 0.3    # other values: K_control = 0.6 # 0.3
-                K_precisn = 0.6     # other values: K_precisn = 0.8
-                K_precisn_vel = 0.9   # 1    # other values: K_precisn_vel = 0.8 # 1
-                K_simtime = 0.1   # other values: K_simtime = 0.01
-
+                K_trigger = 0.7    # other values: K_trigger = 0.005
+                K_deleted = 0.1      #.5    # other values: K_deleted = 0.0001#.5
+                K_control = 1         # 0.3    # other values: K_control = 0.6 # 0.3
+                K_precisn = 1         # other values: K_precisn = 0.8
+                K_precisn_vel = 1     # 1    # other values: K_precisn_vel = 0.8 # 1
+                K_simtime = 0.25       # other values: K_simtime = 0.01
+                eta = 0.1
                 # Proximity factors
-                proximityTOFFactor = 1 #- np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
+                proximityTOFFactor = 1 - np.exp( - np.linalg.norm(TRUE_relativeState_L_meters[0:3]) / 3e3)**2 # the closer to the target the less important the time constraint
 
 
                 ## ## ## ## ## ## ## ## ## ## REWARD COMPUTATION ## ## ## ## ## ## ## ## ## ##
@@ -381,11 +382,12 @@ class SimEnv(gym.Env):
                         self.constraintViolationHistory[self.timeIndex - ix] = constraintViolationBool # save in the history if constraints are violated
 
                         # ceiling value 1 for the proximity factor to avoid "RuntimeWarning: overflow encountered in exp"
-                        proximityFactorPos = min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
-                        proximityFactorVel = min(np.exp(historicalRS__met[1]/30), 1) # the closer to the target on V BAR
+                        proximityFactorPos = min(np.exp(historicalRS__met[1]/25), 1) # the closer to the target on V BAR
+                        proximityFactorVel = min(np.exp(historicalRS__met[1]/10), 1) # the closer to the target on V BAR
                         
                         positionFactor = (2**(-violationEntity) - 1) # observe that if a constraint is violated positionFactor turns to negative! 
-                        velocityFactor  = -np.tanh( 30 * (historicalRS__met[4] - (0.1 - 0.0035 * historicalRS__met[1])) )
+                        velocityFactor  = -np.tanh( 30 * (historicalRS__met[4] - (0.1 - 0.0035 * historicalRS__met[1])) ) + \
+                                            (2**(-10*(np.linalg.norm(np.array([historicalRS__met[0], historicalRS__met[2]])) - 0.1) ) - 1)
                         #0.99 - np.tanh(0.035 * (np.linalg.norm(historicalRS__met[3:6]*1e2)**2 - 16))
                         #np.exp( - (np.linalg.norm(historicalRS__met[3:6]) / np.linalg.norm(self.param.constraint["aimAtState"][3:6]))**2 ) 
                         
@@ -406,16 +408,16 @@ class SimEnv(gym.Env):
                 pass
             case 1: # in case of a trajectory recomputation, give a small negative, according to the age of the trajectory
                 # this is to disincentive a continuous computation of the optimal trajectory (lower penality if old trajectory)
-                if OBoTAge == -1: # if no trajectory exists, incentive the computation
-                    self.stepReward += 10*K_trigger
+                if OBoTAge < 0: # if no trajectory exists, incentive the computation
+                    self.stepReward += eta
                 else: # if the trajectory already exist, disincentive it
-                    self.stepReward -= K_trigger * np.exp(-130*OBoTAge)
+                    self.stepReward -= K_trigger * np.exp(-10*OBoTAge)
             case 2: # if the agent deletes the optimal trajectory
                 if OBoTAge>=0:
                     # if the trajectory exists, the reward is reduced according to the age of the trajectory (lower penality if old trajectory)
-                    self.stepReward -= K_deleted * np.exp(-10*OBoTAge)
+                    self.stepReward -= K_deleted * np.exp(-50*OBoTAge)
                 else: # avoid "deleting" an inexistant trajectory
-                    self.stepReward -= 1
+                    self.stepReward -= eta
             case _:
                 pass
 
@@ -423,7 +425,10 @@ class SimEnv(gym.Env):
         # reduce the reward of an amount proportional to the Guidance control effort
         controlReward = 0.
         for ix in range(self.param.RLGNCratio):
-            proximityFuelFactor = 1 # + min(np.exp(historicalRS__met[1]/30), 1) # the closer, the more important is to use less thrust
+            if self.param.phaseID == 2:
+                proximityFuelFactor = 1 # + min(np.exp(historicalRS__met[1]/25), 1) # the closer, the more important is to use less thrust
+            else:
+                proximityFuelFactor = 1
             #controlReward += K_control * proximityFuelFactor * ( 1 - np.exp( -np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix]) / self.param.maxAdimThrust ) **2 )
             controlReward += K_control *  proximityFuelFactor * \
                             (1 - np.exp( - ( 2*np.linalg.norm(self.controlActionHistory_L[self.timeIndex - ix])\
@@ -446,7 +451,7 @@ class SimEnv(gym.Env):
                 print(" ################################## ")
                 self.terminationCause = "_AIM_REACHED_"
             terminated = True
-            self.stepReward += 1
+            self.stepReward += 5
             self.terminalState = TRUE_relativeState_L
 
         ## Crash Reward - crash into the target
@@ -455,7 +460,7 @@ class SimEnv(gym.Env):
             print(" ############# CRASHED ############# ")
             print(" ################################### ")
             terminated = True
-            self.stepReward -= 1
+            self.stepReward -= 5
             self.terminationCause = "__CRASHED__"
             self.terminalState = TRUE_relativeState_L
 

@@ -109,8 +109,7 @@ def computeEnvironmentDisturbances(t,SCparam,param):
 
 
 	# add environment noise
-	
-
+	distAcceleration_S += np.random.normal(0, param.distNoise, 3)
 	
 	# adimensionalize:
 	distAcceleration_S = distAcceleration_S * (1e-3) * param.tc**2 / param.xc

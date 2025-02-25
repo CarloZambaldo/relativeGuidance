@@ -4,7 +4,7 @@ clc
 
 %% initialize Simulation in Synodic Frame
 phaseID = 1;
-[param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,[0 4*pi/9]);
+[param,initialStateTarget_S,initialStateChaser_S,DeltaIC_S] = initializeSimulation(phaseID,[0 2*pi/9]);
 xc = param.xc;
 tc = param.tc;
 
@@ -81,7 +81,12 @@ quiver3(0,0,0,norm(DeltaICm),0,0,'r','LineWidth',1)
 quiver3(0,0,0,0,norm(DeltaICm),0,'r','LineWidth',1)
 quiver3(0,0,0,0,0,norm(DeltaICm),'r','LineWidth',1)
 
-plotConstraintsVisualization(1e3,phaseID);
+if phaseID == 1
+    ct = "S";
+else
+    ct = "C";
+end
+plotConstraintsVisualization(1e3,ct);
 
 legend("Relative Dynamics","","Initial Condition","","Target LVLH",'Location','best')
 axis equal
@@ -153,7 +158,7 @@ quiver3(0,0,0,0,norm(DeltaICm),0,'r','LineWidth',1)
 quiver3(0,0,0,0,0,norm(DeltaICm),'r','LineWidth',1)
 
 quiver3(relDynami(:,1),relDynami(:,2),relDynami(:,3),controlAction(1,:)',controlAction(2,:)',controlAction(3,:)','g','LineWidth',0.8)
-plotConstraintsVisualization(1e3,phaseID)
+plotConstraintsVisualization(1e3,ct)
 
 legend("Relative Dynamics","","Initial Condition","","Target LVLH",'Location','best')
 axis equal
