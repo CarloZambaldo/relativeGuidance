@@ -23,21 +23,33 @@ The code is structured as in figure:
 the modularity in the code design allows to change any of the blocks, provided that all the others are fixed accordingly.
 
 ### Installation
-Ensure you have Python 3.10 or later installed.
+Ensure you have Python 3.12 or later installed.
 
 Clone the repository:
+```
     git clone https://github.com/CarloZambaldo/relativeGuidance.git
     cd relativeGuidance
-
-Install dependencies:
-    pip install -r requirements.txt
+```
+Install:
+```
+    pip install ./SimEnvRL
+```
 
 ## Usage
+### Configuration
+The repository includes three configuration files:
+- for python usage in the ```SimEnvRL/config/``` directory:
+    -  defining simulation parameters ```env_conf```
+    -   RL training settings ```RL_config```
+- for MATLAB simulations in the ```matlabScripts/MATLAB/config/``` folder:
+    - ```initializeSimulation``` allows to generate the initial conditions for the simulation
 
 ### Running a Simulation 
 To run a simulation, execute the following command:
 
-```python3 RLEnv_MC_Eval.py -p [PHASE_ID] -m [MODEL_NAME] -n [N_OF_SIMULATIONS] -s [SEED] -r [RENDERING_BOOL]```
+```
+python3 RLEnv_MC_Eval.py -p [PHASE_ID] -m [MODEL_NAME] -n [N_OF_SIMULATIONS] -s [SEED] -r [RENDERING_BOOL]
+```
 
 > [!NOTE]
 > only PHASE_ID parameter is required, the others are set to default as follows:
@@ -51,15 +63,22 @@ To run a simulation, execute the following command:
 
 ### Training the RL Agent
 To train a reinforcement learning agent for a given environment, use:
+```
+python3 RLEnv_Training.py -p [PHASE_ID] -m [NEW_MODEL_NAME] -r [RENDERING_BOOL]
+```
 
-```python RLEnv_Training.py -p [PHASE_ID] -m [NEW_MODEL_NAME] -r [RENDERING_BOOL]```
-
-> [!IMPORTANT]
+> [!WARNING]
 > to continue training an agent set the parameter ```--start-from [OLD_AGENT_NAME]```
-> HOWEVER: this is highly discouraged if for training of the previous agent normalisation was set to True. Indeed, the new training does not load the old normalization!!
+> HOWEVER: this is highly discouraged if normalisation was set to True when training the previous agent. Indeed, the new training does not load the old normalization!!
 
-### Configuration
-The repository includes two configuration files in the SimEnvRL/config/ directory, defining simulation parameters (env_conf) and RL training settings (RL_config).
+### Plotting the results
+To plot the results use (MonteCarloInfo) or (MonteCarloPlots) functions available in the (matlabScripts/) folder.
+If multiple simulations were run and saved, to extract only one the MATLAB function (extractSimulationData) is available.
+> [!IMPORTANT]
+> In order to use the MATLAB plots (e.g. see the trajectory in Synodic frame) the ASTRO class is required.
+> This can be found in the dedicated GitHub repository: [github.com/CarloZambaldo/OrbitalMechanics](https://github.com/CarloZambaldo/OrbitalMechanics)
+
+
 
 
 ### Repository Structure
@@ -112,9 +131,11 @@ For questions or collaborations, please contact Carlo Zambaldo.
 ## Citation
 If you use this work, please cite:
 ```bibtex
-@thesis{Zambaldo2025,
-  author    = {Zambaldo, Carlo},
-  title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
-  school    = {Politecnico di Milano},
-  year      = {2025}
+@mastersthesis{Zambaldo2025,
+    author    = {Zambaldo, Carlo},
+    title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
+    school    = {Politecnico di Milano},
+    url       = {[TBD]},
+    month     = apr,
+    year      = {2025}
 }
