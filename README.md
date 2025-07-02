@@ -1,4 +1,4 @@
-# _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ #
+# _Enhancing cislunar proximity operations by integrating reinforcement learning into classical relative guidance methods_ #
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=copyright)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![MATLAB](https://img.shields.io/badge/MATLAB-R2024b-orange?logo=mathworks)
