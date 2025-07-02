@@ -135,7 +135,7 @@ If you use this work, please cite:
     author    = {Zambaldo, Carlo},
     title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
     school    = {Politecnico di Milano},
-    url       = {[TBD]},
+    url       = {https://www.politesi.polimi.it/handle/10589/234866},
     month     = apr,
     year      = {2025}
 }
