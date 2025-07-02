@@ -133,7 +133,7 @@ If you use this work, please cite:
 ```bibtex
 @mastersthesis{Zambaldo2025,
     author    = {Zambaldo, Carlo},
-    title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
+    title     = {Enhancing cislunar proximity operations by integrating reinforcement learning into classical relative guidance methods},
     school    = {Politecnico di Milano},
     url       = {https://www.politesi.polimi.it/handle/10589/234866},
     month     = apr,
