@@ -4,7 +4,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import torch
 import argparse
+import sys
 # TODO: the initial target state is always exact periselene. It should be randomized.
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 
 # allow for terminal variables to be passed as arguments
 # syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
