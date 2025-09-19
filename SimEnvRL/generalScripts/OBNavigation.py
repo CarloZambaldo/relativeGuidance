@@ -31,8 +31,8 @@ def OBNavigation(targetState_S, chaserState_S, param):
 
     ## ADD DISTURBANCES HERE #
     ## generation of navigation errors
-    targetState_M = inject_nav_error(targetState_M)
-    chaserState_M = inject_nav_error(chaserState_M)
+    targetState_M = inject_nav_error(targetState_M, param)
+    chaserState_M = inject_nav_error(chaserState_M, param)
 
 
     # Computing relative state in Moon-centered Synodic and rotating to LVLH
@@ -42,19 +42,21 @@ def OBNavigation(targetState_S, chaserState_S, param):
     
     return targetState_M, chaserState_M, relativeState_L
 
-def inject_nav_error(state):
+def inject_nav_error(state, param):
     """
     Insert noise in the state vector. Considering a gaussian noise of: 3% on the position and 3% (component-wise) on the velocity.
 
     """
+
+    val = 0.03
     
     r = state[:3]
     v = state[3:]
 
-    err_r = np.random.normal(0.0, 0.03*np.linalg.norm(r), 3)
-    err_v = v * np.random.normal(0.0, 0.03, size=3)
+    err_r = np.random.normal(0.0, np.sqrt(val*np.linalg.norm(r)), 3)
+    err_v = np.sqrt( v * np.random.normal(0.0, 0.03, size=3) )
 
-    # print(f"err_r: {err_r}, r: {r}")
-    # print(f"err_v: {err_v}, v: {v}")
+    # print(f"err_r: {err_r}, r: {r*param.xc}")
+    # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")
 
     return np.hstack([r + err_r, v + err_v])
