@@ -1,0 +1,12 @@
+
+numpy
+pandas
+matplotlib
+numpy
+scipy
+
+torch
+stable_baselines3
+
+gymnasium
+dataclasses
