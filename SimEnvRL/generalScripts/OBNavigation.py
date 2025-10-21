@@ -31,8 +31,8 @@ def OBNavigation(targetState_S, chaserState_S, param):
 
     ## ADD DISTURBANCES HERE #
     ## generation of navigation errors
-    targetState_M = inject_nav_error(targetState_M, param)
-    chaserState_M = inject_nav_error(chaserState_M, param)
+    relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
+    targetState_M = inject_nav_error(relativeState_L, param)
 
 
     # Computing relative state in Moon-centered Synodic and rotating to LVLH
@@ -48,13 +48,13 @@ def inject_nav_error(state, param):
 
     """
 
-    val = 0.03
+    val = 3/100
     
     r = state[:3]
     v = state[3:]
 
-    err_r = np.random.normal(0.0, np.sqrt(val*np.linalg.norm(r)), 3)
-    err_v = np.sqrt( v * np.random.normal(0.0, 0.03, size=3) )
+    err_r = np.random.normal(0.0, val*np.linalg.norm(r), size=3)
+    err_v = v * np.random.normal(0.0, val, size=3) 
 
     # print(f"err_r: {err_r}, r: {r*param.xc}")
     # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")
