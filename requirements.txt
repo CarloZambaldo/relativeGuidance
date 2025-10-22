@@ -10,3 +10,4 @@ stable_baselines3
 
 gymnasium
 dataclasses
+tensorboard
