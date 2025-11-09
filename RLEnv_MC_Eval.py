@@ -106,7 +106,6 @@ if usingAgentBool:
     except Exception as e:
         print(f"ERROR: {e}. Please press enter to acknowledge...")
         input()
-
     # load the model according to the environment
     try:
         print("LOADING THE RL AGENT MODEL... ",end='')
