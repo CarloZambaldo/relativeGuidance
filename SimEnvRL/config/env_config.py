@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from ..generalScripts.ReferenceFrames import convert_S_to_LVLH, convert_LVLH_to_S
 import numpy as np
 import scipy.io
+#import random
 
 @dataclass(frozen=True)
 class physParamClass:
@@ -20,7 +21,6 @@ class physParamClass:
     Omega : float = 2*np.pi/2358720                          # [rad/s]
     SolarFlux : float = 1361/299792458                       # [W/m^2 / (m/s)] Solar Flux at 1 AU
     sunInitialAngle : float = 2 * np.pi * np.random.rand()   # random initial angle of the sun
-    distNoise : float = 1e-6                                 # [adim] standard deviation of the noise on the environment disturbances
 
     # SIMULATION PARAMETERS #
     maxAdimThrust : float = (490/15000)*1e-3/xc*tc**2        # maximum adimensional acceleration [adimensional]

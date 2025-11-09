@@ -323,10 +323,9 @@ class SimEnv(gym.Env):
             case 1: # RENDEZVOUS
                 K_trigger = 0.01
                 K_deleted = 0.01
-                K_control = 1.
+                K_control = 1
                 K_precisn = 0.8
                 K_simtime = 0.01
-                eta = 0.1
     
                 # Proximity factors
                 proximityTOFFactor = 1 
@@ -358,9 +357,9 @@ class SimEnv(gym.Env):
                 # reward tunable parameters 
                 K_trigger = 0.7    # other values: K_trigger = 0.005
                 K_deleted = 0.1      #.5    # other values: K_deleted = 0.0001#.5
-                K_control = 1.         # 0.3    # other values: K_control = 0.6 # 0.3
-                K_precisn = 1.         # other values: K_precisn = 0.8
-                K_precisn_vel = 1.     # 1    # other values: K_precisn_vel = 0.8 # 1
+                K_control = 1         # 0.3    # other values: K_control = 0.6 # 0.3
+                K_precisn = 1         # other values: K_precisn = 0.8
+                K_precisn_vel = 1     # 1    # other values: K_precisn_vel = 0.8 # 1
                 K_simtime = 0.25       # other values: K_simtime = 0.01
                 eta = 0.1
                 # Proximity factors

@@ -4,11 +4,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import torch
 import argparse
-import sys
 # TODO: the initial target state is always exact periselene. It should be randomized.
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(BASE_DIR)
 
 # allow for terminal variables to be passed as arguments
 # syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
@@ -279,7 +275,7 @@ POP[3:6, :] = POP[3:6, :] * env.envs[0].unwrapped.param.tc
 print("DONE.")
 
 ## RUN THE MONTE CARLO SIMULATION
-print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data['n_population']*4/60} [hours]")
+print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_population"]*4/60} [hours]")
 start_time = time.time()
 
 # RUN THE SIMULATIONS ##################################################################################################
@@ -294,7 +290,7 @@ for trgt_id in range(n_targets_pos): # for each target position
     for sim_id in range(n_ICs): # for each initial condition
         tstartcomptime = time.time()
         print("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv")
-        print(f"\n\n############### RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data['n_population']} ###############")
+        print(f"\n\n############### RUNNING SIMULATION {sim_id + trgt_id +1} OUT OF {data["n_population"]} ###############")
         print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         # resetting the initial conditions and the environment
         terminated = False
