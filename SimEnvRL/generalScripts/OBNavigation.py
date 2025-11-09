@@ -29,20 +29,40 @@ def OBNavigation(targetState_S, chaserState_S, param):
     ])
 
     # Computing relative state in Moon-centered Synodic and rotating to LVLH
+    ## NO NOISE VERSION ##
+    # relativeState_M = chaserState_M - targetState_M
+    # relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
+
+
+    ################################## ADD DISTURBANCES HERE #
+    ## generation of navigation errors
+    relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
+    targetState_M = inject_nav_error(relativeState_L, param)
+
+
+    # Computing relative state in Moon-centered Synodic and rotating to LVLH
     relativeState_M = chaserState_M - targetState_M
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
-
-
-    ## ADD DISTURBANCES HERE #
-    # Deviazione standard del rumore
-    #SD = np.array([10, 0.1, 0.01])
-    #
-    ## Generazione del rumore gaussiano
-    #noise = np.random.normal(loc=0, scale=SD)
-    #
-    #targetState_M   = targetState_M + noise
-    #chaserState_M   = chaserState_M + noise 
-    #relativeState_L = relativeState_L + noise_relative
-
+    ### ############################################### END DISTURBANCES HERE #
 
     return targetState_M, chaserState_M, relativeState_L
+
+
+def inject_nav_error(state, param):
+    """
+    Insert noise in the state vector. Considering a gaussian noise of: 3% on the position and 3% (component-wise) on the velocity.
+
+    """
+
+    val = 3/100
+    
+    r = state[:3]
+    v = state[3:]
+
+    err_r = np.random.normal(0.0, val*np.linalg.norm(r), size=3)
+    err_v = v * np.random.normal(0.0, val, size=3) 
+
+    # print(f"err_r: {err_r}, r: {r*param.xc}")
+    # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")
+
+    return np.hstack([r + err_r, v + err_v])
