@@ -25,7 +25,7 @@ phaseID = argspar.phase
 n_samples = argspar.n_samples
 agentName = argspar.model
 seed = argspar.seed
-if argspar.render == "True":
+if argspar.render == "True" or argspar.render == "true":
     renderingBool  = True # rendering of the simulation
 else:
     renderingBool  = False # rendering of the simulation
@@ -50,7 +50,7 @@ print("Please press enter to continue...")
 input()
 
 #get maximum number of threads available
-max_num_threads = torch.get_num_threads()
+max_num_threads = torch.get_num_threads()-1
 torch.set_num_threads(max_num_threads) # set the maximum threads available
 torch.set_num_interop_threads(max_num_threads)  #
 print(f"Using {max_num_threads} threads.")
@@ -68,7 +68,7 @@ elif phaseID == 2:
 
 
 print("***************************************************************************")
-print(f"Monte Carlo Analysis of {n_samples} samples. Agent: {agentName}")
+print(f"Monte Carlo Analysis of {n_samples} samples. Agent: '{agentName}'")
 print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
 if seed is not None:
     print(f"Using seed: {seed}")
@@ -108,7 +108,13 @@ if usingAgentBool:
         input()
 
     # load the model according to the environment
-    model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
+    try:
+        print("LOADING THE RL AGENT MODEL... ",end='')
+        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
+        print("MODEL LOADED.")
+    except Exception as e:
+        print(f"ERROR: {e}. Please press enter to acknowledge...")
+        input()
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
