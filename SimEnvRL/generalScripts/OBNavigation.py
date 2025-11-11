@@ -52,6 +52,14 @@ def inject_nav_error(state, param):
     """
     Insert noise in the state vector. Considering a gaussian noise of: 3% on the position and 3% (component-wise) on the velocity.
 
+    Adds a simple plateau to avoid unbounded growth of noise when far away:
+    - cap position-based scaling using a max distance (default 10 km)
+    - cap velocity-based scaling using a max speed per component (default 5 m/s)
+
+    Thresholds can be overridden via:
+    - param.nav_pos_plateau_m (meters)
+    - param.nav_vel_plateau_ms (m/s)
+
     """
 
     val = 3/100
@@ -59,8 +67,26 @@ def inject_nav_error(state, param):
     r = state[:3]
     v = state[3:]
 
-    err_r = np.random.normal(0.0, val*np.linalg.norm(r), size=3)
-    err_v = v * np.random.normal(0.0, val, size=3) 
+    # Plateau thresholds (dimensional)
+    r_max_m = getattr(param, 'nav_pos_plateau_m', 10_000.0)  # 10 km
+    v_max_ms = getattr(param, 'nav_vel_plateau_ms', 5.0)      # 5 m/s
+
+    # Convert thresholds to nondimensional units if scales are available
+    try:
+        r_max_nd = r_max_m / param.xc
+        v_max_nd = v_max_ms / (param.xc / param.tc)
+    except Exception:
+        # If scales are missing, fall back to no plateau
+        r_max_nd = np.inf
+        v_max_nd = np.inf
+
+    # Position noise: std proportional to min(|r|, r_max_nd)
+    r_scale = min(np.linalg.norm(r), r_max_nd)
+    err_r = np.random.normal(0.0, val * r_scale, size=3)
+
+    # Velocity noise: per-component std proportional to min(|v_i|, v_max_nd)
+    v_scale = np.minimum(np.abs(v), v_max_nd)
+    err_v = np.random.normal(0.0, val * v_scale, size=3)
 
     # print(f"err_r: {err_r}, r: {r*param.xc}")
     # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")

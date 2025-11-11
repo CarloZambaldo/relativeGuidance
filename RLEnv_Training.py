@@ -188,6 +188,11 @@ if __name__ == "__main__":
             printNormalization(RLagent)
     except Exception as e:
         print(e)
+        with open(f"log-{modelName}.txt", "a") as f:
+            f.write(f"Finished Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
+            f.write(f"  [Trained on {max_num_threads} threads]\n")
+            f.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
+            f.close()
 
     print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
