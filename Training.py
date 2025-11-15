@@ -58,19 +58,34 @@ if __name__ == "__main__":
     ## TRAINING PARAMETERS ##
     def lr_schedule(progress_remaining):
         return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
-    n_envs          = 15   
-    norm_reward     = True 
-    norm_obs        = True
-    discountFactor  = 0.99    # discount factor for the reward
-    ent_coef        = 0.00015  # entropy coefficient
-    n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
-    batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-    n_epochs        = 15      # every value is used n times for training
-    vf_coef         = 0.5     # value function coefficient
-    clip_range      = 0.15    # default: 0.2
-    gae_lambda      = 0.95    # default: 0.95
-    total_timesteps = 1.5e6   # <<<<<<<<<<<<<<<<<<<<<<<<
 
+    if phaseID == 1:
+        n_envs          = 15   
+        norm_reward     = True 
+        norm_obs        = True
+        discountFactor  = 0.99    # discount factor for the reward
+        ent_coef        = 0.00015  # entropy coefficient
+        n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
+        batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+        n_epochs        = 15      # every value is used n times for training
+        vf_coef         = 0.5     # value function coefficient
+        clip_range      = 0.15    # default: 0.2
+        gae_lambda      = 0.95    # default: 0.95
+        total_timesteps = 1.5e6   # <<<<<<<<<<<<<<<<<<<<<<<<
+
+    if phaseID == 2:
+        n_envs          = 15   
+        norm_reward     = True 
+        norm_obs        = True
+        discountFactor  = 0.99    # discount factor for the reward
+        ent_coef        = 0.0002  # entropy coefficient
+        n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
+        batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+        n_epochs        = 15      # every value is used n times for training
+        vf_coef         = 0.55    # value function coefficient
+        clip_range      = 0.15    # default: 0.2
+        gae_lambda      = 0.95    # default: 0.95
+        total_timesteps = 1.5e6   # <<<<<<<<<<<<<<<<<<<<<<<<
 
     if n_envs > max_num_threads:
         raise BrokenPipeError("n_envs > max_num_threads")
@@ -174,11 +189,6 @@ if __name__ == "__main__":
     torch.set_num_threads(max_num_threads) # set the maximum threads available
     torch.set_num_interop_threads(max_num_threads)  #
     print(f"Using {max_num_threads} threads. Using {n_envs} in parallel.")
-    #os.environ["OMP_NUM_THREADS"] = str(max_num_threads)
-    #os.environ["MKL_NUM_THREADS"] = str(max_num_threads)
-    #os.environ["OPENBLAS_NUM_THREADS"] = str(max_num_threads)
-    #os.environ["VECLIB_MAXIMUM_THREADS"] = str(max_num_threads)
-    #os.environ["NUMEXPR_NUM_THREADS"] = str(max_num_threads)
 
     model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
     model.save(RLagent.modelFileNameDir) # save the model
@@ -188,11 +198,11 @@ if __name__ == "__main__":
             printNormalization(RLagent)
     except Exception as e:
         print(e)
-        with open(f"log-{modelName}.txt", "a") as f:
-            f.write(f"Finished Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
-            f.write(f"  [Trained on {max_num_threads} threads]\n")
-            f.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
-            f.close()
+        with open(f"log-{modelName}.txt", "a") as logfile:
+            logfile.write(f"Finished Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
+            logfile.write(f"  [Trained on {max_num_threads} threads]\n")
+            logfile.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
+            logfile.close()
 
     print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
