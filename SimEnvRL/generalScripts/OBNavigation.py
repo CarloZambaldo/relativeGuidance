@@ -30,19 +30,19 @@ def OBNavigation(targetState_S, chaserState_S, param):
 
     # Computing relative state in Moon-centered Synodic and rotating to LVLH
     ## NO NOISE VERSION ##
-    # relativeState_M = chaserState_M - targetState_M
-    # relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
+        # relativeState_M = chaserState_M - targetState_M
+        # relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
 
 
-    ################################## ADD DISTURBANCES HERE #
+    ################################## NOISE VERSION HERE #
+    
     ## generation of navigation errors
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
-    targetState_M = inject_nav_error(relativeState_L, param)
+    relativeState_L = inject_nav_error(relativeState_L, param)
 
-
-    # Computing relative state in Moon-centered Synodic and rotating to LVLH
-    relativeState_M = chaserState_M - targetState_M
-    relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
+    # Computing target state with disturbances (in LVLH frame)
+    targetState_M = chaserState_M  - relativeState_L
+    
     ### ############################################### END DISTURBANCES HERE #
 
     return targetState_M, chaserState_M, relativeState_L

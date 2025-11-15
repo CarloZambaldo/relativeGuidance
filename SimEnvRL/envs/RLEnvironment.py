@@ -114,7 +114,7 @@ class SimEnv(gym.Env):
                 
                 # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
                 # indeed, the NAVIGATION is required for the agent to determine its action
-                # self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+                # DO NOT UNCOMMENT: self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
 
                 # GUIDANCE ALGORITHM # 
                 # compute the control action and output the optimal trajectory (if re-computed)
@@ -283,6 +283,7 @@ class SimEnv(gym.Env):
 
         ## compute RL Agent Observation at time step 1
         self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+        print(f"OBStateRelative_L: {self.OBStateRelative_L}")
 
         info = {"initialConditionsUsed": typeOfInitialConditions}
         return self.computeRLobservation(), info
@@ -291,7 +292,7 @@ class SimEnv(gym.Env):
     def computeRLobservation(self):
         # compute the Age of the OB optimal Trajectory, if the optimal Trajectory exists, set to -1 if not
         if self.OBoptimalTrajectory and "envStartTime" in self.OBoptimalTrajectory:
-            trajAGE = (self.timeNow - self.OBoptimalTrajectory["envStartTime"]) ## FIXME : ADDED 10 * let's see
+            trajAGE = (self.timeNow - self.OBoptimalTrajectory["envStartTime"])
         else:
             trajAGE = -1 # setting to -1 if the optimal trajectory does not exist
 
@@ -301,9 +302,9 @@ class SimEnv(gym.Env):
         else:
             meanControlAction = self.controlActionHistory_L[self.timeIndex-self.param.RLGNCratio+1:self.timeIndex+1].mean(axis=0)
             #print(f"meanControlAction: {meanControlAction}")
+
         meanControlAction /= self.param.maxAdimThrust # normalize wrt the max thrust available
         observation = np.hstack([self.OBStateRelative_L, meanControlAction, trajAGE])
-        #observation = np.hstack([self.OBStateRelative_L, trajAGE])
 
         return observation
 
