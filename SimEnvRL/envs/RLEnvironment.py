@@ -278,7 +278,6 @@ class SimEnv(gym.Env):
 
         ## compute RL Agent Observation at time step 1
         self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
-        print(f"OBStateRelative_L: {self.OBStateRelative_L}")
 
         info = {"initialConditionsUsed": typeOfInitialConditions}
         return self.computeRLobservation(), info
