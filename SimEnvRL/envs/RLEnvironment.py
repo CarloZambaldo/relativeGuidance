@@ -321,6 +321,7 @@ class SimEnv(gym.Env):
                 K_control = 1
                 K_precisn = 0.8
                 K_simtime = 0.01
+                eta = 0.1
     
                 # Proximity factors
                 proximityTOFFactor = 1 
