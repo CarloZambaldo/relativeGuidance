@@ -59,19 +59,18 @@ if __name__ == "__main__":
     def lr_schedule(progress_remaining):
         return (3e-5 - 1e-6) * progress_remaining + 1e-6    # Decreases as training progresses
 
-    if phaseID == 3:
-        n_envs          = 15   
-        norm_reward     = True 
-        norm_obs        = True
-        discountFactor  = 0.99    # discount factor for the reward
-        ent_coef        = 0.00015  # entropy coefficient
-        n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
-        batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
-        n_epochs        = 15      # every value is used n times for training
-        vf_coef         = 0.5     # value function coefficient
-        clip_range      = 0.15    # default: 0.2
-        gae_lambda      = 0.95    # default: 0.95
-        total_timesteps = 25   # <<<<<<<<<<<<<<<<<<<<<<<<
+    n_envs          = 15   
+    norm_reward     = True 
+    norm_obs        = True
+    discountFactor  = 0.99    # discount factor for the reward
+    ent_coef        = 0.00015  # entropy coefficient
+    n_steps         = int(np.ceil(7500/n_envs))    # consider different trajectories
+    batch_size      = 250     # divisor of n_steps for efficiency recommend using a `batch_size` that is a factor of `n_steps * n_envs`.
+    n_epochs        = 15      # every value is used n times for training
+    vf_coef         = 0.5     # value function coefficient
+    clip_range      = 0.15    # default: 0.2
+    gae_lambda      = 0.95    # default: 0.95
+    total_timesteps = 25   # <<<<<<<<<<<<<<<<<<<<<<<<
 
     if n_envs > max_num_threads:
         raise BrokenPipeError("n_envs > max_num_threads")
