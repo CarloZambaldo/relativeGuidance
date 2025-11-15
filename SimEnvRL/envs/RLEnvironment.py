@@ -88,11 +88,6 @@ class SimEnv(gym.Env):
                                                            self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine, self.param.maxAdimThrust*margine,
                                                           1]),
                                             dtype=np.float64)
-        #self.observation_space = spaces.Box(low=np.array([-1,-1,-1,-1,-1,-1,
-        #                                                  -1]),
-        #                                    high=np.array([1, 1, 1, 1, 1, 1,
-        #                                                   1]),
-        #                                    dtype=np.float64)
         
         ## ACTION SPACE
         # 2 actions are present : 0 [skip Loop 1] or 1 [compute Loop 1] or 2 [delete OBoptimalTrajectory]
