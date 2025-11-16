@@ -7,7 +7,7 @@ packages = ["src/SimEnvRL"]
 
 [project]
 name = "SimEnvRL"
-version = "4.8.0"
+version = "5.0.0"
 dependencies = [
   "gymnasium",          # Gym environment
   "scipy",              # Scientific computing

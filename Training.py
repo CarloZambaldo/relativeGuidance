@@ -96,16 +96,16 @@ if __name__ == "__main__":
     # Create environment (depending on the device and normalisation)
     if deviceType == "cpu": # IF USING CPU
         if (norm_reward or norm_obs): # IF USING CPU with normalized environment
-            #env = DummyVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
-            env = SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+            #env = DummyVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
+            env = SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
                                   for _ in range(n_envs)])
             env = VecMonitor(env, RLagent.log_dir)  # Logs true episode rewards
             env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward) # normalize the environment
         else: # IF USING CPU without normalized environment
-            env =  SubprocVecEnv([lambda: gym.make('SimEnv-v4.8',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+            env =  SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
                                   for _ in range(n_envs)])
     elif deviceType == "cuda": # IF USING GPU
-        env = make_vec_env('SimEnv-v4.8', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+        env = make_vec_env('SimEnv-v5.0', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
         raise Exception("GPU not supported on achiral.")
 
 
@@ -115,6 +115,7 @@ if __name__ == "__main__":
         print(f"Training: {modelName} (new) on {deviceType}")
     else:
         print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
+    print(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.")
     print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
     print(f"total_timesteps: {total_timesteps}")
     print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
@@ -172,6 +173,7 @@ if __name__ == "__main__":
             f.write(f"Training: {modelName} (new) on {deviceType}\n")
         else:
             f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
+        f.write(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.")
         f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
         f.write(f"total_timesteps: {total_timesteps}\n")
         f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
@@ -190,19 +192,27 @@ if __name__ == "__main__":
     torch.set_num_interop_threads(max_num_threads)  #
     print(f"Using {max_num_threads} threads. Using {n_envs} in parallel.")
 
+    # train the model
     model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
-    model.save(RLagent.modelFileNameDir) # save the model
+
     try:
         if norm_obs or norm_reward:
-            env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
+            # save the normalization if used
+            with open(f"{RLagent.model_dir}/vec_normalize.pkl", "w") as file:
+                env.save(f"{RLagent.model_dir}/vec_normalize.pkl")        # save the normalization
             printNormalization(RLagent)
-    except Exception as e:
+
+        # save the model
+        model.save(RLagent.modelFileNameDir)
+
+    except Exception as e: # catch any exception during saving
+        print("EXCEPTION DURING SAVING NORMALIZATION:")
         print(e)
         with open(f"log-{modelName}.txt", "a") as logfile:
-            logfile.write(f"Finished Training: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
-            logfile.write(f"  [Trained on {max_num_threads} threads]\n")
+            logfile.write(f"Encountered Error at: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
             logfile.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
             logfile.close()
+            input("Press Enter to continue...")
 
     print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 

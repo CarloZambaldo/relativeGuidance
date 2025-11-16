@@ -21,7 +21,7 @@ from SimEnvRL.generalScripts.wrappers import noAutoResetWrapper
 
 ## REGISTER THE ENVIRONMENT ##
 register(
-    id="SimEnv-v4.8",
+    id="SimEnv-v5.0",
     entry_point="SimEnvRL.envs.RLEnvironment:SimEnv",
 )
 

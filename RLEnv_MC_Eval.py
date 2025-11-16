@@ -83,7 +83,7 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = noAutoResetWrapper(gym.make("SimEnv-v4.8", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool}))
+env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool}))
 env = DummyVecEnv([lambda:env])
 
 if seed is not None:
