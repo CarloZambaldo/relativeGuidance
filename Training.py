@@ -173,7 +173,7 @@ if __name__ == "__main__":
             f.write(f"Training: {modelName} (new) on {deviceType}\n")
         else:
             f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
-        f.write(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.")
+        f.write(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.\n")
         f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
         f.write(f"total_timesteps: {total_timesteps}\n")
         f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
