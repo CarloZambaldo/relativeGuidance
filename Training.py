@@ -199,6 +199,7 @@ if __name__ == "__main__":
     except Exception as e: # catch any exception during training
         print("EXCEPTION DURING TRAINING:")
         print(e)
+        input("Press Enter to continue...")
         with open(f"log-{modelName}.txt", "a") as logfile:
             logfile.write(f"Encountered Error at: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
             logfile.write(f"  [EXCEPTION DURING TRAINING: {e}]\n")
@@ -219,6 +220,7 @@ if __name__ == "__main__":
     except Exception as e: # catch any exception during saving
         print("EXCEPTION DURING SAVING NORMALIZATION:")
         print(e)
+        input("Press Enter to continue...")
         with open(f"log-{modelName}.txt", "a") as logfile:
             logfile.write(f"Encountered Error at: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
             logfile.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
