@@ -193,8 +193,19 @@ if __name__ == "__main__":
     print(f"Using {max_num_threads} threads. Using {n_envs} in parallel.")
 
     # train the model
-    model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
+    try:
+        model.learn(total_timesteps=total_timesteps, reset_num_timesteps=True, tb_log_name=RLagent.modelName)
+        print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
+    except Exception as e: # catch any exception during training
+        print("EXCEPTION DURING TRAINING:")
+        print(e)
+        with open(f"log-{modelName}.txt", "a") as logfile:
+            logfile.write(f"Encountered Error at: {datetime.now().strftime('%Y/%m/%d at %H:%M')}\n")
+            logfile.write(f"  [EXCEPTION DURING TRAINING: {e}]\n")
+            logfile.close()
+            input("Press Enter to continue...")
 
+    # save the model and the normalization statistics
     try:
         if norm_obs or norm_reward:
             # save the normalization if used
@@ -213,8 +224,6 @@ if __name__ == "__main__":
             logfile.write(f"  [EXCEPTION DURING SAVING NORMALIZATION: {e}]\n")
             logfile.close()
             input("Press Enter to continue...")
-
-    print(f"FINISHED TRAINING: {datetime.now().strftime('%Y/%m/%d AT %H:%M')}")
 
 
     #########################################################################################################
