@@ -1,3 +1,5 @@
 addpath("../Simulations/")
-load("MC_P2__Agent_P2_thesis_2025_11_15_at_13_44.mat")
-MonteCarloPlots(extractSimulationData(data,[1]),1)
+addpath(genpath("MATLAB"))
+load("MC_P2__Agent_P2_v5_2025_11_20_at_15_27.mat")
+% % MonteCarloPlots(extractSimulationData(data,[1]),1)
+MonteCarloPlots(data,1)

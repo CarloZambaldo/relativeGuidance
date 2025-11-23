@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     deviceType   = "cpu"                           # "cuda" or "cpu"
 
-    #phaseID = 1
+    # change training time span depending on the phase
     if phaseID == 1:
         tspan = np.array([0, 0.06])
     else:
