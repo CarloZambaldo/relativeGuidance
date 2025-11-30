@@ -18,12 +18,14 @@ parser.add_argument("-m", "--model", type=str, default="_NO_AGENT_", help="Model
 parser.add_argument("-s","--seed", type=str, default="None", help="Seed value used to initialize the simulations")
 parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Monte Carlo samples")
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
+parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
 # Parse arguments
 argspar = parser.parse_args()
 
 phaseID = argspar.phase
 n_samples = argspar.n_samples
 agentName = argspar.model
+pos_mode = argspar.position_mode
 seed = argspar.seed
 if argspar.render == "True" or argspar.render == "true":
     renderingBool  = True # rendering of the simulation
@@ -157,15 +159,19 @@ else:
 #                                       np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757]),    # after aposelene
 #                                       np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])    # periselene
 # ])
-
-# aposelene
-initialStateTarget_S_batch =  np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])])
-# leaving aposelene
-#initialStateTarget_S_batch =  np.vstack([np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726])])
-# approaching aposelene
-#initialStateTarget_S_batch =  np.vstack([np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757])])
-# periselene region
-#initialStateTarget_S_batch =  np.vstack([np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])])
+match(pos_mode.lower()):
+    case "aposelene":
+        # at aposelene
+        initialStateTarget_S_batch =  np.vstack([np.array([1.02134, 0, -0.18162, 0, -0.10176, 9.76561e-07])])
+    case "leaving_aposelene":
+        # leaving aposelene
+        initialStateTarget_S_batch =  np.vstack([np.array([1.004838519270395, -0.040590078989478,  -0.111182754851536,  -0.063068640419990,  -0.027276933293995,   0.303875711871726])])
+    case "approaching_aposelene":
+        # approaching aposelene
+        initialStateTarget_S_batch =  np.vstack([np.array([0.998133960785942,  0.040746790012428,  -0.076259271557438,   0.072618053421135,   0.031629806888561,  -0.414761014570757])])
+    case "periselene":
+        # periselene region
+        initialStateTarget_S_batch =  np.vstack([np.array([0.987592938236645, -0.008985366369626,   0.005588791398360,  -0.057770551032874,   1.282613753074718,   0.742803090971121])])
 
 
 n_targets_pos = initialStateTarget_S_batch.shape[0]
