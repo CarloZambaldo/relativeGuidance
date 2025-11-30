@@ -31,23 +31,30 @@ for p in "${P_VALUES[@]}"; do
     echo "Starting session $session (p=$p, m=$model, region=$region)..."
     # Kill existing session with the same name to avoid tmux errors on reruns
     if tmux has-session -t "$session" 2>/dev/null; then
+      echo "Session $session already exists. Killing it to start a new one."
       tmux kill-session -t "$session"
     fi
-    tmux new-session -d -s "$session" bash -lc "
+    if tmux new-session -d -s "$session" bash -lc "
       set -euo pipefail
-      cd \"$(pwd)\"
-      podman run --rm -i --entrypoint "" -v "$(pwd)":/code -w /code "$IMAGE" \
-        python3 MonteCarlo_eval.py -p "$p" -m "$model" -s "$SEED" -n "$N_SIM" -r False -x "$region" -y \
-        |& tee "$log"
-
+      podman run --rm -it --entrypoint \"\" -v \"$(pwd)\":/code -w /code \"$IMAGE\" \
+        python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y \
+        |& tee \"$log\"
       status=\${PIPESTATUS[0]}
       echo \"exit code: \$status\" | tee -a \"$log\"
       exit \"\$status\"
-    " \
-      && echo "Session started (log: $log)" \
-      || { echo "Failed to start session $session" >&2; continue; }
+    "; then
+      echo "Session started (log: $log)"
+    else
+      echo "Failed to start session $session" >&2
+      continue
+    fi
   done
 done
 
 echo "Sessions started. Attach to one with: tmux attach -t SESSION_NAME"
 echo "Logs under: $LOG_DIR/*.log"
+
+
+# podman run --rm -it -v \"$(pwd)\":/code \"$IMAGE\" \
+#        bash -lc "python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y" \
+#      |& tee \"$log\"
