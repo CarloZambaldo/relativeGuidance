@@ -27,7 +27,7 @@ for p in "${P_VALUES[@]}"; do
   for region in "${PHASES[@]}"; do
     session="MC_P${p}_${region}"
     log="$LOG_DIR/${session}.log"
-    status_file="$LOG_DIR/${session}.status"
+    
     echo "Starting session $session (p=$p, m=$model, region=$region)..."
     # Kill existing session with the same name to avoid tmux errors on reruns
     if tmux has-session -t "$session" 2>/dev/null; then
@@ -37,11 +37,10 @@ for p in "${P_VALUES[@]}"; do
       set -euo pipefail
       cd \"$(pwd)\"
       podman run --rm -it -v \"$(pwd)\":/code \"$IMAGE\" \
-        bash -lc 'python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y' \
+        bash -lc "python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y" \
       |& tee \"$log\"
       status=\${PIPESTATUS[0]}
       echo \"exit code: \$status\" | tee -a \"$log\"
-      echo \"\$status\" > \"$status_file\"
       exit \"\$status\"
     " \
       && echo "Session started (log: $log)" \
