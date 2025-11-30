@@ -4,11 +4,13 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import torch
 import argparse
-# TODO: the initial target state is always exact periselene. It should be randomized.
+
+# recall the starting configuration
+#  cd main/relativeGuidance
+#  podman run --rm -it -v .:/code/ paiton:v01
+#  python3 MonteCarlo_eval.py -p 2 -m "PPO_Agent_Phase2_v02" -s 42 -n 100 -r True -x aposelene
 
 # allow for terminal variables to be passed as arguments
-# syntax:   python3 RLEnv_MC_Eval.py [phaseID] [n_samples] [agentName]
-        
 # Create Argument Parser
 parser = argparse.ArgumentParser(description="Monte Carlo Analysis parameters")
 
@@ -19,6 +21,7 @@ parser.add_argument("-s","--seed", type=str, default="None", help="Seed value us
 parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Monte Carlo samples")
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
 parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
+parser.add_argument("-y", "--skip-acknowledge", action="store_true", help="Skip acknowledge prompts (auto-continue)")
 # Parse arguments
 argspar = parser.parse_args()
 
@@ -27,6 +30,7 @@ n_samples = argspar.n_samples
 agentName = argspar.model
 pos_mode = argspar.position_mode
 seed = argspar.seed
+skip_ack = bool(argspar.skip_acknowledge)
 if argspar.render == "True" or argspar.render == "true":
     renderingBool  = True # rendering of the simulation
 else:
@@ -45,11 +49,15 @@ else:
     print(f"Agent {agentName} is used to control the chaser.")
 
 print(f"Running MC simulation (phase {phaseID})")
+print(f"position mode: {pos_mode}")
 print(f"number of samples: {n_samples}")
 print(f"Using seed: {seed}")
 print(f"Rendering: {renderingBool}")
-print("Please press enter to continue...")
-input()
+if skip_ack:
+    print("Skipping acknowledgement prompt (-y).")
+else:
+    print("Please press enter to continue...")
+    input()
 
 #get maximum number of threads available
 max_num_threads = torch.get_num_threads()-1
@@ -106,16 +114,24 @@ if usingAgentBool:
         print("NORMALIZATION LOADED.")
         normalizationBool = True
     except Exception as e:
-        print(f"ERROR: {e}. Please press enter to acknowledge...")
-        input()
+        print(f"ERROR: {e}.", end=' ')
+        if skip_ack:
+            print("Skipping acknowledgement prompt (-y).")
+        else:
+            print("Please press enter to acknowledge...")
+            input()
     # load the model according to the environment
     try:
         print("LOADING THE RL AGENT MODEL... ",end='')
         model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
         print("MODEL LOADED.")
     except Exception as e:
-        print(f"ERROR: {e}. Please press enter to acknowledge...")
-        input()
+        print(f"ERROR: {e}.", end=' ')
+        if skip_ack:
+            print("Skipping acknowledgement prompt (-y).")
+        else:
+            print("Please press enter to acknowledge...")
+            input()
 
 print("GENERATING A POPULATION FOR THE SIMULATIONS... ",end='')
 data : dict = {
@@ -290,7 +306,7 @@ print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_popu
 start_time = time.time()
 
 # RUN THE SIMULATIONS ##################################################################################################
-fileNameSave = f"MC_P{phaseID}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
+fileNameSave = f"MC_P{phaseID}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
 if not os.path.exists("./Simulations/"):
     os.makedirs("./Simulations/")
