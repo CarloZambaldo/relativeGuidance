@@ -17,8 +17,13 @@ for p in "${P_VALUES[@]}"; do
   for region in "${PHASES[@]}"; do
     session="MC_P${p}_${region}"
     echo "Starting session $session (p=$p, m=$model, region=$region)..."
-    tmux new-session -d -s "$session" "podman run --rm -it -v \"$(pwd)\":/code/ \"$IMAGE\" bash -lc 'cd /code && python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y'"
-    echo "Session started."
+    # Kill existing session with the same name to avoid tmux errors on reruns
+    if tmux has-session -t "$session" 2>/dev/null; then
+      tmux kill-session -t "$session"
+    fi
+    tmux new-session -d -s "$session" "podman run --rm -it -v \"$(pwd)\":/code/ \"$IMAGE\" bash -lc 'cd /code && python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y'" \
+      && echo "Session started." \
+      || echo "Failed to start session $session"
   done
 done
 
