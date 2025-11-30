@@ -36,9 +36,10 @@ for p in "${P_VALUES[@]}"; do
     tmux new-session -d -s "$session" bash -lc "
       set -euo pipefail
       cd \"$(pwd)\"
-      podman run --rm -it -v \"$(pwd)\":/code \"$IMAGE\" \
-        bash -lc "python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y" \
-      |& tee \"$log\"
+      podman run --rm -i --entrypoint "" -v "$(pwd)":/code -w /code "$IMAGE" \
+        python3 MonteCarlo_eval.py -p "$p" -m "$model" -s "$SEED" -n "$N_SIM" -r False -x "$region" -y \
+        |& tee "$log"
+
       status=\${PIPESTATUS[0]}
       echo \"exit code: \$status\" | tee -a \"$log\"
       exit \"\$status\"
