@@ -17,7 +17,7 @@ for p in "${P_VALUES[@]}"; do
   for region in "${PHASES[@]}"; do
     session="MC_P${p}_${region}"
     echo "Starting session $session (p=$p, m=$model, region=$region)..."
-    tmux new-session -d -s "$session" "cd \"$HOST_WORKDIR\" && podman run --rm -it -v \"$(pwd)\":/code \"$IMAGE\" bash -lc 'cd /code && python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y'"
+    tmux new-session -d -s "$session" "podman run --rm -it -v \"$(pwd)\":/code/ \"$IMAGE\" bash -lc 'cd /code && python3 MonteCarlo_eval.py -p \"$p\" -m \"$model\" -s \"$SEED\" -n \"$N_SIM\" -r False -x \"$region\" -y'"
     echo "Session started."
   done
 done
