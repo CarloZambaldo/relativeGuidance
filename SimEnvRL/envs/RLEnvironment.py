@@ -110,7 +110,7 @@ class SimEnv(gym.Env):
                 ## FIXME IF ANY PROBLEM OCCURS HERE ##
                 # HARDCODED SAFETY MODE ACTIVATION #
                 # new version 2026/01/07 - AgentAction is set to SAFE MODE when < 100 m from the target
-                if np.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
+                if np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
                     AgentAction = 2 # DELETE
                     self.AgentActionHistory[self.timeIndex] = AgentAction
                     if self.renderingBool:
