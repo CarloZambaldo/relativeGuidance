@@ -105,7 +105,16 @@ class SimEnv(gym.Env):
             if (self.timeIndex < len(self.timeHistory)-1): # check if the simulation is not over (still space inside the History vectors)
                 # extract parameters for the current time step
                 self.timeNow = self.timeHistory[self.timeIndex]
-                self.AgentActionHistory[self.timeIndex] = AgentAction
+                # self.AgentActionHistory[self.timeIndex] = AgentAction
+
+                ## FIXME IF ANY PROBLEM OCCURS HERE ##
+                # HARDCODED SAFETY MODE ACTIVATION #
+                # new version 2026/01/07 - AgentAction is set to SAFE MODE when < 100 m from the target
+                if np.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
+                    AgentAction = 2 # DELETE
+                    self.AgentActionHistory[self.timeIndex] = AgentAction
+                    print(" >> SAFE MODE ACTIVATED << ")
+                # END OF HARDCODED SAFETY MODE ACTIVATION #
                 
                 # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
                 # indeed, the NAVIGATION is required for the agent to determine its action
