@@ -113,7 +113,8 @@ class SimEnv(gym.Env):
                 if np.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
                     AgentAction = 2 # DELETE
                     self.AgentActionHistory[self.timeIndex] = AgentAction
-                    print(" >> SAFE MODE ACTIVATED << ")
+                    if self.renderingBool:
+                        print(" >> SAFE MODE ACTIVATED << ")
                 # END OF HARDCODED SAFETY MODE ACTIVATION #
                 
                 # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
