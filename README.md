@@ -30,7 +30,14 @@ Clone the repository:
     cd relativeGuidance
 
 Install dependencies:
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
+
+If you want to run the simulation in a container you can directly execute:
+    podman build -t myimage:latest .
+
+and then run it using:
+    podman run --rm -it myimage:latest
+    python3 ...... [see below]
 
 ## Usage
 

@@ -42,6 +42,15 @@ function [meanFinalState,sigmaFinalState] = MonteCarloInfo(data)
 
     notConverged = 100 - failRate - successRate;
     fprintf("NOT CONVERGED: %3.2f %%\n",notConverged);
+
+    no_not_conv = length(data.fail) - sum(success) - sum(fail);
+    if no_not_conv > 0
+        indici = find(data.success==0 & data.fail==0);
+        fprintf("  Index of not converged: ");
+        for i = 1:no_not_conv
+            fprintf("%d, ", indici(i));
+        end
+    end
     
     fprintf("\n")
 

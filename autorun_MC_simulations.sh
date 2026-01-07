@@ -25,7 +25,7 @@ fi
 for p in "${P_VALUES[@]}"; do
   model="${MODELS[$((p-1))]}"
   for region in "${PHASES[@]}"; do
-    session="MC_P${p}_${region}"
+    session="MC_P${p}_${region}_${model}"
     log="$LOG_DIR/${session}.log"
     
     echo "Starting session $session (p=$p, m=$model, region=$region)..."
