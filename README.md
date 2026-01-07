@@ -36,7 +36,7 @@ If you want to run the simulation in a container you can directly execute:
     podman build -t myimage:latest .
 
 and then run it using:
-    podman run --rm -it myimage:latest
+    podman run --rm -it -v "$PWD":/code/ myimage:latest
     python3 ...... [see below]
 
 ## Usage
