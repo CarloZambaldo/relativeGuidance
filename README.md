@@ -1,4 +1,4 @@
-# _Employment of Reinforcement Learning to support state of the art Relative Guidance Methods_ #
+# _Enhancing Cislunar Proximity Operations by integrating Reinforcement Learning into Classical Relative Guidance Methods_ #
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?logo=copyright)
 ![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)
 ![MATLAB](https://img.shields.io/badge/MATLAB-R2024b-orange?logo=mathworks)
@@ -121,7 +121,7 @@ If you use this work, please cite:
 ```bibtex
 @thesis{Zambaldo2025,
   author    = {Zambaldo, Carlo},
-  title     = {Employment of Reinforcement Learning to Support State-of-the-Art Relative Guidance Methods},
+  title     = {Enhancing Cislunar Proximity Operations by integrating Reinforcement Learning into Classical Relative Guidance Methods},
   school    = {Politecnico di Milano},
   year      = {2025}
 }
