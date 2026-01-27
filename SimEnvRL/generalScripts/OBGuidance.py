@@ -30,7 +30,7 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
 
     # Compute sliding surface
     if phaseID == 2:
-        sigma = 1e-1 * surface_L2 + (np.array([1, 2.11e1, 1]) * surface_L1_vel + 8e-3 * surface_L1_pos)
+        sigma = surface_L2 + (np.array([1, 2.11e2, 1]) * surface_L1_vel + 8e-3 * surface_L1_pos)
     elif phaseID == 1:
         sigma = surface_L2 + (6 * surface_L1_vel + np.array([3e-3, 8e-3, 3e-3]) * surface_L1_pos)
     #            ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
