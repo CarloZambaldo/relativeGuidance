@@ -214,9 +214,9 @@ match phaseID:
             val['R_BAR'] = -1 +2 * np.random.rand(1, n_samples)  # from -1 to +1 km
             val['V_BAR'] = -4.5 + 3 * np.random.rand(1, n_samples)   # from -4.5 to -1.5 km
             val['H_BAR'] = -1 + 2 * np.random.rand(1, n_samples) # from -1 to +1 km
-            val['speed_R_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
-            val['speed_V_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
-            val['speed_H_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_R_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_V_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_H_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
             
             POP = []
             for index_R in range(len(val['R_BAR'][0])):
@@ -239,9 +239,9 @@ match phaseID:
             val['R_BAR'] = -1 + 2 * np.random.rand(1, n_ICs)  # from -1 to +1 km
             val['V_BAR'] = -4 + 2 * np.random.rand(1, n_ICs)  # from -4 to -2 km
             val['H_BAR'] = -1 + 2 * np.random.rand(1, n_ICs)  # from -1 to +1 km
-            val['speed_R_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
-            val['speed_V_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
-            val['speed_H_BAR'] = 0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_R_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_V_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_H_BAR'] = 0.0 # 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
             
             POP = np.array([
                 val['R_BAR'][0],
