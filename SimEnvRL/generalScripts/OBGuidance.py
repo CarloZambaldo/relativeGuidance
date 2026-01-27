@@ -33,10 +33,11 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
         sigma = surface_L2 + (np.array([1, 2.11e1, 1]) * surface_L1_vel + 8e-3 * surface_L1_pos)
     elif phaseID == 1:
         sigma = surface_L2 + (6 * surface_L1_vel + np.array([3e-3, 8e-3, 3e-3]) * surface_L1_pos)
-    #       ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
+    #            ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
     
     # Compute control action (using ASRE+APF+SMC)
-    controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
+    # original: controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
+    controlAction_L = closestOptimalControl - abs(sigma) * np.tanh(sigma)
 
     #print(f"CONTROL : {controlAction_L}")
     return controlAction_L, OBoptimalTrajectory
@@ -233,7 +234,7 @@ def computeA(t, targetState_M, param):
     # computation of angular momentum and derivatives
     hTM = np.cross(rTM, vTM)
     hTM_norm = np.linalg.norm(hTM)
-    hTM_dot = np.cross(rTM, aTM)
+    # hTM_dot = np.cross(rTM, aTM)
 
     # ANGULAR VELOCITY COMPUTATION
     omegaLM = np.array([
@@ -311,16 +312,16 @@ def compute_PHIT(t, PHIT, B, Q, R, M12, param):
     # but since the element in 1,2 is constant, i will pass it
     M = np.block([[A, M12], [-Q, -A]])
 
-    DP = M @ PHI
-    DP = DP.flatten()
-
-    return np.concatenate([DP, dST]).flatten() # TODO check if .flatten() is correct
+    DP = (M @ PHI).ravel()
+    out = np.empty(DP.size + dST.size, dtype=DP.dtype)
+    out[:DP.size] = DP
+    out[DP.size:] = dST
+    return out
 
 ## APF ##################################################################################
 def APF(relativeState_L, constraintType, param):
     # coefficients definition
     adi2meters = param.xc * 1e3
-    Umax = param.maxAdimThrust
 
     # extraction of relative state and conversion to meters and meters per second
     rho = np.array(relativeState_L[:3]) * adi2meters
@@ -378,7 +379,6 @@ def APF(relativeState_L, constraintType, param):
     # sliding surface definition and control action computation
     sigma = NablaU_APF
     #controlAction = -Umax * np.tanh(sigma)
-
     return sigma #controlAction, 
 
 
