@@ -7,8 +7,8 @@ HOST_WORKDIR="main/relativeGuidance"   # adjust if needed
 SEED="${SEED:-1753110}"
 N_SIM="${N_SIM:-100}"
 
-P_VALUES=(2)              # phase values to simulate
-MODELS=("Agent_P2-v11.5-multi-SEMIDEF")  # models to use (index p-1)
+P_VALUES=(1 2)              # phase values to simulate
+MODELS=("_NO_AGENT_" "_NO_AGENT_")  # models to use (index p-1)
 PHASES=("aposelene" "leaving_aposelene" "approaching_aposelene" "periselene")
 
 LOG_DIR="tmux_logs"
