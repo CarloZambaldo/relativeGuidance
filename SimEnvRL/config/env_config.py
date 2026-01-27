@@ -70,7 +70,7 @@ class physParamClass:
                                     {
                                         "constraintType" : 'CONE',
                                         "aimAtState" : self.dockingState,
-                                        "characteristicSize" : {'acone': 0.02, 'bcone': 10}
+                                        "characteristicSize" : {'acone': 0.08, 'bcone': 5}
                                     }
                 )
             case _:
