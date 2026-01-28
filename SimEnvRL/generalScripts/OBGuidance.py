@@ -352,8 +352,9 @@ def APF(relativeState_L, constraintType, param):
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
             # coefficients definition
-            K_C_inside  = np.array([5e-3, 1e-1, 5e-3]) + \
-                          np.array([3e2, 5e-1, 3e2]) * (abs(rho[1])**3/(1e9))#
+            K_C_inside  = np.array([5e-1, 3e-1, 5e-1])
+            ## K_C_inside  = np.array([5e-3, 1e-1, 5e-3]) + \
+            ##               np.array([3e2, 5e-1, 3e2]) * (abs(rho[1])**3/(1e9))#
                             # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([10, 0, 10])
 
