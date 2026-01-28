@@ -123,7 +123,7 @@ class initialValueClass():
             case 2: # DOCKING #########################################
                 # defining the random initial relative state (IN LVLH!)
                 rand_position_L = np.array([(-1+2*np.random.rand()),              # R-BAR # position range along R-BAR [-1,+1] km
-                                            (-5+3.3*np.random.rand()),              # V-BAR # position range along V-BAR [-5,-1.7] km
+                                            (-4+3.3*np.random.rand()),              # V-BAR # position range along V-BAR [-4,-0.7] km
                                             (-1+2*np.random.rand())]) / param.xc  # H-BAR # position range along H-BAR [-1,+1] km
                 # rand_velocity_L = (-2+2*np.random.rand(3)) * 1e-3 / param.xc * param.tc    # velocity range
                 rand_velocity_L = 0.01 * np.random.rand(3) * 1e-3 / param.xc * param.tc  # velocity VERY SMALL
