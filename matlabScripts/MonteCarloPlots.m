@@ -89,9 +89,9 @@ function [] = MonteCarloPlots(data,eachplotbool)
                 plot(time * param.tc / 60, control(:,3) * 1e3 * param.xc / param.tc^2, 'LineWidth', 1.1);
                 % Subplot 2: Controlled Relative Dynamics
                 subplot(3,1,2)
-                plot(time * param.tc / 60, relDynami(:,1), 'LineWidth', 1); hold on
-                plot(time * param.tc / 60, relDynami(:,2), 'LineWidth', 1);
-                plot(time * param.tc / 60, relDynami(:,3), 'LineWidth', 1);
+                plot(time * param.tc / 60, relDynami(:,1) * 1e3, 'LineWidth', 1); hold on
+                plot(time * param.tc / 60, relDynami(:,2) * 1e3, 'LineWidth', 1);
+                plot(time * param.tc / 60, relDynami(:,3) * 1e3, 'LineWidth', 1);
                 % Subplot 3: Controlled Relative Velocity
                 subplot(3,1,3)
                 plot(time * param.tc / 60, relDynami(:,4).*1e3, 'LineWidth', 1); hold on
@@ -145,7 +145,7 @@ function [] = MonteCarloPlots(data,eachplotbool)
             title("Controlled Relative Dynamics [LVLH]");
             legend("R-BAR", "V-BAR", "H-BAR", 'Location', 'best');
             xlabel("Time [min]");
-            ylabel("Position [km]");
+            ylabel("Position [m]");
             
             % Subplot 3: Controlled Relative Velocity
             subplot(3,1,3)

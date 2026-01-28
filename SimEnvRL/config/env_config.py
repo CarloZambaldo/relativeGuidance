@@ -125,8 +125,8 @@ class initialValueClass():
                 rand_position_L = np.array([(-1+2*np.random.rand()),              # R-BAR # position range along R-BAR [-1,+1] km
                                             (-5+3.3*np.random.rand()),              # V-BAR # position range along V-BAR [-5,-1.7] km
                                             (-1+2*np.random.rand())]) / param.xc  # H-BAR # position range along H-BAR [-1,+1] km
-                rand_velocity_L = (-2+2*np.random.rand(3)) * 1e-3 / param.xc * param.tc    # velocity range
-                
+                # rand_velocity_L = (-2+2*np.random.rand(3)) * 1e-3 / param.xc * param.tc    # velocity range
+                rand_velocity_L = 0.01 * np.random.rand(3) * 1e-3 / param.xc * param.tc  # velocity VERY SMALL
                 DeltaIC_S = convert_LVLH_to_S(targetState_S,np.hstack([rand_position_L, rand_velocity_L]),param)
 
             case _:
@@ -147,7 +147,7 @@ class initialValueClass():
 
         return self
     
-    def imporse_initialValues(self,param,values):
+    def impose_initialValues(self,param,values):
         # Check if either 'targetState_S' or 'relativeState_L' is None or not a numpy array
         if values["targetState_S"] is None \
            or values["relativeState_L"] is None \
@@ -228,7 +228,7 @@ def getInitialValues(param,seed=None,values=None):
             "targetState_S": None if "targetState_S" not in values or values["targetState_S"] is None or not isinstance(values["targetState_S"], np.ndarray) else values["targetState_S"],
             "relativeState_L": None if "relativeState_L" not in values or values["relativeState_L"] is None or not isinstance(values["relativeState_L"], np.ndarray) else values["relativeState_L"]
         }
-        initialValue = initialValue.imporse_initialValues(param,values)
+        initialValue = initialValue.impose_initialValues(param,values)
         typeOfInitialConditions = "USER_DEFINED"
 
     else: # otherwise use defaults
