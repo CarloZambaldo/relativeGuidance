@@ -12,7 +12,7 @@ simulations = ls(percorso)
 %%
 
 addpath(genpath("MATLAB"))
-load("MC_P2_aposelene__Agent_P2-v11.5-multi-SEMIDEF_2026_01_28_at_10_10.mat")
+load("MC_P2_aposelene__Agent_P2-v11.5-multi-SEMIDEF_2025_12_18_at_11_47.mat")
 % MonteCarloPlots(extractSimulationData(data,[26]),2)
 MonteCarloPlots(data,2)
 % MonteCarloInfo(data);
