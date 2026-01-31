@@ -22,12 +22,15 @@ parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Mon
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
 parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
 parser.add_argument("-y", "--skip-acknowledge", action="store_true", help="Skip acknowledge prompts (auto-continue)")
+parser.add_argument("-e", "--navigation-noise-percent", type=float, default=0, help="Percentage of navigation noise to be applied (e.g., 0.03 for 3%)")
+
 # Parse arguments
 argspar = parser.parse_args()
 
 phaseID = argspar.phase
 n_samples = argspar.n_samples
 agentName = argspar.model
+navigation_noise_percent = argspar.navigation_noise_percent
 pos_mode = argspar.position_mode
 seed = argspar.seed
 skip_ack = bool(argspar.skip_acknowledge)
@@ -53,6 +56,7 @@ print(f"position mode: {pos_mode}")
 print(f"number of samples: {n_samples}")
 print(f"Using seed: {seed}")
 print(f"Rendering: {renderingBool}")
+print(f"Navigation noise percent: {navigation_noise_percent*100} %")
 if skip_ack:
     print("Skipping acknowledgement prompt (-y).")
 else:
@@ -93,7 +97,7 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool}))
+env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"navigation_noise_percent":navigation_noise_percent,"renderingBool":renderingBool}))
 env = DummyVecEnv([lambda:env])
 
 if seed is not None:
@@ -214,9 +218,9 @@ match phaseID:
             val['R_BAR'] = -1 +2 * np.random.rand(1, n_samples)  # from -1 to +1 km
             val['V_BAR'] = -4.5 + 3 * np.random.rand(1, n_samples)   # from -4.5 to -1.5 km
             val['H_BAR'] = -1 + 2 * np.random.rand(1, n_samples) # from -1 to +1 km
-            val['speed_R_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
-            val['speed_V_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
-            val['speed_H_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_R_BAR'] =  1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_V_BAR'] =  1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
+            val['speed_H_BAR'] =  1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_samples_speed)) # rand out in m/s, result in km/s
             
             POP = []
             for index_R in range(len(val['R_BAR'][0])):
@@ -239,9 +243,9 @@ match phaseID:
             val['R_BAR'] = -1 + 2 * np.random.rand(1, n_ICs)  # from -1 to +1 km
             val['V_BAR'] = -4 + 2 * np.random.rand(1, n_ICs)  # from -4 to -2 km
             val['H_BAR'] = -1 + 2 * np.random.rand(1, n_ICs)  # from -1 to +1 km
-            val['speed_R_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
-            val['speed_V_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
-            val['speed_H_BAR'] = 1e-3 * (-2 + 4 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_R_BAR'] = 1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_V_BAR'] = 1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
+            val['speed_H_BAR'] = 1e-3 * (-0.01 + 0.02 * np.random.rand(1, n_ICs)) # rand out in m/s, result in km/s
             
             POP = np.array([
                 val['R_BAR'][0],
@@ -268,18 +272,9 @@ match phaseID:
             val['H_BAR'] = r * np.cos(theta)  # H component
 
             # Generate random speeds
-            val['speed_R_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed R component in km/s
-            val['speed_V_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed V component in km/s
-            val['speed_H_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, n_ICs))  # Speed H component in km/s
-
-            # DEBUG: if seed == 0:
-            # DEBUG:     val['R_BAR'] = np.array([0.5])  # R component
-            # DEBUG:     val['V_BAR'] = np.array([6  ]) # V component
-            # DEBUG:     val['H_BAR'] = np.array([0.1])   # H component
-            # DEBUG:     # Generate random speeds
-            # DEBUG:     val['speed_R_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, 1))  # Speed R component in km/s
-            # DEBUG:     val['speed_V_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, 1))  # Speed V component in km/s
-            # DEBUG:     val['speed_H_BAR'] = 1e-3 * (-5 + 10 * np.random.rand(1, 1))  # Speed H component in km/s
+            val['speed_R_BAR'] = 1e-3 * (-1 + 2 * np.random.rand(1, n_ICs))  # Speed R component in km/s
+            val['speed_V_BAR'] = 1e-3 * (-1 + 2 * np.random.rand(1, n_ICs))  # Speed V component in km/s
+            val['speed_H_BAR'] = 1e-3 * (-1 + 2 * np.random.rand(1, n_ICs))  # Speed H component in km/s
 
             # Stack the population matrix
             POP = np.array([
