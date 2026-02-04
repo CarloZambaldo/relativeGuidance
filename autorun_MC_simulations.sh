@@ -1,160 +1,142 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Usage:
+#   ./run_mc_tmux.sh -p <phaseID> -q <noisePercentage> -m <agentModel>
+#
+# Examples:
+#   ./run_mc_tmux.sh -p 2 -q 5 -m _NO_AGENT_
+#   ./run_mc_tmux.sh -p 1 -q 0 -m Agent_P2-v11.5-multi-SEMIDEF
+
+# ---- Config ----
+IMAGE="${IMAGE:-paiton:v01}"
+HOST_WORKDIR="main/relativeGuidance"   # adjust if needed
+SEED="${SEED:-1753110}"
+N_SIM="${N_SIM:-100}"
+
+LOG_DIR="tmux_logs"
+mkdir -p "$LOG_DIR"
+
 usage() {
-	cat <<'EOF'
+  cat >&2 <<'EOF'
 Usage:
-  ./run_mc_tmux.sh -m MODEL -P PHASEIDS [-x "region1 region2 ..."] [options]
+  run_mc_tmux.sh -p <phaseID> -q <noisePercentage> -m <agentModel> [-s <seed>] [-n <nSim>]
 
 Required:
-  -m, --model MODEL          Agent name (string). Example: Agent_P2-v11.5-multi-SEMIDEF
-  -P, --phaseids IDS         PhaseID codes as comma/space separated list.
-                             Examples: -P 123,34    OR   -P "123 34"
+  -p    phaseID (integer)
+  -q    noisePercentage (numeric, e.g. 0, 5, 2.5)
+  -m    agentModel (string)
 
 Optional:
-  -x, --regions LIST         Regions to simulate (space-separated string).
-                             Default: "aposelene leaving_aposelene approaching_aposelene periselene"
-  -s, --seed SEED            Seed (default: 1753110)
-  -n, --n-sim N              Number of simulations (default: 100)
-  -i, --image IMAGE          Podman image (default: paiton:v01)
-  -w, --workdir PATH         Host workdir to cd into before running (default: main/relativeGuidance)
-  -l, --log-dir DIR          Log directory (default: tmux_logs)
-  --dry-run                  Print commands, do not start tmux sessions
-  -h, --help                 Show this help
+  -s    seed (default: from $SEED env or script default)
+  -n    number of simulations (default: from $N_SIM env or script default)
 
-Notes:
-  - Each PhaseID code (e.g. 123, 34) is treated as an independent simulation batch.
-  - Session name includes PhaseID + region + model.
+Environment overrides:
+  IMAGE, HOST_WORKDIR, SEED, N_SIM
+
 EOF
 }
 
-# Defaults (can be overridden by env or flags)
-IMAGE="${IMAGE:-paiton:v01}"
-HOST_WORKDIR="${HOST_WORKDIR:-main/relativeGuidance}"
-SEED="${SEED:-1753110}"
-N_SIM="${N_SIM:-100}"
-REGIONS_DEFAULT=("aposelene" "leaving_aposelene" "approaching_aposelene" "periselene")
-LOG_DIR="${LOG_DIR:-tmux_logs}"
+# ---- Parse flags ----
+PHASE_ID=""
+NOISE_PERC=""
+AGENT_MODEL=""
 
-MODEL=""
-PHASEIDS_RAW=""
-REGIONS_RAW=""
-DRY_RUN=0
-
-# ---- Parse args ----
-while [[ $# -gt 0 ]]; do
-	case "$1" in
-		-m|--model)
-			MODEL="${2:-}"; shift 2;;
-		-P|--phaseids)
-			PHASEIDS_RAW="${2:-}"; shift 2;;
-		-x|--regions)
-			REGIONS_RAW="${2:-}"; shift 2;;
-		-s|--seed)
-			SEED="${2:-}"; shift 2;;
-		-n|--n-sim)
-			N_SIM="${2:-}"; shift 2;;
-		-i|--image)
-			IMAGE="${2:-}"; shift 2;;
-		-w|--workdir)
-			HOST_WORKDIR="${2:-}"; shift 2;;
-		-l|--log-dir)
-			LOG_DIR="${2:-}"; shift 2;;
-		--dry-run)
-			DRY_RUN=1; shift;;
-		-h|--help)
-			usage; exit 0;;
-		*)
-			echo "Unknown option: $1" >&2
-			usage
-			exit 2;;
-	esac
+while getopts ":p:q:m:s:n:h" opt; do
+  case "$opt" in
+    p) PHASE_ID="$OPTARG" ;;
+    q) NOISE_PERC="$OPTARG" ;;
+    m) AGENT_MODEL="$OPTARG" ;;
+    s) SEED="$OPTARG" ;;
+    n) N_SIM="$OPTARG" ;;
+    h) usage; exit 0 ;;
+    :)
+      echo "Error: -$OPTARG requires an argument." >&2
+      usage
+      exit 2
+      ;;
+    \?)
+      echo "Error: unknown option: -$OPTARG" >&2
+      usage
+      exit 2
+      ;;
+  esac
 done
+shift $((OPTIND - 1))
 
-# ---- Validate ----
-if [[ -z "$MODEL" ]]; then
-	echo "ERROR: missing required --model" >&2
-	usage; exit 2
+# ---- Validate required flags ----
+if [[ -z "$PHASE_ID" || -z "$NOISE_PERC" || -z "$AGENT_MODEL" ]]; then
+  echo "Error: missing required flags." >&2
+  usage
+  exit 2
 fi
 
-if [[ -z "$PHASEIDS_RAW" ]]; then
-	echo "ERROR: missing required --phaseids" >&2
-	usage; exit 2
+if ! [[ "$PHASE_ID" =~ ^[0-9]+$ ]]; then
+  echo "Error: -p phaseID must be an integer. Got: '$PHASE_ID'" >&2
+  exit 2
+fi
+if ! [[ "$NOISE_PERC" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "Error: -q noisePercentage must be numeric (e.g., 0, 5, 2.5). Got: '$NOISE_PERC'" >&2
+  exit 2
+fi
+if ! [[ "$N_SIM" =~ ^[0-9]+$ ]]; then
+  echo "Error: -n N_SIM must be an integer. Got: '$N_SIM'" >&2
+  exit 2
 fi
 
-
-mkdir -p "$LOG_DIR"
-
-# Preflight: ensure the image is resolvable/present
+# ---- Preflight ----
 if ! podman image exists "$IMAGE"; then
-	echo "Podman image '$IMAGE' not found or unqualified short name not resolvable." >&2
-	echo "Use a fully-qualified name (e.g., 'localhost/paiton:v01' or 'docker.io/...') or pull the image first." >&2
-	exit 1
+  echo "Podman image '$IMAGE' not found or unqualified short name not resolvable." >&2
+  echo "Use a fully-qualified name (e.g., 'localhost/paiton:v01' or 'docker.io/...') or pull the image first." >&2
+  exit 1
 fi
 
-# ---- Parse phaseIDs: allow "123,34" or "123 34" ----
-# convert commas to spaces, squeeze spaces
-PHASEIDS_RAW="${PHASEIDS_RAW//,/ }"
-read -r -a PHASEIDS <<<"$PHASEIDS_RAW"
-
-# ---- Parse regions ----
-if [[ -n "$REGIONS_RAW" ]]; then
-	read -r -a REGIONS <<<"$REGIONS_RAW"
-else
-	REGIONS=("${REGIONS_DEFAULT[@]}")
+if [[ ! -d "$HOST_WORKDIR" ]]; then
+  echo "Warning: HOST_WORKDIR '$HOST_WORKDIR' not found from current dir: $(pwd)" >&2
+  echo "         Continuing anyway (adjust HOST_WORKDIR if needed)." >&2
 fi
 
-# ---- Run ----
-for phaseid in "${PHASEIDS[@]}"; do
-	# quick sanity: ensure only digits (adjust if your IDs can be alphanumeric)
-	if [[ ! "$phaseid" =~ ^[0-9]+$ ]]; then
-		echo "ERROR: phaseid '$phaseid' is not numeric. If you need alphanumerics, relax the regex." >&2
-		exit 2
-	fi
+# ---- Build names ----
+AGENT_SAFE="$(echo "$AGENT_MODEL" | tr -c '[:alnum:]._+-' '_' )"
+NOISE_SAFE="$(echo "$NOISE_PERC" | tr '.' 'p')"
 
-	for region in "${REGIONS[@]}"; do
-		# session name: keep it tmux-friendly
-		safe_model="${MODEL// /_}"
-		session="MC_ID${phaseid}_${region}_${safe_model}"
-		log="$LOG_DIR/${session}.log"
+SESSION="MC_P${PHASE_ID}_N${NOISE_SAFE}_${AGENT_SAFE}"
+LOG="$LOG_DIR/${SESSION}.log"
 
-		echo "Starting session $session (phaseID=$phaseid, model=$MODEL, region=$region)..."
+echo "Starting session $SESSION (phaseID=$PHASE_ID, noise=$NOISE_PERC, model=$AGENT_MODEL, seed=$SEED, nSim=$N_SIM)..."
+echo "Log: $LOG"
 
-		if tmux has-session -t "$session" 2>/dev/null; then
-			echo "Session $session already exists. Killing it to start a new one."
-			if [[ $DRY_RUN -eq 0 ]]; then
-				tmux kill-session -t "$session"
-			fi
-		fi
+# Kill existing session with same name to allow reruns
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  echo "Session $SESSION already exists. Killing it to start a new one."
+  tmux kill-session -t "$SESSION"
+fi
 
-		cmd=$(
-			cat <<EOF
-set -euo pipefail
-podman run --rm -it --entrypoint "" -v "$(pwd)":/code -w /code "$IMAGE" \\
-	python3 MonteCarlo_eval.py -p "$phaseid" -m "$MODEL" -s "$SEED" -n "$N_SIM" -r False -x "$region" -y \\
-	|& tee "$log"
-status=\${PIPESTATUS[0]}
-echo "exit code: \$status" | tee -a "$log"
-exit "\$status"
-EOF
-		)
+# ---- Start tmux session ----
+tmux new-session -d -s "$SESSION" bash -lc "
+  set -euo pipefail
 
-		if [[ $DRY_RUN -eq 1 ]]; then
-			echo "DRY RUN: tmux new-session -d -s \"$session\" bash -lc '...'"
-			echo "--------- command ---------"
-			echo "$cmd"
-			echo "---------------------------"
-			continue
-		fi
+  # run from your project folder (host), mounted into /code
+  cd \"$HOST_WORKDIR\" 2>/dev/null || true
 
-		if tmux new-session -d -s "$session" bash -lc "$cmd"; then
-			echo "Session started (log: $log)"
-		else
-			echo "Failed to start session $session" >&2
-			continue
-		fi
-	done
-done
+  podman run --rm -it --entrypoint \"\" \
+    -v \"$(pwd | sed 's:/*$::')\":/code \
+    -w /code \
+    \"$IMAGE\" \
+    python3 MonteCarlo_eval.py \
+      -p \"$PHASE_ID\" \
+      -q \"$NOISE_PERC\" \
+      -m \"$AGENT_MODEL\" \
+      -s \"$SEED\" \
+      -n \"$N_SIM\" \
+    |& tee \"$LOG\"
 
-echo "Sessions started. Attach with: tmux attach -t SESSION_NAME"
-echo "Logs under: $LOG_DIR/*.log"
+  status=\${PIPESTATUS[0]}
+  echo \"exit code: \$status\" | tee -a \"$LOG\"
+  exit \"\$status\"
+"
+
+echo "Session started. Attach with:"
+echo "  tmux attach -t \"$SESSION\""
+echo "Tail log with:"
+echo "  tail -f \"$LOG\""
