@@ -82,15 +82,6 @@ if [[ -z "$PHASEIDS_RAW" ]]; then
 	usage; exit 2
 fi
 
-# cd into workdir if it exists
-if [[ -n "$HOST_WORKDIR" ]]; then
-	if [[ -d "$HOST_WORKDIR" ]]; then
-		cd "$HOST_WORKDIR"
-	else
-		echo "ERROR: workdir not found: $HOST_WORKDIR" >&2
-		exit 2
-	fi
-fi
 
 mkdir -p "$LOG_DIR"
 
