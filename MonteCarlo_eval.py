@@ -301,7 +301,7 @@ print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_popu
 start_time = time.time()
 
 # RUN THE SIMULATIONS ##################################################################################################
-fileNameSave = f"MC_P{phaseID}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
+fileNameSave = f"MC_P{phaseID}_N{navigation_noise_percent}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
 if not os.path.exists("./Simulations/"):
     os.makedirs("./Simulations/")
