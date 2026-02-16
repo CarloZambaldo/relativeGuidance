@@ -4,6 +4,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import torch
 import argparse
+import shutil
+from pathlib import Path
 
 # recall the starting configuration
 #  cd main/relativeGuidance
@@ -364,10 +366,16 @@ for trgt_id in range(n_targets_pos): # for each target position
 
         # saving at each time step not to lose any of the simulation (in case of crash)
         print("SAVING THE SIMULATION: ",end='')
-        # Save the Monte Carlo data to a .mat file
-        
-        scipy.io.savemat(f"./Simulations/{fileNameSave}", {"data": data})
+
+        # Save the Monte Carlo data to a .mat file in the scratch folder
+        scipy.io.savemat(f"/scratch/czambaldo/data/{fileNameSave}", {"data": data})
         print("DONE.\n")
+
+
+# move the simulation to the home
+src = Path("/scratch/czambaldo/data/{fileNameSave}")
+dst_folder = Path("/home/czambaldo/main/relativeGuidance/Simulations/{fileNameSave}")
+shutil.move(src, dst_folder)
 
 print(f"\n >>> ALL SIMULATION DATA IS SAVED IN './Simulations/{fileNameSave}' <<<\n")
 
