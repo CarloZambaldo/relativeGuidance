@@ -24,7 +24,7 @@ parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Mon
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
 parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
 parser.add_argument("-y", "--skip-acknowledge", action="store_true", help="Skip acknowledge prompts (auto-continue)")
-parser.add_argument("-e", "--navigation-noise-percent", type=float, default=0, help="Percentage of navigation noise to be applied (e.g., 0.03 for 3%)")
+parser.add_argument("-e", "--navigation-noise-percent", type=float, default=0.0, help="Percentage of navigation noise to be applied (e.g., 0.03 for 3%)")
 
 # Parse arguments
 argspar = parser.parse_args()
@@ -58,7 +58,7 @@ print(f"position mode: {pos_mode}")
 print(f"number of samples: {n_samples}")
 print(f"Using seed: {seed}")
 print(f"Rendering: {renderingBool}")
-print(f"Navigation noise percent: {navigation_noise_percent*100} %")
+print(f"Navigation noise percent: {float(navigation_noise_percent)*100} %")
 if skip_ack:
     print("Skipping acknowledgement prompt (-y).")
 else:
