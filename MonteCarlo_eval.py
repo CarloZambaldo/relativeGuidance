@@ -154,6 +154,7 @@ data : dict = {
             "chaserThrust": env.envs[0].unwrapped.param.maxAdimThrust,
             "chaserMass": env.envs[0].unwrapped.param.chaser["mass"],
             "chaserSpecificImpulse": env.envs[0].unwrapped.param.specificImpulse,
+            "noisePercent": env.envs[0].unwrapped.param.navigation_noise_percent,
             },
         "timeHistory" : np.arange(env.envs[0].unwrapped.param.tspan[0], env.envs[0].unwrapped.param.tspan[1] + (1/env.envs[0].unwrapped.param.freqGNC), 1/env.envs[0].unwrapped.param.freqGNC),
         "targetTrajectory_S" : None,
