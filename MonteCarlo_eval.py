@@ -372,7 +372,7 @@ for trgt_id in range(n_targets_pos): # for each target position
         print("SAVING THE SIMULATION: ",end='')
 
         # Save the Monte Carlo data to a .mat file in the scratch folder
-        scipy.io.savemat(f"/scratch/czambaldo/data/{fileNameSave}", {"data": data})
+        scipy.io.savemat(f"/data/{fileNameSave}", {"data": data})
         print("DONE.\n")
 
 
