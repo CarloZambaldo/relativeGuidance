@@ -113,7 +113,8 @@ for region in "${PHASES[@]}"; do
 	if tmux new-session -d -s "$session" bash -lc "
 		set -euo pipefail
 		podman run --rm -it --entrypoint \"\" \
-			-v \"\$(pwd)\":/code -w /code \"$IMAGE\" \
+			-v /home/czambaldo/main/relativeGuidance/:/code -w /code \"$IMAGE\" \
+			-v /scratch/czambaldo/data:/data \
 			python3 MonteCarlo_eval.py \
 				-p \"$PHASE_ID\" \
 				-m \"$AGENT_MODEL\" \

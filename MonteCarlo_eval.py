@@ -309,8 +309,8 @@ fileNameSave = f"MC_P{phaseID}_N{navigation_noise_percent}_{pos_mode}__{agentNam
 if not os.path.exists("./Simulations/"):
     os.makedirs("./Simulations/")
 
-if not os.path.exists("/scratch/czambaldo/data/"):
-    os.makedirs("/scratch/czambaldo/data/")
+if not os.path.exists("/data/"):
+    os.makedirs("/data/")
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
@@ -376,10 +376,12 @@ for trgt_id in range(n_targets_pos): # for each target position
         print("DONE.\n")
 
 
-# move the simulation to the home
-src = Path(f"/scratch/czambaldo/data/{fileNameSave}")
-dst_folder = Path(f"/home/czambaldo/main/relativeGuidance/Simulations/{fileNameSave}")
-shutil.move(src, dst_folder)
+# move the simulation to the home - NOTE: these are container paths
+src = Path(f"/data/{fileNameSave}")
+dst_folder = Path("/code/main/relativeGuidance/Simulations")
+dst_folder.mkdir(parents=True, exist_ok=True)
+dst = dst_folder / fileNameSave
+shutil.move(src, dst)
 
 print(f"\n >>> ALL SIMULATION DATA IS SAVED IN './Simulations/{fileNameSave}' <<<\n")
 
