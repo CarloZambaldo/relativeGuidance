@@ -48,6 +48,8 @@ class SimEnv(gym.Env):
         self.OBoTUsageHistory : np.ndarray = None               # whether the OBoptimalTrajectory was used (this can highlight possible failures in ASRE L1)
         self.CPUExecTimeHistory : np.ndarray = None             # execution time required for the CPU to run the guidance
 
+        self.OBNavNoiseHistory : np.ndarray = None              # noise history on the OB navigation (relative state in LVLH)
+
         # create the environment simulation parameters dataclass
         options = options or {}
 
@@ -108,7 +110,7 @@ class SimEnv(gym.Env):
                 # self.AgentActionHistory[self.timeIndex] = AgentAction
 
                 ## FIXME IF ANY PROBLEM OCCURS HERE ##
-                # HARDCODED SAFETY MODE ACTIVATION #
+                # HARDCODED SAFE MODE ACTIVATION #
                 # new version 2026/01/07 - AgentAction is set to SAFE MODE when < 100 m from the target
                 # if np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
                 #    AgentAction = 2 # DELETE
@@ -159,7 +161,7 @@ class SimEnv(gym.Env):
                 self.timeIndex += 1
                 self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
                 self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
-                self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+                self.OBStateTarget_M, _, self.OBStateRelative_L, self.OBNavNoiseHistory = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory, self.param)
                 AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
                 
                 # compute the TRUE relative state in synodic and LVLH
@@ -287,7 +289,7 @@ class SimEnv(gym.Env):
         self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
         ## compute RL Agent Observation at time step 1
-        self.OBStateTarget_M, _, self.OBStateRelative_L = OBNavigation(self.targetState_S, self.chaserState_S, self.param)
+        self.OBStateTarget_M, _, self.OBStateRelative_L, self.OBNavNoiseHistory = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory, self.param)
 
         info = {"initialConditionsUsed": typeOfInitialConditions}
         return self.computeRLobservation(), info

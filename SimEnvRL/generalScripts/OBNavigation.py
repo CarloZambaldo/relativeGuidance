@@ -2,7 +2,7 @@ import numpy as np
 import time
 from .ReferenceFrames import convert_M_to_LVLH
 
-def OBNavigation(targetState_S, chaserState_S, param):
+def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
     """
     This function outputs the translation and rotation from Synodic to
     Moon-centered synodic and the relative state in LVLH
@@ -38,14 +38,23 @@ def OBNavigation(targetState_S, chaserState_S, param):
     
     ## generation of navigation errors
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
-    relativeState_L = inject_nav_error(relativeState_L, param)
+    relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param)
+
+    newNoiseSample = np.hstack([err_r, err_v])
+    if OBNavNoiseHistory is None:
+        OBNavNoiseHistory = newNoiseSample.reshape(1, 6)
+    else:
+        OBNavNoiseHistory = np.atleast_2d(OBNavNoiseHistory)
+        if OBNavNoiseHistory.shape[1] != 6:
+            OBNavNoiseHistory = OBNavNoiseHistory.reshape(-1, 6)
+        OBNavNoiseHistory = np.vstack([OBNavNoiseHistory, newNoiseSample.reshape(1, 6)])
 
     # Computing target state with disturbances (in LVLH frame)
     targetState_M = chaserState_M  - relativeState_L
     
     ### ############################################### END DISTURBANCES HERE #
 
-    return targetState_M, chaserState_M, relativeState_L
+    return targetState_M, chaserState_M, relativeState_L, OBNavNoiseHistory
 
 
 def inject_nav_error(state, param):
@@ -91,4 +100,4 @@ def inject_nav_error(state, param):
     # print(f"err_r: {err_r}, r: {r*param.xc}")
     # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")
 
-    return np.hstack([r + err_r, v + err_v])
+    return np.hstack([r + err_r, v + err_v]), err_r, err_v
