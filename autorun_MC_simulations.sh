@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # Args:
 #   -p | --phase           phaseID (integer)
-#   -q | --noise           noisePercentage (number, e.g. 0, 5, 10, 12.5)
+#   -q | --noise           noisePercentage (number, e.g. 0, 0.005, 0.01, ...)
 #   -m | --model           agentModel (string)
 #
 # What it does:
