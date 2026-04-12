@@ -1,7 +1,5 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
-
 
 # -----------------------------------------------------------------------------
 # Usage:
@@ -23,12 +21,7 @@ set -euo pipefail
 # -------------------------
 # Config (edit if needed)
 # -------------------------
-IMAGE="${IMAGE:-paiton:v01}"
-LOG_DIR="${LOG_DIR:-tmux_logs}"
-N_SIM="${N_SIM:-100}"
-SEED="${SEED:-1753110}"
 
-# Config
 IMAGE="${IMAGE:-paiton:v01}"
 HOST_WORKDIR="main/relativeGuidance"   # adjust if needed
 SEED="${SEED:-1753110}"
@@ -113,8 +106,8 @@ for region in "${PHASES[@]}"; do
 	if tmux new-session -d -s "$session" bash -lc "
 		set -euo pipefail
 		podman run --rm -it --entrypoint \"\" \
-			-v /home/czambaldo/main/relativeGuidance/:/code -w /code \"$IMAGE\" \
-			-v /scratch/czambaldo/data:/data \
+			-v /home/czambaldo/main/relativeGuidance/:/code \
+			-v /scratch/czambaldo/data:/data -w /code \"$IMAGE\"\
 			python3 MonteCarlo_eval.py \
 				-p \"$PHASE_ID\" \
 				-m \"$AGENT_MODEL\" \
