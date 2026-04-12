@@ -4,6 +4,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 from datetime import datetime
 import torch
 import argparse
+import shutil
+from pathlib import Path
 
 # recall the starting configuration
 #  cd main/relativeGuidance
@@ -22,12 +24,15 @@ parser.add_argument("-n","--n-samples", type=int, default=1, help="number of Mon
 parser.add_argument("-r", "--render", type=str, default="True", help="Rendering bool")
 parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
 parser.add_argument("-y", "--skip-acknowledge", action="store_true", help="Skip acknowledge prompts (auto-continue)")
+parser.add_argument("-e", "--navigation-noise-percent", type=float, default=0.0, help="Percentage of navigation noise to be applied (e.g., 0.03 for 3%)")
+
 # Parse arguments
 argspar = parser.parse_args()
 
 phaseID = argspar.phase
 n_samples = argspar.n_samples
 agentName = argspar.model
+navigation_noise_percent = argspar.navigation_noise_percent
 pos_mode = argspar.position_mode
 seed = argspar.seed
 skip_ack = bool(argspar.skip_acknowledge)
@@ -53,6 +58,7 @@ print(f"position mode: {pos_mode}")
 print(f"number of samples: {n_samples}")
 print(f"Using seed: {seed}")
 print(f"Rendering: {renderingBool}")
+print(f"Navigation noise percent: {float(navigation_noise_percent)*100} %")
 if skip_ack:
     print("Skipping acknowledgement prompt (-y).")
 else:
@@ -93,7 +99,7 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"renderingBool":renderingBool}))
+env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"navigation_noise_percent":navigation_noise_percent,"renderingBool":renderingBool}))
 env = DummyVecEnv([lambda:env])
 
 if seed is not None:
@@ -148,6 +154,7 @@ data : dict = {
             "chaserThrust": env.envs[0].unwrapped.param.maxAdimThrust,
             "chaserMass": env.envs[0].unwrapped.param.chaser["mass"],
             "chaserSpecificImpulse": env.envs[0].unwrapped.param.specificImpulse,
+            "noisePercent": env.envs[0].unwrapped.param.navigation_noise_percent,
             },
         "timeHistory" : np.arange(env.envs[0].unwrapped.param.tspan[0], env.envs[0].unwrapped.param.tspan[1] + (1/env.envs[0].unwrapped.param.freqGNC), 1/env.envs[0].unwrapped.param.freqGNC),
         "targetTrajectory_S" : None,
@@ -306,10 +313,13 @@ print(f"STARTING MONTE CARLO SIMULATION... ESTIMATED TIME: {phaseID*data["n_popu
 start_time = time.time()
 
 # RUN THE SIMULATIONS ##################################################################################################
-fileNameSave = f"MC_P{phaseID}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
+fileNameSave = f"MC_P{phaseID}_N{navigation_noise_percent}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
 if not os.path.exists("./Simulations/"):
     os.makedirs("./Simulations/")
+
+if not os.path.exists("/data/"):
+    os.makedirs("/data/")
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
@@ -369,10 +379,18 @@ for trgt_id in range(n_targets_pos): # for each target position
 
         # saving at each time step not to lose any of the simulation (in case of crash)
         print("SAVING THE SIMULATION: ",end='')
-        # Save the Monte Carlo data to a .mat file
-        
-        scipy.io.savemat(f"./Simulations/{fileNameSave}", {"data": data})
+
+        # Save the Monte Carlo data to a .mat file in the scratch folder
+        scipy.io.savemat(f"/data/{fileNameSave}", {"data": data})
         print("DONE.\n")
+
+
+# move the simulation to the home - NOTE: these are container paths
+src = Path(f"/data/{fileNameSave}")
+dst_folder = Path("/code/main/relativeGuidance/Simulations")
+dst_folder.mkdir(parents=True, exist_ok=True)
+dst = dst_folder / fileNameSave
+shutil.move(src, dst)
 
 print(f"\n >>> ALL SIMULATION DATA IS SAVED IN './Simulations/{fileNameSave}' <<<\n")
 

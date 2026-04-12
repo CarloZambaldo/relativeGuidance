@@ -71,7 +71,7 @@ def inject_nav_error(state, param):
 
     """
 
-    val = 3/100
+    val = param.navigation_noise_percent # e.g. 0.03 for 3%
     
     r = state[:3]
     v = state[3:]
