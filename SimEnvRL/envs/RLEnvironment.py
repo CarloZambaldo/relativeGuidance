@@ -272,7 +272,7 @@ class SimEnv(gym.Env):
         self.constraintViolationHistory = np.zeros((len(self.timeHistory),))
         self.OBoTUsageHistory = np.zeros((len(self.timeHistory),)).astype(bool)
         self.CPUExecTimeHistory = np.zeros((len(self.timeHistory),))
-        self.OBNavNoiseHistory = np.zeros((len(self.timeHistory),))
+        self.OBNavNoiseHistory = np.zeros((len(self.timeHistory),6))
 
         # extraction of the initial conditions
         self.targetState_S = self.initialValue.fullInitialState[0:6]
