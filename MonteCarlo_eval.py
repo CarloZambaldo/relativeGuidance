@@ -376,7 +376,7 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["fail"][sim_id + trgt_id] = 1 if env.envs[0].unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.envs[0].unwrapped.terminationCause == "_AIM_REACHED_" else 0
         data["CPUExecTimeHistory"][:, sim_id + trgt_id] = env.envs[0].unwrapped.CPUExecTimeHistory
-	data["OBNaviNoise"][:, sim_id + trgt_id] = env.envs[0].unwrapped.OBNavNoiseHistory
+        data["OBNaviNoise"][:, sim_id + trgt_id] = env.envs[0].unwrapped.OBNavNoiseHistory
         print(f" DONE.\n > Simulation Elapsed Time: {tstartcomptime/60:.2f} [min] ")
 
         # saving at each time step not to lose any of the simulation (in case of crash)
@@ -388,13 +388,19 @@ for trgt_id in range(n_targets_pos): # for each target position
 
 
 # move the simulation to the home - NOTE: these are container paths
-src = Path(f"/data/{fileNameSave}")
-dst_folder = Path("/code/main/relativeGuidance/Simulations")
-dst_folder.mkdir(parents=True, exist_ok=True)
-dst = dst_folder / fileNameSave
-shutil.move(src, dst)
+print("MOVING THE SIMULATION FILE FROM CONTAINER TO HOME FOLDER: ",end='')
+try:
+    src = Path(f"/data/{fileNameSave}")
+    dst_folder = Path("/code/main/relativeGuidance/Simulations")
+    dst_folder.mkdir(parents=True, exist_ok=True)
+    dst = dst_folder / fileNameSave
+    shutil.move(src, dst)
+    print("DONE.")
+    print(f"\n >>> ALL SIMULATION DATA IS SAVED IN '{dst}' <<<\n")
 
-print(f"\n >>> ALL SIMULATION DATA IS SAVED IN './Simulations/{fileNameSave}' <<<\n")
+except Exception as e:
+    print(f"ERROR: {e}. The file is saved in the container's /data/ folder.")
+
 
 
 
