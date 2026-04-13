@@ -392,7 +392,7 @@ for trgt_id in range(n_targets_pos): # for each target position
 print("MOVING THE SIMULATION FILE FROM CONTAINER TO HOME FOLDER: ",end='')
 try:
     src = Path(f"/data/{fileNameSave}")
-    dst_folder = Path("/code/main/relativeGuidance/Simulations")
+    dst_folder = Path("/code/Simulations")
     dst_folder.mkdir(parents=True, exist_ok=True)
     dst = dst_folder / fileNameSave
     shutil.move(src, dst)
