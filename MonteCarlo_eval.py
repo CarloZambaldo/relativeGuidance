@@ -163,6 +163,7 @@ data : dict = {
         "controlAction" : None,
         "constraintViolation" : None,
         "CPUExecTimeHistory" : None,
+        "OBNaviNoise" : None,
         "terminalState" : None,
         "terminalTimeIndex" : None,
         "fail" : None,
@@ -212,7 +213,7 @@ data["AgentAction"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]
 data["OBoTUsage"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["constraintViolation"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
 data["CPUExecTimeHistory"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
-data["OBNaviNoise"] = np.zeros((len(data["timeHistory"])-1, data["n_population"]))
+data["OBNaviNoise"] = np.zeros((len(data["timeHistory"])-1, 6, data["n_population"]))
 
 # GENERATE THE POPULATION (states) - DEPENDING ON THE PHASE ID
 match phaseID:
