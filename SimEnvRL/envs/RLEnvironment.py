@@ -162,7 +162,9 @@ class SimEnv(gym.Env):
                 self.timeIndex += 1
                 self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
                 self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
-                self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory, self.param)
+                    
+                # Get previous noise for correlated drift
+                self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory[self.timeIndex-1], self.param)
                 AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
                 
                 # compute the TRUE relative state in synodic and LVLH
@@ -292,7 +294,7 @@ class SimEnv(gym.Env):
         self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
         ## compute RL Agent Observation at time step 1
-        self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory, self.param)
+        self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, None, self.param)
         self.OBNavNoiseHistory[self.timeIndex, :] = newNoiseSample
 
         info = {"initialConditionsUsed": typeOfInitialConditions}
