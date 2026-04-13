@@ -29,6 +29,7 @@ class physParamClass:
     dockingState = np.array([0, 0, 0, 0, 0.05e-3*tc/xc, 0])  # Final relative state
     freqGNC : float = 2 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
+    navigation_noise_percent : float = None                  # [adimensional] percentage of noise in navigation
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
@@ -206,13 +207,13 @@ class initialValueClass():
 
 
 
-# defining the parameters for the environment
-def getParam(phaseID=None,tspan=None):
+## DEFINE PARAMETERS ##
+def getParam(phaseID=None,tspan=None,navigation_noise_percent=None):
     # define the environmental parameters (constant for the environment)
-    param = physParamClass(phaseID=phaseID,tspan=tspan)
-
+    param = physParamClass(phaseID=phaseID,tspan=tspan,navigation_noise_percent=navigation_noise_percent)
     return param
 
+## SETTING INITIAL VALUES ##
 def getInitialValues(param,seed=None,values=None):
     # define the dataclass (with no values)
     initialValue = initialValueClass()

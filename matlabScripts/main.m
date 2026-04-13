@@ -3,9 +3,11 @@ close all
 clc
 
 %%
-cd("C:\Users\carlo\OneDrive - Politecnico di Milano\UNIVERSITY\PROJECTS\TESI\1-CODE\simulationFull\matlabScripts\");
+% cd("C:\Users\carlo\OneDrive - Politecnico di Milano\UNIVERSITY\PROJECTS\TESI\1-CODE\simulationFull\matlabScripts\");
+cd("X:\university-projects");
+percorso = "/university-projects";
 fprintf("Available simulations:\n")
-percorso = "../Simulations/paper/";
+% percorso = "../Simulations/paper/";
 addpath(percorso)
 simulations = ls(percorso)
 

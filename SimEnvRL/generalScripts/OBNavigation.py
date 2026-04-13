@@ -38,7 +38,14 @@ def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
     
     ## generation of navigation errors
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
-    relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param)
+    
+    # Get previous noise for correlated drift
+    if OBNavNoiseHistory is not None and len(OBNavNoiseHistory) > 0:
+        previous_noise = OBNavNoiseHistory[-1]
+    else:
+        previous_noise = None
+    
+    relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param, previous_noise)
 
     newNoiseSample = np.hstack([err_r, err_v])
     if OBNavNoiseHistory is None:
@@ -57,9 +64,14 @@ def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
     return targetState_M, chaserState_M, relativeState_L, OBNavNoiseHistory
 
 
-def inject_nav_error(state, param):
+def inject_nav_error(state, param, previous_noise=None):
     """
     Insert noise in the state vector. Considering a gaussian noise of: 3% on the position and 3% (component-wise) on the velocity.
+    
+    Adds correlated drift noise that changes slowly over time:
+    - Initial noise is gaussian with std proportional to state magnitude
+    - Subsequent noise adds small random drift to previous noise values
+    - Drift std is a fraction of the base noise std (configurable via param.navigation_drift_std_percent)
 
     Adds a simple plateau to avoid unbounded growth of noise when far away:
     - cap position-based scaling using a max distance (default 10 km)
@@ -71,7 +83,8 @@ def inject_nav_error(state, param):
 
     """
 
-    val = 3/100
+    val = param.navigation_noise_percent # e.g. 0.03 for 3%
+    drift_std_fraction = getattr(param, 'navigation_drift_std_percent', 0.1)  # fraction of val for drift std
     
     r = state[:3]
     v = state[3:]
@@ -91,11 +104,27 @@ def inject_nav_error(state, param):
 
     # Position noise: std proportional to min(|r|, r_max_nd)
     r_scale = min(np.linalg.norm(r), r_max_nd)
-    err_r = np.random.normal(0.0, val * r_scale, size=3)
-
+    
     # Velocity noise: per-component std proportional to min(|v_i|, v_max_nd)
     v_scale = np.minimum(np.abs(v), v_max_nd)
-    err_v = np.random.normal(0.0, val * v_scale, size=3)
+    
+    if previous_noise is not None:
+        # Correlated drift: add small random change to previous noise
+        prev_err_r = previous_noise[:3]
+        prev_err_v = previous_noise[3:]
+        
+        drift_r_std = drift_std_fraction * val * r_scale
+        drift_v_std = drift_std_fraction * val * v_scale
+        
+        drift_r = np.random.normal(0.0, drift_r_std, size=3)
+        drift_v = np.random.normal(0.0, drift_v_std, size=3)
+        
+        err_r = prev_err_r + drift_r
+        err_v = prev_err_v + drift_v
+    else:
+        # Initial noise: gaussian
+        err_r = np.random.normal(0.0, val * r_scale, size=3)
+        err_v = np.random.normal(0.0, val * v_scale, size=3)
 
     # print(f"err_r: {err_r}, r: {r*param.xc}")
     # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")

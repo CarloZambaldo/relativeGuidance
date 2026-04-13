@@ -72,11 +72,12 @@ class SimEnv(gym.Env):
         if options:
             options = {
                 "phaseID": options.get("phaseID"),
-                "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None
+                "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None,
+                "navigation_noise_percent": options.get("navigation_noise_percent", None)
             }
         else:
             raise AttributeError("options are required to start the environment. Please check that 'phaseID' and 'tspan' are correctly defined.")
-        self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"])
+        self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"],navigation_noise_percent=options["navigation_noise_percent"])
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, 
