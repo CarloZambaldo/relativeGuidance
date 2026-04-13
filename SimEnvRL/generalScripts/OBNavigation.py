@@ -2,7 +2,7 @@ import numpy as np
 import time
 from .ReferenceFrames import convert_M_to_LVLH
 
-def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
+def OBNavigation(targetState_S, chaserState_S, previous_noise, param):
     """
     This function outputs the translation and rotation from Synodic to
     Moon-centered synodic and the relative state in LVLH
@@ -38,12 +38,6 @@ def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
     
     ## generation of navigation errors
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
-    
-    # Get previous noise for correlated drift
-    if OBNavNoiseHistory is not None and len(OBNavNoiseHistory) > 0:
-        previous_noise = OBNavNoiseHistory[-1]
-    else:
-        previous_noise = None
     
     relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param, previous_noise)
 
