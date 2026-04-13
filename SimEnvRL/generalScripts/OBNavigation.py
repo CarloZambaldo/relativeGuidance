@@ -48,20 +48,13 @@ def OBNavigation(targetState_S, chaserState_S, OBNavNoiseHistory, param):
     relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param, previous_noise)
 
     newNoiseSample = np.hstack([err_r, err_v])
-    if OBNavNoiseHistory is None:
-        OBNavNoiseHistory = newNoiseSample.reshape(1, 6)
-    else:
-        OBNavNoiseHistory = np.atleast_2d(OBNavNoiseHistory)
-        if OBNavNoiseHistory.shape[1] != 6:
-            OBNavNoiseHistory = OBNavNoiseHistory.reshape(-1, 6)
-        OBNavNoiseHistory = np.vstack([OBNavNoiseHistory, newNoiseSample.reshape(1, 6)])
 
     # Computing target state with disturbances (in LVLH frame)
     targetState_M = chaserState_M  - relativeState_L
     
     ### ############################################### END DISTURBANCES HERE #
 
-    return targetState_M, chaserState_M, relativeState_L, OBNavNoiseHistory
+    return targetState_M, chaserState_M, relativeState_L, newNoiseSample
 
 
 def inject_nav_error(state, param, previous_noise=None):
