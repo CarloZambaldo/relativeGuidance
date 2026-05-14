@@ -81,6 +81,8 @@ if phaseID == 1:
     tspan = np.array([0, 0.045]) # ca 4 hours
 elif phaseID == 2:
     tspan = np.array([0, 0.033]) # ca 3.3 hours # FIXME
+else:
+    raise ValueError("given phaseID not defined correctly")
 
 
 print("***************************************************************************")
