@@ -131,7 +131,11 @@ if usingAgentBool:
     # load the model according to the environment
     try:
         print("LOADING THE RL AGENT MODEL... ",end='')
-        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed)
+        # custom_objects: avoid executing the cloudpickled schedule functions saved at
+        # training time (they segfault when the Python version differs from the training
+        # container's); the overridden values only matter for training, not for evaluation
+        custom_objects = {"learning_rate": 3e-4, "clip_range": 0.2, "lr_schedule": lambda _: 3e-4}
+        model = PPO.load(f"{RLagent.model_dir}/{RLagent.modelNumber}", env=env, device="cpu", seed=seed, custom_objects=custom_objects)
         print("MODEL LOADED.")
     except Exception as e:
         print(f"ERROR: {e}.", end=' ')
