@@ -7,6 +7,10 @@ def OBNavigation(targetState_S, chaserState_S, previous_noise, param):
     This function outputs the translation and rotation from Synodic to
     Moon-centered synodic and the relative state in LVLH
 
+    Navigation errors are injected on the RELATIVE state only: the target
+    ephemeris is assumed to be known on board (see thesis, Sec. 5.1), hence
+    the returned targetState_M is the true one. The noisy relative state
+    models the output of the on-board relative navigation filter.
     """
 
     # Translating and rotating to Moon-centered Synodic [ex FranziRot]
@@ -29,91 +33,73 @@ def OBNavigation(targetState_S, chaserState_S, previous_noise, param):
     ])
 
     # Computing relative state in Moon-centered Synodic and rotating to LVLH
-    ## NO NOISE VERSION ##
-        # relativeState_M = chaserState_M - targetState_M
-        # relativeState_L, _ = convert_M_to_LVLH(targetState_M, relativeState_M, param)
+    relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param)
 
-
-    ################################## NOISE VERSION HERE #
-    
-    ## generation of navigation errors
-    relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param) # Only to compute the error ! this has to be updated after
-    
-    relativeState_L, err_r, err_v = inject_nav_error(relativeState_L, param, previous_noise)
-
-    newNoiseSample = np.hstack([err_r, err_v])
-
-    # Computing target state with disturbances (in LVLH frame)
-    targetState_M = chaserState_M  - relativeState_L
-    
-    ### ############################################### END DISTURBANCES HERE #
+    # generation of navigation errors (on the relative state only)
+    relativeState_L, newNoiseSample = inject_nav_error(relativeState_L, param, previous_noise)
 
     return targetState_M, chaserState_M, relativeState_L, newNoiseSample
 
 
 def inject_nav_error(state, param, previous_noise=None):
     """
-    Insert noise in the state vector. Considering a gaussian noise of: 3% on the position and 3% (component-wise) on the velocity.
-    
-    Adds correlated drift noise that changes slowly over time:
-    - Initial noise is gaussian with std proportional to state magnitude
-    - Subsequent noise adds small random drift to previous noise values
-    - Drift std is a fraction of the base noise std (configurable via param.navigation_drift_std_percent)
+    Insert noise in the relative state vector, modelling the estimation error
+    of the on-board relative navigation filter.
 
-    Adds a simple plateau to avoid unbounded growth of noise when far away:
-    - cap position-based scaling using a max distance (default 10 km)
-    - cap velocity-based scaling using a max speed per component (default 5 m/s)
+    The error on each channel is a first-order Gauss-Markov (exponentially
+    correlated) process with bounded stationary standard deviation:
 
-    Thresholds can be overridden via:
-    - param.nav_pos_plateau_m (meters)
-    - param.nav_vel_plateau_ms (m/s)
+        err[k+1] = phi * err[k] + sqrt(1 - phi^2) * w[k],   phi = exp(-dt/tau)
 
+    where w[k] ~ N(0, sigma^2). This keeps the error correlated in time
+    (correlation time tau) WITHOUT the unbounded variance growth of a pure
+    random walk, so the stationary std stays equal to sigma at every time.
+
+    Standard deviations (1-sigma), with val = param.navigation_noise_percent:
+    - position: sigma_r = val * min(||rho||, r_plateau)   (range-proportional,
+      as for optical/lidar relative navigation, capped at plateau)
+    - velocity: sigma_v = val * min(||v_rho||, v_plateau)
+
+    Tunable via param (all have safe defaults):
+    - param.navigation_noise_percent  e.g. 0.03 for 3% (None or 0 -> no noise)
+    - param.nav_noise_corr_time_s     correlation time tau [s]      (default 60)
+    - param.nav_pos_plateau_m         position scaling cap [m]      (default 10 km)
+    - param.nav_vel_plateau_ms        velocity scaling cap [m/s]    (default 5 m/s)
     """
 
-    val = param.navigation_noise_percent # e.g. 0.03 for 3%
-    drift_std_fraction = getattr(param, 'navigation_drift_std_percent', 0.1)  # fraction of val for drift std
-    
+    val = getattr(param, 'navigation_noise_percent', None)
+    if not val:  # None or 0.0 -> noiseless navigation (e.g. during training)
+        return state, np.zeros(6)
+
     r = state[:3]
     v = state[3:]
 
-    # Plateau thresholds (dimensional)
-    r_max_m = getattr(param, 'nav_pos_plateau_m', 10_000.0)  # 10 km
+    # Plateau thresholds (dimensional) converted to nondimensional units
+    r_max_m = getattr(param, 'nav_pos_plateau_m', 10_000.0)   # 10 km
     v_max_ms = getattr(param, 'nav_vel_plateau_ms', 5.0)      # 5 m/s
+    r_max_nd = r_max_m / (param.xc * 1e3)                     # xc is in km
+    v_max_nd = v_max_ms / (param.xc * 1e3 / param.tc)         # xc/tc is in km/s
 
-    # Convert thresholds to nondimensional units if scales are available
-    try:
-        r_max_nd = r_max_m / param.xc
-        v_max_nd = v_max_ms / (param.xc / param.tc)
-    except Exception:
-        # If scales are missing, fall back to no plateau
-        r_max_nd = np.inf
-        v_max_nd = np.inf
+    # stationary standard deviations (isotropic, based on the norms)
+    sigma_r = val * min(np.linalg.norm(r), r_max_nd)
+    sigma_v = val * min(np.linalg.norm(v), v_max_nd)
 
-    # Position noise: std proportional to min(|r|, r_max_nd)
-    r_scale = min(np.linalg.norm(r), r_max_nd)
-    
-    # Velocity noise: per-component std proportional to min(|v_i|, v_max_nd)
-    v_scale = np.minimum(np.abs(v), v_max_nd)
-    
+    # Gauss-Markov propagation coefficient
+    dt_s = param.tc / param.freqGNC                            # GNC step [s]
+    tau_s = getattr(param, 'nav_noise_corr_time_s', 60.0)      # correlation time [s]
+    phi = np.exp(-dt_s / tau_s)
+
+    w_r = np.random.normal(0.0, sigma_r, size=3)
+    w_v = np.random.normal(0.0, sigma_v, size=3)
+
     if previous_noise is not None:
-        # Correlated drift: add small random change to previous noise
-        prev_err_r = previous_noise[:3]
-        prev_err_v = previous_noise[3:]
-        
-        drift_r_std = drift_std_fraction * val * r_scale
-        drift_v_std = drift_std_fraction * val * v_scale
-        
-        drift_r = np.random.normal(0.0, drift_r_std, size=3)
-        drift_v = np.random.normal(0.0, drift_v_std, size=3)
-        
-        err_r = prev_err_r + drift_r
-        err_v = prev_err_v + drift_v
+        err_r = phi * previous_noise[:3] + np.sqrt(1 - phi**2) * w_r
+        err_v = phi * previous_noise[3:] + np.sqrt(1 - phi**2) * w_v
     else:
-        # Initial noise: gaussian
-        err_r = np.random.normal(0.0, val * r_scale, size=3)
-        err_v = np.random.normal(0.0, val * v_scale, size=3)
+        # initial error drawn from the stationary distribution
+        err_r = w_r
+        err_v = w_v
 
-    # print(f"err_r: {err_r}, r: {r*param.xc}")
-    # print(f"err_v: {err_v}, v: {v*param.xc/param.tc}")
+    newNoiseSample = np.hstack([err_r, err_v])
 
-    return np.hstack([r + err_r, v + err_v]), err_r, err_v
+    return np.hstack([r + err_r, v + err_v]), newNoiseSample

@@ -11,7 +11,7 @@ def printSummary(env):
     }
     OBoptimalTrajectory = env.OBoptimalTrajectory
     # Calculations
-    _, _, relativeState_L = OBNavigation(initialValue.targetState_S, initialValue.chaserState_S, param)
+    _, _, relativeState_L, _ = OBNavigation(initialValue.targetState_S, initialValue.chaserState_S, None, param)
     if relativeState_L[1] <= 0:
         rP = "BEHIND"
     else:

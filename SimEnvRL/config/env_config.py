@@ -29,7 +29,10 @@ class physParamClass:
     dockingState = np.array([0, 0, 0, 0, 0.05e-3*tc/xc, 0])  # Final relative state
     freqGNC : float = 2 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
-    navigation_noise_percent : float = None                  # [adimensional] percentage of noise in navigation
+    navigation_noise_percent : float = None                  # [adimensional] percentage of noise in navigation (1-sigma, None or 0 -> no noise)
+    nav_noise_corr_time_s : float = 60.                      # [s] correlation time of the Gauss-Markov navigation error
+    nav_pos_plateau_m : float = 10_000.                      # [m] cap on the range used to scale the position noise
+    nav_vel_plateau_ms : float = 5.                          # [m/s] cap on the speed used to scale the velocity noise
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
