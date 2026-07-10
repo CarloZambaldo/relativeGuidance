@@ -319,11 +319,12 @@ start_time = time.time()
 # RUN THE SIMULATIONS ##################################################################################################
 fileNameSave = f"MC_P{phaseID}_N{navigation_noise_percent}_{pos_mode}__{agentName}_{datetime.now().strftime('%Y_%m_%d_at_%H_%M')}.mat"
 
-if not os.path.exists("./Simulations/"):
-    os.makedirs("./Simulations/")
+localSimDir = Path("./Simulations")
+localSimDir.mkdir(parents=True, exist_ok=True)
 
-if not os.path.exists("/data/"):
-    os.makedirs("/data/")
+# use the container scratch dir if present (podman run -v ...:/data), otherwise save locally
+scratchDir = Path("/data") if Path("/data").is_dir() else localSimDir
+print(f"Simulation data will be saved in: {scratchDir.resolve()}")
 
 # run the simulation for all the generated population
 for trgt_id in range(n_targets_pos): # for each target position 
@@ -374,7 +375,8 @@ for trgt_id in range(n_targets_pos): # for each target position
         data["AgentAction"][:, sim_id + trgt_id] = env.envs[0].unwrapped.AgentActionHistory
         data["OBoTUsage"][:, sim_id + trgt_id] = env.envs[0].unwrapped.OBoTUsageHistory
         data["constraintViolation"][:, sim_id + trgt_id] = env.envs[0].unwrapped.constraintViolationHistory
-        data["terminalState"][:, sim_id + trgt_id] = env.envs[0].unwrapped.terminalState
+        if env.envs[0].unwrapped.terminalState is not None: # None if the simulation ran out of time
+            data["terminalState"][:, sim_id + trgt_id] = env.envs[0].unwrapped.terminalState
         data["terminalTimeIndex"][sim_id] = env.envs[0].unwrapped.timeIndex
         data["fail"][sim_id + trgt_id] = 1 if env.envs[0].unwrapped.terminationCause == "__CRASHED__" else 0
         data["success"][sim_id + trgt_id] = 1 if  env.envs[0].unwrapped.terminationCause == "_AIM_REACHED_" else 0
@@ -386,23 +388,26 @@ for trgt_id in range(n_targets_pos): # for each target position
         print("SAVING THE SIMULATION: ",end='')
 
         # Save the Monte Carlo data to a .mat file in the scratch folder
-        scipy.io.savemat(f"/data/{fileNameSave}", {"data": data})
+        scipy.io.savemat(str(scratchDir / fileNameSave), {"data": data})
         print("DONE.\n")
 
 
 # move the simulation to the home - NOTE: these are container paths
-print("MOVING THE SIMULATION FILE FROM CONTAINER TO HOME FOLDER: ",end='')
-try:
-    src = Path(f"/data/{fileNameSave}")
-    dst_folder = Path("/code/Simulations")
-    dst_folder.mkdir(parents=True, exist_ok=True)
-    dst = dst_folder / fileNameSave
-    shutil.move(src, dst)
-    print("DONE.")
-    print(f"\n >>> ALL SIMULATION DATA IS SAVED IN '{dst}' <<<\n")
+if scratchDir != localSimDir:
+    print("MOVING THE SIMULATION FILE FROM CONTAINER TO HOME FOLDER: ",end='')
+    try:
+        src = scratchDir / fileNameSave
+        dst_folder = Path("/code/Simulations")
+        dst_folder.mkdir(parents=True, exist_ok=True)
+        dst = dst_folder / fileNameSave
+        shutil.move(src, dst)
+        print("DONE.")
+        print(f"\n >>> ALL SIMULATION DATA IS SAVED IN '{dst}' <<<\n")
 
-except Exception as e:
-    print(f"ERROR: {e}. The file is saved in the container's /data/ folder.")
+    except Exception as e:
+        print(f"ERROR: {e}. The file is saved in the container's /data/ folder.")
+else:
+    print(f"\n >>> ALL SIMULATION DATA IS SAVED IN '{(localSimDir / fileNameSave).resolve()}' <<<\n")
 
 
 
