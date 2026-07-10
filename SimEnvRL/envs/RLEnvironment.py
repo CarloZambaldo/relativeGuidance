@@ -111,15 +111,18 @@ class SimEnv(gym.Env):
                 self.timeNow = self.timeHistory[self.timeIndex]
                 # self.AgentActionHistory[self.timeIndex] = AgentAction
 
-                ## FIXME IF ANY PROBLEM OCCURS HERE ##
-                # HARDCODED SAFE MODE ACTIVATION #
-                # new version 2026/01/07 - AgentAction is set to SAFE MODE when < 100 m from the target
-                # if np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
-                #    AgentAction = 2 # DELETE
-                #    self.AgentActionHistory[self.timeIndex] = AgentAction
-                #    if self.renderingBool:
-                #        print(" >> SAFE MODE ACTIVATED << ")
-                # END OF HARDCODED SAFETY MODE ACTIVATION #
+                # HARDCODED SAFE MODE ACTIVATION (thesis behaviour, do not disable!) #
+                # below 100 m from the target the optimal trajectory is deleted and the
+                # terminal approach is flown in safe mode (APF+SMC aiming at the docking
+                # state). Without this handover the nominal mode tracks the aged ASRE
+                # reference down to contact and misses the docking corridor in most
+                # regions (e.g. leaving-aposelene success drops from 99% to ~2%).
+                if np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
+                    AgentAction = 2 # DELETE
+                    self.AgentActionHistory[self.timeIndex] = AgentAction
+                    if self.renderingBool:
+                        print(" >> SAFE MODE ACTIVATED << ")
+                # END OF HARDCODED SAFE MODE ACTIVATION #
                 
                 # NAVIGATION # NOTE: this has already been computed for the current time step in previous cycle
                 # indeed, the NAVIGATION is required for the agent to determine its action
