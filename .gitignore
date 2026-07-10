@@ -43,6 +43,7 @@ __pycache__/
 # Ignore data files (could be particularly heavy)
 *.pkl
 *.mat
+*.pdf
 
 # Ignore simulations storage and old versions
 Simulations/
