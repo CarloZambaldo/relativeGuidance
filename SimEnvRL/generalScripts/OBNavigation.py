@@ -2,15 +2,26 @@ import numpy as np
 import time
 from .ReferenceFrames import convert_M_to_LVLH
 
-def OBNavigation(targetState_S, chaserState_S, previous_noise, param):
+def OBNavigation(targetState_S, chaserState_S, navMemory, param, appliedControl_L=None):
     """
     This function outputs the translation and rotation from Synodic to
     Moon-centered synodic and the relative state in LVLH
 
     Navigation errors are injected on the RELATIVE state only: the target
     ephemeris is assumed to be known on board (see thesis, Sec. 5.1), hence
-    the returned targetState_M is the true one. The noisy relative state
-    models the output of the on-board relative navigation filter.
+    the returned targetState_M is the true one.
+
+    The noisy measurement is then processed by a constant-gain navigation
+    filter (steady-state Kalman-like): the previous estimate is propagated
+    kinematically with the applied control acceleration and blended with the
+    new measurement. This attenuates the high-frequency component of the
+    measurement noise WITHOUT lagging the controlled dynamics (the control
+    is fed forward in the prediction), avoiding SMC chattering on noise.
+
+    navMemory: dict {'eps': normalized Gauss-Markov noise state,
+                     'xhat': previous filtered estimate} or None at first call.
+    appliedControl_L: control acceleration (LVLH, adimensional) applied over
+                      the last GNC step, used for the kinematic prediction.
     """
 
     # Translating and rotating to Moon-centered Synodic [ex FranziRot]
@@ -36,9 +47,32 @@ def OBNavigation(targetState_S, chaserState_S, previous_noise, param):
     relativeState_L, _ = convert_M_to_LVLH(targetState_M, chaserState_M - targetState_M, param)
 
     # generation of navigation errors (on the relative state only)
-    relativeState_L, newNoiseSample = inject_nav_error(relativeState_L, param, previous_noise)
+    # NOTE: newNoiseSample is the raw injected measurement error (for logging/analysis)
+    eps_prev = navMemory.get('eps') if navMemory else None
+    measurement_L, newNoiseSample, eps = inject_nav_error(relativeState_L, param, eps_prev)
 
-    return targetState_M, chaserState_M, relativeState_L, newNoiseSample
+    # constant-gain navigation filter (transparent when no noise is injected)
+    val = getattr(param, 'navigation_noise_percent', None)
+    Kf_r = getattr(param, 'nav_filter_gain_pos', 0.1)
+    Kf_v = getattr(param, 'nav_filter_gain_vel', 0.1)
+    xhat_prev = navMemory.get('xhat') if navMemory else None
+    if (not val) or (xhat_prev is None):
+        relativeState_L_est = measurement_L
+    else:
+        dt = 1.0 / param.freqGNC  # [adimensional] GNC step
+        u = np.zeros(3) if appliedControl_L is None else np.asarray(appliedControl_L, dtype=float)
+        # kinematic prediction of the previous estimate (control feed-forward;
+        # the orbital relative accelerations are negligible over one GNC step)
+        xpred = xhat_prev.copy()
+        xpred[:3] += xhat_prev[3:] * dt + 0.5 * u * dt**2
+        xpred[3:] += u * dt
+        # measurement update with constant gains
+        Kgain = np.hstack([Kf_r * np.ones(3), Kf_v * np.ones(3)])
+        relativeState_L_est = xpred + Kgain * (measurement_L - xpred)
+
+    newNavMemory = {'eps': eps, 'xhat': relativeState_L_est}
+
+    return targetState_M, chaserState_M, relativeState_L_est, newNoiseSample, newNavMemory
 
 
 def inject_nav_error(state, param, previous_noise=None):
@@ -47,13 +81,18 @@ def inject_nav_error(state, param, previous_noise=None):
     of the on-board relative navigation filter.
 
     The error on each channel is a first-order Gauss-Markov (exponentially
-    correlated) process with bounded stationary standard deviation:
+    correlated) process with bounded stationary standard deviation. The GM
+    recursion runs on a NORMALIZED (unit-variance) state eps, which is then
+    scaled by the current sigma:
 
-        err[k+1] = phi * err[k] + sqrt(1 - phi^2) * w[k],   phi = exp(-dt/tau)
+        eps[k+1] = phi * eps[k] + sqrt(1 - phi^2) * w[k],   phi = exp(-dt/tau)
+        err[k+1] = sigma[k+1] * eps[k+1],                   w[k] ~ N(0, 1)
 
-    where w[k] ~ N(0, sigma^2). This keeps the error correlated in time
-    (correlation time tau) WITHOUT the unbounded variance growth of a pure
-    random walk, so the stationary std stays equal to sigma at every time.
+    This keeps the error correlated in time (correlation time tau) WITHOUT the
+    unbounded variance growth of a pure random walk, and makes the error track
+    the current sigma instantly (the sensor accuracy improves as the range
+    shrinks; without the rescaling the error would keep memory of the larger
+    sigma from ~tau seconds earlier and spoil the terminal docking precision).
 
     Standard deviations (1-sigma), with val = param.navigation_noise_percent:
     - position: sigma_r = val * min(||rho||, r_plateau)   (range-proportional,
@@ -69,7 +108,7 @@ def inject_nav_error(state, param, previous_noise=None):
 
     val = getattr(param, 'navigation_noise_percent', None)
     if not val:  # None or 0.0 -> noiseless navigation (e.g. during training)
-        return state, np.zeros(6)
+        return state, np.zeros(6), np.zeros(6)
 
     r = state[:3]
     v = state[3:]
@@ -89,17 +128,17 @@ def inject_nav_error(state, param, previous_noise=None):
     tau_s = getattr(param, 'nav_noise_corr_time_s', 60.0)      # correlation time [s]
     phi = np.exp(-dt_s / tau_s)
 
-    w_r = np.random.normal(0.0, sigma_r, size=3)
-    w_v = np.random.normal(0.0, sigma_v, size=3)
+    w = np.random.normal(0.0, 1.0, size=6)  # unit-variance white innovation
 
     if previous_noise is not None:
-        err_r = phi * previous_noise[:3] + np.sqrt(1 - phi**2) * w_r
-        err_v = phi * previous_noise[3:] + np.sqrt(1 - phi**2) * w_v
+        eps = phi * previous_noise + np.sqrt(1 - phi**2) * w
     else:
-        # initial error drawn from the stationary distribution
-        err_r = w_r
-        err_v = w_v
+        # initial normalized error drawn from the stationary distribution
+        eps = w
+
+    err_r = sigma_r * eps[:3]
+    err_v = sigma_v * eps[3:]
 
     newNoiseSample = np.hstack([err_r, err_v])
 
-    return np.hstack([r + err_r, v + err_v]), newNoiseSample
+    return np.hstack([r + err_r, v + err_v]), newNoiseSample, eps

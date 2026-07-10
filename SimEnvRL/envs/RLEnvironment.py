@@ -49,6 +49,7 @@ class SimEnv(gym.Env):
         self.CPUExecTimeHistory : np.ndarray = None             # execution time required for the CPU to run the guidance
 
         self.OBNavNoiseHistory : np.ndarray = None              # noise history on the OB navigation (relative state in LVLH)
+        self.OBNavMemory : dict = None                          # navigation memory: normalized Gauss-Markov noise state + previous filtered estimate
 
         # create the environment simulation parameters dataclass
         options = options or {}
@@ -163,8 +164,11 @@ class SimEnv(gym.Env):
                 self.targetState_S = self.fullStateHistory[self.timeIndex,:6]
                 self.chaserState_S = self.fullStateHistory[self.timeIndex,6:12]
                     
-                # Get previous noise for correlated drift
-                self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavNoiseHistory[self.timeIndex-1], self.param)
+                # navigation: correlated Gauss-Markov measurement error + constant-gain filter
+                # (the control applied over the step just propagated is fed forward in the filter prediction)
+                self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample, self.OBNavMemory = \
+                    OBNavigation(self.targetState_S, self.chaserState_S, self.OBNavMemory, self.param,
+                                 appliedControl_L=self.controlActionHistory_L[self.timeIndex])
                 AgentAction = 0 # reset the AgentAction to SKIP (0) for the next GNC loop; note that the AgentAction shall only be applied once
                 
                 # compute the TRUE relative state in synodic and LVLH
@@ -294,7 +298,9 @@ class SimEnv(gym.Env):
         self.fullStateHistory[:, :6] = odesol.y.T # store the target dynamics
 
         ## compute RL Agent Observation at time step 1
-        self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample = OBNavigation(self.targetState_S, self.chaserState_S, None, self.param)
+        self.OBNavMemory = None
+        self.OBStateTarget_M, _, self.OBStateRelative_L, newNoiseSample, self.OBNavMemory = \
+            OBNavigation(self.targetState_S, self.chaserState_S, None, self.param)
         self.OBNavNoiseHistory[self.timeIndex, :] = newNoiseSample
 
         info = {"initialConditionsUsed": typeOfInitialConditions}

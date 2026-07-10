@@ -30,17 +30,54 @@ def OBGuidance(envTime,OBrelativeState,OBtargetState,phaseID,param,AgentAction=N
 
     # Compute sliding surface
     if phaseID == 2:
-        sigma = surface_L2 + (np.array([1e1, 2.11e2, 1e1]) * surface_L1_vel + 8e-3 * surface_L1_pos)
+        Kvel = np.array([1, 2.11e1, 1])   # thesis values (do not touch: x10 gains make the safe-mode glide 10x slower -> out of time)
+        Kpos = np.array([8e-3, 8e-3, 8e-3])
     elif phaseID == 1:
-        sigma = surface_L2 + (6 * surface_L1_vel + np.array([3e-3, 8e-3, 3e-3]) * surface_L1_pos)
-    #            ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^    
-    
-    # Compute control action (using ASRE+APF+SMC)
-    # original: controlAction_L = closestOptimalControl - Umax * np.tanh(sigma)
-    controlAction_L = closestOptimalControl - abs(sigma) * np.tanh(sigma)
+        Kvel = np.array([6., 6., 6.])
+        Kpos = np.array([3e-3, 8e-3, 3e-3])
+    sigma = surface_L2 + (Kvel * surface_L1_vel + Kpos * surface_L1_pos)
+    #            ^ APF REP ^     ^  OPTIMAL TRAJECTORY VEL + POS  ^
+
+    # Noise-adaptive dead-band on the sliding surface (anti-chattering):
+    # the OBC knows its own navigation accuracy (filter covariance), so it does
+    # not react to |sigma| below ~k_db standard deviations of the noise-induced
+    # sigma fluctuation. With no navigation noise the dead-band is zero and the
+    # control law reduces EXACTLY to the thesis one (Eq. 4.28).
+    sigma_db = computeNoiseDeadband(OBrelativeState, Kpos, Kvel, param)
+    sigma_eff = np.sign(sigma) * np.maximum(np.abs(sigma) - sigma_db, 0.0)
+
+    # Compute control action (using ASRE+APF+SMC) -- thesis law, Eq. 4.28
+    controlAction_L = closestOptimalControl - Umax * np.tanh(sigma_eff)
 
     #print(f"CONTROL : {controlAction_L}")
     return controlAction_L, OBoptimalTrajectory
+
+
+def computeNoiseDeadband(OBrelativeState, Kpos, Kvel, param):
+    """
+    Per-axis dead-band width for the sliding surface, proportional to the
+    1-sigma navigation error mapped through the surface gains:
+
+        db_i = k_db * sqrt( (Kvel_i * sigma_v)^2 + (Kpos_i * sigma_r)^2 )
+
+    where sigma_r [m] and sigma_v [m/s] are the current navigation noise
+    standard deviations (same model as OBNavigation.inject_nav_error, computed
+    from the on-board estimated state, hence available to the OBC).
+    Returns zeros when navigation noise is disabled.
+    """
+    val = getattr(param, 'navigation_noise_percent', None)
+    if not val:
+        return np.zeros(3)
+
+    k_db = getattr(param, 'nav_deadband_k', 2.0)
+
+    # navigation noise 1-sigma in dimensional units (m, m/s)
+    rho_m = np.linalg.norm(OBrelativeState[:3]) * param.xc * 1e3
+    v_ms = np.linalg.norm(OBrelativeState[3:6]) * param.xc * 1e3 / param.tc
+    sigma_r = val * min(rho_m, getattr(param, 'nav_pos_plateau_m', 10_000.0))
+    sigma_v = val * min(v_ms, getattr(param, 'nav_vel_plateau_ms', 5.0))
+
+    return k_db * np.sqrt((Kvel * sigma_v)**2 + (Kpos * sigma_r)**2)
 
 
 # Loop 1: Optimal Trajectory
@@ -351,10 +388,9 @@ def APF(relativeState_L, constraintType, param):
             acone = param.constraint["characteristicSize"]["acone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
             bcone = param.constraint["characteristicSize"]["bcone"]  # note: these are adimensional parameters to have 0.4m of radius at docking port
 
-            # coefficients definition
-            K_C_inside  = np.array([5e-1, 3e-1, 5e-1])
-            ## K_C_inside  = np.array([5e-3, 1e-1, 5e-3]) + \
-            ##               np.array([3e2, 5e-1, 3e2]) * (abs(rho[1])**3/(1e9))#
+            # coefficients definition -- thesis values (Table 4.4)
+            K_C_inside  = np.array([5e-3, 1e-1, 5e-3]) + \
+                          np.array([3e2, 5e-1, 3e2]) * (abs(rho[1])**3/(1e9))
                             # the old one np.array([1, 1e-1, 1]) + np.array([1, 5e-1, 1]) * (abs(rho[1])**3/(1e9))
             K_C_outside = np.array([10, 0, 10])
 

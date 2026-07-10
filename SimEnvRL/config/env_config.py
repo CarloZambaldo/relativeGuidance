@@ -27,12 +27,15 @@ class physParamClass:
     specificImpulse: float = 270                             # [s] specific impulse of the thruster 
     holdingState = np.array([0, -4/xc, 0, 0, 0, 0])          # [adimensional]
     dockingState = np.array([0, 0, 0, 0, 0.05e-3*tc/xc, 0])  # Final relative state
-    freqGNC : float = 2 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
+    freqGNC : float = 5 * tc                                 # [adimensional (from Hz)] GNC upadate frequency
     RLGNCratio : int = 100                                   # number of GNC steps per RL step
     navigation_noise_percent : float = None                  # [adimensional] percentage of noise in navigation (1-sigma, None or 0 -> no noise)
     nav_noise_corr_time_s : float = 60.                      # [s] correlation time of the Gauss-Markov navigation error
     nav_pos_plateau_m : float = 10_000.                      # [m] cap on the range used to scale the position noise
     nav_vel_plateau_ms : float = 5.                          # [m/s] cap on the speed used to scale the velocity noise
+    nav_filter_gain_pos : float = 0.1                        # [-] constant navigation-filter gain on position (per GNC step)
+    nav_filter_gain_vel : float = 0.1                        # [-] constant navigation-filter gain on velocity (per GNC step)
+    nav_deadband_k : float = 2.                              # [-] sliding-surface dead-band width in units of noise-induced sigma std (0 = off)
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
