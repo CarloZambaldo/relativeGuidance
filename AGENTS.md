@@ -91,13 +91,17 @@ amplified 2-3× by the dead-band free-zone (db/Kpos ≈ 2σ_r). Fix (commit `936
   (per-sim ΔV/TOF/texec/miss/final_err_m/min_err_m); run: `podman run --rm --entrypoint "" -v ~/main/relativeGuidance/:/code -w /code paiton:v01 python3 analyze_MC.py /code/Simulations /code/Simulations/MC_P?_summary.json`.
   NOTE: AgentActionHistory in .mat only records the forced handover actions (recompute counts unusable; use OBoTUsage).
 
-State on casper (2026-07-16 ~11:10):
-- **Campaign #2 RUNNING**: tmux CAMPAIGN2, `run_campaign2.sh`, P2-only 10 configs × 4 regions = 40 runs, log campaign2.log, ~8 h est.
-  Old P2 .mat archived in `Simulations/campaign1_P2_preCloseRange/`; campaign1 logs in `tmux_logs_c1/`.
-- **SWAP_P1 / SWAP_P2 tmux**: swapped-agent reruns (P1 with Agent_P2, P2 with Agent_P1-v11-thesis, aposelene p=0) to regenerate
-  paper Appendix A2 numbers. WARNING: their .mat files land in Simulations/ and would collide with campaign entries in analyze_MC's
-  (region,noise,mode) keying — move them to `Simulations/agent_swap/` BEFORE re-running the aggregations.
-- `MC_P1_summary.json` (campaign1 P1, valid) downloaded to paper repo `paper_tesi_work/data/`.
+State on casper (final, 2026-07-16 evening):
+- **Campaign #2 COMPLETE** (10:52→17:39, 40 runs OK). Old P2 .mat archived in `Simulations/campaign1_P2_preCloseRange/`;
+  campaign1 logs in `tmux_logs_c1/`. Swap .mat moved to `Simulations/agent_swap/` (collision-safe).
+- **CAMPAIGN #2 RESULTS (P2)**: **100/100 success in apo/leaving/approaching at ALL noise levels 0-3%, BOTH modes** —
+  user's ≥99% requirement exceeded. p95 lateral miss ≤1.3 cm at 3% (corridor 10 cm). Periselene: safe 100% everywhere,
+  nominal 0-7% (thesis-known computeTOF limit; obot_frac≈1.0 = tracks flawed ASRE ref to crash).
+  ΔV p=0 nominal 1.31 (apo) / 2.66 (leav) / 5.11 (appr) vs safe 9.23; TOF nominal 151-162 vs safe 137 min.
+  **ΔV crossover ≈1% noise**: above it safe glide cheaper than nominal tracking (3%: 13.1 vs 18.5-27.7) — key paper finding.
+- Swapped-agent (A2): P1-wrong ≈ identical stats to correct (3.85 vs 3.86 m/s, 92%); P2-wrong produces NUMERICALLY IDENTICAL
+  trajectories to correct agent (same decision sequence: 1 compute + skip; obot 84%, rest = <100 m handover).
+- Summaries `MC_P1_summary.json`, `MC_P2_summary.json`, `MC_swap_summary.json` downloaded to `paper_tesi_work/data/`.
 
 Paper working copy: `TESI/paper_tesi_work/` (extracted from paper_tesi.zip; re-zip when done).
 Done so far: noise-model section rewritten in 0_intro (GM + close-range handover eq + filter + pointer to dead-band);
@@ -106,9 +110,11 @@ Done so far: noise-model section rewritten in 0_intro (GM + close-range handover
 P1 success gate fixed 200 m→10 m, P1 tables generated (Tables/tab_P1_*.tex via `gen_paper_assets.py` + data JSONs), P1 discussion
 written (safe≡ across apo regions is expected: same seed/ICs; failures at ≥2% are measurement-limited OOT loitering 35-60 m from gate);
 nomenclature filled; `check_refs.py` label checker (only tab:dockOverrallPerfo pending until P2 assets).
-TODO when campaign 2 completes: move swap .mat → agent_swap/, rerun analyze for P1(unchanged)+P2, download MC_P2_summary.json,
-run `gen_paper_assets.py` (tables+3 figures), write P2 prose + conclusions (5_conclusions.tex is EMPTY), update A2 tables from
-swap results, re-zip paper_tesi.zip.
+ALL DONE (2026-07-16 evening): P2 tables+figures generated (Tables/tab_P2_*, Figures/MC_success_vs_noise.pdf,
+MC_deltaV_vs_noise.pdf, MC_P2_terminal_dispersion.pdf), P2 section + conclusions written, A2 tables/prose regenerated,
+abstract updated, nomenclature filled. Updated paper packaged as `TESI/paper_tesi_updated.zip` (original paper_tesi.zip untouched).
+Regenerate assets anytime: `python gen_paper_assets.py data/MC_P1_summary.json data/MC_P2_summary.json` in paper_tesi_work/.
+Note: stats cells show "--" when <10 successful runs (outlier-only statistics suppressed). No LaTeX locally/casper — compile on Overleaf.
 
 ### Key headline numbers (campaign1 P1, thesis-consistent)
 - P1 apo p=0: safe ΔV 13.29±7.77 / TOF 210.7 min / 100%; nominal 3.86±2.07 / 113.2 min / 92% (−71% ΔV, −46% TOF).
