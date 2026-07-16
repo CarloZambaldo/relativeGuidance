@@ -78,6 +78,39 @@ Notes:
 - "ASRE did not converge: Singular matrix" lines in periselene logs are in-sim warnings, not crashes.
 - The `OUT_OF_TIME` "RELATIVE DISTANCE" print norms all 6 state components (mixes pos+vel) — misleading, ignore.
 
-### TODO / next steps for the paper
-- Pull the 80 `.mat` files from casper and run the aggregate analysis (ΔV, miss distance, trajectories) locally.
-- Decide how to present P1 high-noise degradation (agent ≈ safe at ≥2%) and P2 safe-mode advantage at high noise.
+## Session 2026-07-16: close-range sensor fix + Campaign #2 + paper writing
+
+Goal: ≥99% P2 success in apo/leaving/approaching regions (user requirement; P2 was 30-60% at ≥2% noise).
+Root cause analysis: terminal lateral miss ≈ p·v_dock·τ_lat (v_dock = 5 cm/s from `dockingState`, τ_lat = Kvel/Kpos = 125 s)
+amplified 2-3× by the dead-band free-zone (db/Kpos ≈ 2σ_r). Fix (commit `9366218`):
+- `nav_noise_sigmas()` in OBNavigation.py: shared σ model (injection + dead-band) with **docking-sensor handover**
+  `f = clip(range/200 m, 0.05, 1)` on σ_r and σ_v. p=0 and long-range behavior unchanged; P1 mathematically unaffected.
+- MonteCarlo_eval P2 tspan 0.033 → 0.045 (OOT no longer truncates the noisy TOF tail; P2 TOF ≈ 141±19 min vs old 206-min wall).
+- Local validation n=10 each: P2 apo 3% agent 10/10, safe 10/10, leaving 1% agent 10/10 (were 38/31/93%); lateral miss 0.1-1.5 cm (was 33-38 cm).
+- `analyze_MC.py` (repo root): aggregates the 1.7 GB .mat files ON casper (podman) into compact JSON
+  (per-sim ΔV/TOF/texec/miss/final_err_m/min_err_m); run: `podman run --rm --entrypoint "" -v ~/main/relativeGuidance/:/code -w /code paiton:v01 python3 analyze_MC.py /code/Simulations /code/Simulations/MC_P?_summary.json`.
+  NOTE: AgentActionHistory in .mat only records the forced handover actions (recompute counts unusable; use OBoTUsage).
+
+State on casper (2026-07-16 ~11:10):
+- **Campaign #2 RUNNING**: tmux CAMPAIGN2, `run_campaign2.sh`, P2-only 10 configs × 4 regions = 40 runs, log campaign2.log, ~8 h est.
+  Old P2 .mat archived in `Simulations/campaign1_P2_preCloseRange/`; campaign1 logs in `tmux_logs_c1/`.
+- **SWAP_P1 / SWAP_P2 tmux**: swapped-agent reruns (P1 with Agent_P2, P2 with Agent_P1-v11-thesis, aposelene p=0) to regenerate
+  paper Appendix A2 numbers. WARNING: their .mat files land in Simulations/ and would collide with campaign entries in analyze_MC's
+  (region,noise,mode) keying — move them to `Simulations/agent_swap/` BEFORE re-running the aggregations.
+- `MC_P1_summary.json` (campaign1 P1, valid) downloaded to paper repo `paper_tesi_work/data/`.
+
+Paper working copy: `TESI/paper_tesi_work/` (extracted from paper_tesi.zip; re-zip when done).
+Done so far: noise-model section rewritten in 0_intro (GM + close-range handover eq + filter + pointer to dead-band);
+1_methodology: κ gains values, 100-m terminal handover paragraph, new §Noise-Adaptive Dead-Band (sec:deadband, eq:deadband);
+2_training: training paragraph incl. noiseless-training/out-of-distribution point; 3_simulations: IC descriptions fixed to code,
+P1 success gate fixed 200 m→10 m, P1 tables generated (Tables/tab_P1_*.tex via `gen_paper_assets.py` + data JSONs), P1 discussion
+written (safe≡ across apo regions is expected: same seed/ICs; failures at ≥2% are measurement-limited OOT loitering 35-60 m from gate);
+nomenclature filled; `check_refs.py` label checker (only tab:dockOverrallPerfo pending until P2 assets).
+TODO when campaign 2 completes: move swap .mat → agent_swap/, rerun analyze for P1(unchanged)+P2, download MC_P2_summary.json,
+run `gen_paper_assets.py` (tables+3 figures), write P2 prose + conclusions (5_conclusions.tex is EMPTY), update A2 tables from
+swap results, re-zip paper_tesi.zip.
+
+### Key headline numbers (campaign1 P1, thesis-consistent)
+- P1 apo p=0: safe ΔV 13.29±7.77 / TOF 210.7 min / 100%; nominal 3.86±2.07 / 113.2 min / 92% (−71% ΔV, −46% TOF).
+- P1 periselene p=0.5%: safe 35% vs nominal 82% (agent replanning rescues periselene at low noise).
+- texec (casper EPYC 7413 = 2.65 GHz base ×24 cores → paper GR740 conversion ×63.6): raw ~0.04-0.07 ms/step.
