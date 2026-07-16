@@ -120,3 +120,57 @@ Note: stats cells show "--" when <10 successful runs (outlier-only statistics su
 - P1 apo p=0: safe ΔV 13.29±7.77 / TOF 210.7 min / 100%; nominal 3.86±2.07 / 113.2 min / 92% (−71% ΔV, −46% TOF).
 - P1 periselene p=0.5%: safe 35% vs nominal 82% (agent replanning rescues periselene at low noise).
 - texec (casper EPYC 7413 = 2.65 GHz base ×24 cores → paper GR740 conversion ×63.6): raw ~0.04-0.07 ms/step.
+
+## Session 2026-07-16 (evening, continued): 2%-noise retraining experiment + explanatory plots
+
+IMPORTANT CORRECTION from Carlo: the <100m terminal safe-mode handover is NOT an original thesis mechanism
+(unlike what commit `76e7549`'s message says) — it was added post-thesis, in an earlier AI-assisted session.
+Kept enabled by default for eval (still needed for the 100% P2 success results above), but an experiment is
+underway to have the agent learn this behaviour itself instead of relying on the hardcoded override.
+
+**Experiment**: retrain the P2 agent WITH 2% navigation noise (`Training.py -e 0.02`), and with the <100m
+handover DISABLED during training (`terminal_handover_enabled=False`, auto-set whenever `-e` is given) so the
+agent actually experiences and must learn the terminal approach itself, rather than having its action
+overridden in the state that matters most. Code changes (commit `f3391be` + follow-ups):
+- `env_config.py` / `RLEnvironment.py`: new `terminal_handover_enabled` param (default True — unchanged for
+  MonteCarlo_eval/all eval scripts, which still force the handover).
+- `Training.py`: `-e/--noise` sets `navigation_noise_percent` for training envs and auto-disables the
+  handover; `-y` skips the interactive confirm prompt (needed for unattended tmux runs).
+
+**Running**: tmux `TRAIN_P2_NOISE2` on **melchior** (not casper — casper was busy with campaign2/analysis;
+melchior was idle). Podman image `paiton:v01` was not on melchior; transferred via `podman save` on casper →
+NFS-shared home tarball (`~/paiton_v01.tar`, deleted after use) → `podman load` on melchior. Command:
+`podman run --rm --entrypoint "" -v /home/czambaldo/main/relativeGuidance/:/code -w /code paiton:v01 python3 Training.py -p 2 -m Agent_P2-v12-noise2pct -e 0.02 -y`,
+log `tmux_logs/TRAIN_P2_NOISE2.log`. 1.5e6 timesteps, 15 parallel envs, 24 threads; a prior similar P2 run
+(1e6 steps) took ~4h on comparable hardware (inferred from file mtimes, no logged duration), so expect ~6h
+(started 2026-07-16 19:43). A persistent Monitor polls every 20 min for "FINISHED TRAINING" or exceptions.
+New model lands in `AgentModels/Agent_P2-v12-noise2pct/model/`.
+Next steps once done: MC-eval this new agent (both handover on/off at eval time are worth trying) at
+0/0.5/1/2/3% noise on aposelene/leaving/approaching, compare ΔV and success vs `Agent_P2-v11.5-multi-SEMIDEF`
+— the interesting question is whether it learns a cheaper terminal strategy than the hardcoded safe-mode
+handover, recovering some of the ΔV lost above the ~1% noise crossover documented in the paper.
+
+**Explanatory plots** (Carlo wanted cone + example trajectories like in the thesis, referencing
+`matlabScripts/MonteCarloPlots.m` + `plotConstraintsVisualization.m` — those MATLAB scripts use the WRONG
+post-thesis cone params acone=0.08/bcone=5, not the restored thesis values 0.02/10 used here):
+- `extract_trajectories.py` (repo root): pulls a handful of full trajectories out of a huge (1.7GB) MC .mat
+  into a small JSON (position/velocity/control/agent-action/OBoT-usage histories), with `--stride` decimation
+  and `--indices` for picking specific/paired sim ids (needed for fair same-IC comparisons across configs,
+  since MC seeding makes sim index i the same IC across different noise/mode/model runs of the same region).
+  Run via podman on casper (same pattern as analyze_MC.py), download via base64 over the magi.py SSH helper.
+- `paper_tesi_work/gen_trajectory_plots.py`: renders 5 PNGs into `Figures/explanatory/` — cone+3 paired
+  trajectories, terminal zoom, periselene failure case, one time-history breakdown, phase-1 KOS/Safe spheres.
+  Gotcha found & fixed: matplotlib's `ax.set_box_aspect([1,1,1])` alone does NOT give true equal units per
+  axis (it only shapes the drawn box, each axis autoscales independently) — use the `set_axes_equal_3d()`
+  helper (matches limits+centers explicitly) for a non-misleading "axis equal" 3D plot. Also: the thesis cone
+  flares very wide far from the target (physically correct — corridor is permissive far out, tapers hard only
+  near contact; at V=-4.2km the half-width is ~5.5km, wider than the approach itself!), so rendering the
+  full-length cone surface swamps the trajectories visually — only render it near-target (last ~500-600m) and
+  scale the axes from the trajectory data, not the cone surface. Data extracted from campaign-2 P2 .mat files
+  (aposelene paired sim ids 0,1,2 for the safe/nominal/noisy comparison; periselene for the failure case; a P1
+  aposelene file for the sphere plot). All extracted data downloaded to `paper_tesi_work/data/traj_extracts/`.
+
+Paper zip repackaged again as `paper_tesi_updated.zip` including `data/`, `gen_paper_assets.py`,
+`check_refs.py`, `gen_trajectory_plots.py`. These 5 explanatory PNGs are exploratory renders sent directly to
+Carlo for viewing, NOT (yet) inserted as paper figures — ask before adding, they'd need a clean caption
+explaining the bounded-cone-rendering caveat above.
