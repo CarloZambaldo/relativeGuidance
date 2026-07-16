@@ -74,11 +74,14 @@ class SimEnv(gym.Env):
             options = {
                 "phaseID": options.get("phaseID"),
                 "tspan": options["tspan"] if isinstance(options["tspan"], np.ndarray) else None,
-                "navigation_noise_percent": options.get("navigation_noise_percent", None)
+                "navigation_noise_percent": options.get("navigation_noise_percent", None),
+                "terminal_handover_enabled": options.get("terminal_handover_enabled", True)
             }
         else:
             raise AttributeError("options are required to start the environment. Please check that 'phaseID' and 'tspan' are correctly defined.")
-        self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"],navigation_noise_percent=options["navigation_noise_percent"])
+        self.param = config.env_config.getParam(phaseID=options["phaseID"],tspan=options["tspan"],
+                                                  navigation_noise_percent=options["navigation_noise_percent"],
+                                                  terminal_handover_enabled=options["terminal_handover_enabled"])
 
         ## OBSERVATION SPACE
         # (the first 6 values are OBStateRelative_L, 
@@ -111,13 +114,16 @@ class SimEnv(gym.Env):
                 self.timeNow = self.timeHistory[self.timeIndex]
                 # self.AgentActionHistory[self.timeIndex] = AgentAction
 
-                # HARDCODED SAFE MODE ACTIVATION (thesis behaviour, do not disable!) #
+                # HARDCODED SAFE MODE ACTIVATION (evaluation default, do not disable for MC campaigns!) #
                 # below 100 m from the target the optimal trajectory is deleted and the
                 # terminal approach is flown in safe mode (APF+SMC aiming at the docking
                 # state). Without this handover the nominal mode tracks the aged ASRE
                 # reference down to contact and misses the docking corridor in most
                 # regions (e.g. leaving-aposelene success drops from 99% to ~2%).
-                if np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
+                # Disabled during training (terminal_handover_enabled=False) so the agent
+                # actually experiences and learns the terminal approach under its own policy,
+                # rather than having its action overridden in the very state that matters most.
+                if self.param.terminal_handover_enabled and np.linalg.norm(self.OBStateRelative_L[0:3]) * self.param.xc < 0.1:
                     AgentAction = 2 # DELETE
                     self.AgentActionHistory[self.timeIndex] = AgentAction
                     if self.renderingBool:

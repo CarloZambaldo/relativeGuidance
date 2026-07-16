@@ -38,6 +38,7 @@ class physParamClass:
     nav_filter_gain_pos : float = 0.1                        # [-] constant navigation-filter gain on position (per GNC step)
     nav_filter_gain_vel : float = 0.1                        # [-] constant navigation-filter gain on velocity (per GNC step)
     nav_deadband_k : float = 2.                              # [-] sliding-surface dead-band width in units of noise-induced sigma std (0 = off)
+    terminal_handover_enabled : bool = True                  # [-] if True, forces safe mode (AgentAction=2) below 100 m from target (eval default); set False during training so the agent experiences and learns the terminal approach itself
 
     # SPACECRAFT PARAMETERS #
     chaser: dict = field(default_factory=lambda: {
@@ -216,9 +217,10 @@ class initialValueClass():
 
 
 ## DEFINE PARAMETERS ##
-def getParam(phaseID=None,tspan=None,navigation_noise_percent=None):
+def getParam(phaseID=None,tspan=None,navigation_noise_percent=None,terminal_handover_enabled=True):
     # define the environmental parameters (constant for the environment)
-    param = physParamClass(phaseID=phaseID,tspan=tspan,navigation_noise_percent=navigation_noise_percent)
+    param = physParamClass(phaseID=phaseID,tspan=tspan,navigation_noise_percent=navigation_noise_percent,
+                            terminal_handover_enabled=terminal_handover_enabled)
     return param
 
 ## SETTING INITIAL VALUES ##

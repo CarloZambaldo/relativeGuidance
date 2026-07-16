@@ -21,8 +21,16 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", type=str, default="None", help="Mission Phase")
     parser.add_argument("-r", "--render", type=str, default="False", help="Rendering bool")
     parser.add_argument("-f","--start-from", type=str, default="new", help="Name of the agent from which continue training")
+    parser.add_argument("-e","--noise", type=float, default=None, help="navigation_noise_percent used during training (e.g. 0.02 for 2%%); default None = noiseless (thesis behaviour)")
+    parser.add_argument("-y","--yes", action="store_true", help="Skip the interactive acknowledgement prompt (needed for unattended/background runs)")
     # Parse arguments
     argspar = parser.parse_args()
+    navigation_noise_percent = argspar.noise
+    # the terminal <100 m safe-mode handover overrides AgentAction unconditionally: if left
+    # enabled during training with noise, the agent could never learn a terminal-approach
+    # policy of its own (its action in that state is ignored), so it is disabled whenever
+    # a noise level is given, and left enabled (thesis/eval behaviour) for noiseless training.
+    terminal_handover_enabled = navigation_noise_percent is None
 
     ## SYSTEM INPUT PARAMETERS ##
     # if len(sys.argv) < 3:
@@ -94,18 +102,22 @@ if __name__ == "__main__":
     RLagent = config.RL_config.get(modelName)
 
     # Create environment (depending on the device and normalisation)
+    env_options = {"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool,
+                    "navigation_noise_percent": navigation_noise_percent,
+                    "terminal_handover_enabled": terminal_handover_enabled}
+
     if deviceType == "cpu": # IF USING CPU
         if (norm_reward or norm_obs): # IF USING CPU with normalized environment
-            #env = DummyVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})])
-            env = SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+            #env = DummyVecEnv([lambda: gym.make('SimEnv-v5.0',options=env_options)])
+            env = SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options=env_options)
                                   for _ in range(n_envs)])
             env = VecMonitor(env, RLagent.log_dir)  # Logs true episode rewards
             env = VecNormalize(env, norm_obs=norm_obs, norm_reward=norm_reward) # normalize the environment
         else: # IF USING CPU without normalized environment
-            env =  SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options={"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool})
+            env =  SubprocVecEnv([lambda: gym.make('SimEnv-v5.0',options=env_options)
                                   for _ in range(n_envs)])
     elif deviceType == "cuda": # IF USING GPU
-        env = make_vec_env('SimEnv-v5.0', n_envs=20, env_kwargs={"options":{"phaseID": phaseID, "tspan": tspan, "renderingBool": renderingBool}})
+        env = make_vec_env('SimEnv-v5.0', n_envs=20, env_kwargs={"options": env_options})
         raise Exception("GPU not supported on achiral.")
 
 
@@ -117,6 +129,7 @@ if __name__ == "__main__":
         print(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}.")
     print(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.")
     print(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}")
+    print(f"navigation_noise_percent: {navigation_noise_percent}; terminal_handover_enabled: {terminal_handover_enabled}")
     print(f"total_timesteps: {total_timesteps}")
     print(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}")
     print(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\nlearning_rate:\tlinear from {lr_schedule(1)} to {lr_schedule(0)}")
@@ -125,8 +138,11 @@ if __name__ == "__main__":
 
     print("***************************************************************************\n")
 
-    print("please check the parameters and press enter to start the training...")
-    input()
+    if argspar.yes:
+        print("Skipping acknowledgement prompt (-y).")
+    else:
+        print("please check the parameters and press enter to start the training...")
+        input()
 
     # Reset the environment
     print("RESETTING THE ENVIRONMENT...")
@@ -175,6 +191,7 @@ if __name__ == "__main__":
             f.write(f"Training: {modelName} (continue) from {modelNameOLD} on {deviceType}\n")
         f.write(f"Using {max_num_threads} threads, running {n_envs} environments in parallel.\n")
         f.write(f"Phase ID:\t{phaseID}\ntspan:   \t{tspan}\nrendering:\t{renderingBool}\n")
+        f.write(f"navigation_noise_percent: {navigation_noise_percent}; terminal_handover_enabled: {terminal_handover_enabled}\n")
         f.write(f"total_timesteps: {total_timesteps}\n")
         f.write(f"norm_reward: {norm_reward}; norm_obs = {norm_obs}\n")
         f.write(f"gamma:     \t{discountFactor}\nent_coef:\t{ent_coef}\n")
