@@ -25,6 +25,7 @@ parser.add_argument("-r", "--render", type=str, default="True", help="Rendering 
 parser.add_argument("-x", "--position-mode", type=str, default="aposelene", help="Target position mode: 'aposelene', 'leaving_aposelene', 'approaching_aposelene', 'periselene'")  
 parser.add_argument("-y", "--skip-acknowledge", action="store_true", help="Skip acknowledge prompts (auto-continue)")
 parser.add_argument("-e", "--navigation-noise-percent", type=float, default=0.0, help="Percentage of navigation noise to be applied (e.g., 0.03 for 3%)")
+parser.add_argument("--no-terminal-handover", action="store_true", help="Disable the hardcoded <100m forced safe-mode handover (default: enabled). Use to evaluate an agent trained to handle the terminal approach itself.")
 
 # Parse arguments
 argspar = parser.parse_args()
@@ -88,6 +89,7 @@ else:
 print("***************************************************************************")
 print(f"Monte Carlo Analysis of {n_samples} samples. Agent: '{agentName}'")
 print(f"Phase ID: {phaseID}, tspan: {tspan}, rendering: {renderingBool}")
+print(f"terminal_handover_enabled: {not argspar.no_terminal_handover}")
 if seed is not None:
     print(f"Using seed: {seed}")
 else:
@@ -101,7 +103,7 @@ n_samples_speed = None # if None generates all different speeds for each sample
 print("RUNNING A NEW MONTE CARLO SIMULATION ...")
 
 # initialization of the environment
-env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"navigation_noise_percent":navigation_noise_percent,"renderingBool":renderingBool}))
+env = noAutoResetWrapper(gym.make("SimEnv-v5.0", options={"phaseID":phaseID,"tspan":tspan,"navigation_noise_percent":navigation_noise_percent,"renderingBool":renderingBool,"terminal_handover_enabled":not argspar.no_terminal_handover}))
 env = DummyVecEnv([lambda:env])
 
 if seed is not None:
