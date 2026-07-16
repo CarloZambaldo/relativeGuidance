@@ -30,6 +30,7 @@ def main():
     ap.add_argument("mat_file")
     ap.add_argument("output", nargs="?", default=None)
     ap.add_argument("--n", type=int, default=6, help="number of example trajectories to extract")
+    ap.add_argument("--stride", type=int, default=1, help="keep 1 every `stride` GNC steps (decimation, for compact output on long flights)")
     args = ap.parse_args()
 
     mat_path = Path(args.mat_file)
@@ -96,18 +97,25 @@ def main():
         vel_ms = true_rel[: k + 1, 3:6, idx] * xc * 1e3 / tc  # m/s
         ctrl = u[: k + 1, :, idx] * (xc * 1e3 / tc**2)        # m/s^2
         time_s = np.arange(k + 1) * dt_s
+        stride = max(1, args.stride)
+        sel = np.arange(0, k + 1, stride)
+        if sel[-1] != k:  # always keep the exact terminal point
+            sel = np.append(sel, k)
+        aa = agent_act[:k, idx]
+        ob = obot[:k, idx]
+        sel_aa = sel[sel < aa.shape[0]]
         out["trajectories"].append({
             "label": label,
             "sim_id": int(idx),
             "success": bool(success[idx]),
             "fail": bool(fail[idx]),
             "dv_ms": round(float(dv[idx]), 3),
-            "time_s": np.round(time_s, 2).tolist(),
-            "pos_km": np.round(pos_km, 6).tolist(),
-            "vel_ms": np.round(vel_ms, 6).tolist(),
-            "ctrl_ms2": np.round(ctrl, 8).tolist(),
-            "agent_action": agent_act[:k, idx].astype(int).tolist(),
-            "obot_usage": obot[:k, idx].astype(bool).astype(int).tolist(),
+            "time_s": np.round(time_s[sel], 2).tolist(),
+            "pos_km": np.round(pos_km[sel], 5).tolist(),
+            "vel_ms": np.round(vel_ms[sel], 5).tolist(),
+            "ctrl_ms2": np.round(ctrl[sel], 7).tolist(),
+            "agent_action": aa[sel_aa].astype(int).tolist(),
+            "obot_usage": ob[sel_aa].astype(bool).astype(int).tolist(),
         })
 
     with open(out_path, "w") as f:
