@@ -49,6 +49,10 @@ def analyze_file(path):
     terminal = np.asarray(d.terminalState)  # (6, N) adimensional LVLH
     agent_act = np.asarray(d.AgentAction)   # (T-1, N)
     obot = np.asarray(d.OBoTUsage)          # (T-1, N)
+    true_rel = np.asarray(d.trueRelativeStateHistory_L)  # (T-1, 6, N)
+
+    # aim point (adimensional LVLH): holding state for P1, docking port for P2
+    aim = np.array([0.0, -4.0 / xc, 0.0]) if meta["phase"] == "1" else np.zeros(3)
 
     acc2ms = xc * 1e3 / tc                  # adim velocity -> m/s
 
@@ -56,6 +60,8 @@ def analyze_file(path):
     texec_ms = np.zeros(n)
     n_recompute = np.zeros(n, dtype=int)
     obot_frac = np.zeros(n)
+    final_err_m = np.zeros(n)
+    min_err_m = np.zeros(n)
     for i in range(n):
         k = term_idx[i] if term_idx[i] > 0 else u.shape[0] - 1
         dv[i] = np.sum(np.linalg.norm(u[: k + 1, :, i], axis=1)) * dt_adim * acc2ms
@@ -63,6 +69,10 @@ def analyze_file(path):
         texec_ms[i] = 1e3 * (steps[steps > 0].mean() if np.any(steps > 0) else 0.0)
         n_recompute[i] = int(np.sum(agent_act[:k, i] == 1))
         obot_frac[i] = float(np.mean(obot[:k, i])) if k > 0 else 0.0
+        kk = min(k, true_rel.shape[0] - 1)
+        err = np.linalg.norm(true_rel[: kk + 1, :3, i] - aim, axis=1) * xc * 1e3  # [m]
+        final_err_m[i] = err[-1]
+        min_err_m[i] = err.min()
 
     tof_min = term_idx * dt_s / 60.0
 
@@ -77,6 +87,8 @@ def analyze_file(path):
         "texec_ms": np.round(texec_ms, 4).tolist(),
         "n_recompute": n_recompute.tolist(),
         "obot_frac": np.round(obot_frac, 4).tolist(),
+        "final_err_m": np.round(final_err_m, 3).tolist(),
+        "min_err_m": np.round(min_err_m, 3).tolist(),
         # terminal state: positions in cm, velocities in cm/s (LVLH: R, V, H)
         "final_R_cm": np.round(terminal[0] * xc * 1e5, 3).tolist(),
         "final_V_cm": np.round(terminal[1] * xc * 1e5, 3).tolist(),
