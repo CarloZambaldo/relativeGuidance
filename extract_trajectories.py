@@ -9,9 +9,8 @@ this script picks a few representative simulation indices and writes a small
 JSON with only their trajectories, meant to be downloaded and plotted locally.
 
 Usage:
-    python3 extract_trajectories.py <mat_file> [output.json] [--n N] [--select best,median,worst,first]
+    python3 extract_trajectories.py <mat_file> [output.json] [--n N] [--stride S] [--indices i,j,k]
 """
-import sys
 import re
 import json
 import argparse
@@ -25,22 +24,12 @@ FNAME_RE = re.compile(
 )
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("mat_file")
-    ap.add_argument("output", nargs="?", default=None)
-    ap.add_argument("--n", type=int, default=6, help="number of example trajectories to extract")
-    ap.add_argument("--stride", type=int, default=1, help="keep 1 every `stride` GNC steps (decimation, for compact output on long flights)")
-    args = ap.parse_args()
-
-    mat_path = Path(args.mat_file)
-    out_path = Path(args.output) if args.output else mat_path.with_suffix("").with_name(mat_path.stem + "_traj.json")
-
-    d = scipy.io.loadmat(str(mat_path), squeeze_me=True, struct_as_record=False)["data"]
+def build_output(mat_path, d, chosen, stride):
     param = d.param
     xc, tc = float(param.xc), float(param.tc)
     freqGNC = float(param.freqGNC)
     dt_s = tc / freqGNC
+    acc2ms = xc * 1e3 / tc
 
     success = np.asarray(d.success, dtype=bool)
     fail = np.asarray(d.fail, dtype=bool)
@@ -49,36 +38,11 @@ def main():
     u = np.asarray(d.controlAction)                       # (T, 3, N) adim
     agent_act = np.asarray(d.AgentAction)                 # (T-1, N)
     obot = np.asarray(d.OBoTUsage)                         # (T-1, N)
-    n = success.size
 
-    # dV per sim (for ranking best/median/worst among successful runs)
-    acc2ms = xc * 1e3 / tc
-    dv = np.zeros(n)
-    for i in range(n):
+    dv = np.zeros(success.size)
+    for i in range(success.size):
         k = term_idx[i] if term_idx[i] > 0 else u.shape[0] - 1
         dv[i] = np.sum(np.linalg.norm(u[: k + 1, :, i], axis=1)) * (1.0 / freqGNC) * acc2ms
-
-    succ_idx = np.where(success)[0]
-    fail_idx = np.where(fail)[0]
-    oot_idx = np.where(~(success | fail))[0]
-
-    chosen = []
-    if succ_idx.size:
-        order = succ_idx[np.argsort(dv[succ_idx])]
-        chosen.append(("best_dV", order[0]))
-        chosen.append(("median_dV", order[len(order) // 2]))
-        chosen.append(("worst_dV_success", order[-1]))
-    if fail_idx.size:
-        chosen.append(("example_crash", fail_idx[0]))
-    if oot_idx.size:
-        chosen.append(("example_out_of_time", oot_idx[0]))
-    # pad with plain sequential examples up to n
-    i = 0
-    while len(chosen) < args.n and i < n:
-        if i not in [c[1] for c in chosen]:
-            chosen.append((f"sim_{i}", i))
-        i += 1
-    chosen = chosen[: args.n]
 
     m = FNAME_RE.match(mat_path.name)
     meta = m.groupdict() if m else {}
@@ -93,17 +57,18 @@ def main():
     for label, idx in chosen:
         k = term_idx[idx] if term_idx[idx] > 0 else true_rel.shape[0] - 1
         k = min(k, true_rel.shape[0] - 1)
-        pos_km = true_rel[: k + 1, :3, idx] * xc          # (k+1, 3) km
+        pos_km = true_rel[: k + 1, :3, idx] * xc              # (k+1, 3) km
         vel_ms = true_rel[: k + 1, 3:6, idx] * xc * 1e3 / tc  # m/s
         ctrl = u[: k + 1, :, idx] * (xc * 1e3 / tc**2)        # m/s^2
         time_s = np.arange(k + 1) * dt_s
-        stride = max(1, args.stride)
+
         sel = np.arange(0, k + 1, stride)
         if sel[-1] != k:  # always keep the exact terminal point
             sel = np.append(sel, k)
         aa = agent_act[:k, idx]
         ob = obot[:k, idx]
         sel_aa = sel[sel < aa.shape[0]]
+
         out["trajectories"].append({
             "label": label,
             "sim_id": int(idx),
@@ -117,7 +82,62 @@ def main():
             "agent_action": aa[sel_aa].astype(int).tolist(),
             "obot_usage": ob[sel_aa].astype(bool).astype(int).tolist(),
         })
+    return out
 
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("mat_file")
+    ap.add_argument("output", nargs="?", default=None)
+    ap.add_argument("--n", type=int, default=6, help="number of example trajectories to auto-select")
+    ap.add_argument("--stride", type=int, default=1, help="keep 1 every `stride` GNC steps (decimation, for compact output on long flights)")
+    ap.add_argument("--indices", type=str, default=None, help="comma-separated explicit sim indices to extract (e.g. for paired cross-config comparisons), overrides --n auto-selection")
+    args = ap.parse_args()
+
+    mat_path = Path(args.mat_file)
+    out_path = Path(args.output) if args.output else mat_path.with_suffix("").with_name(mat_path.stem + "_traj.json")
+    stride = max(1, args.stride)
+
+    d = scipy.io.loadmat(str(mat_path), squeeze_me=True, struct_as_record=False)["data"]
+
+    if args.indices:
+        chosen = [(f"sim_{i}", i) for i in (int(x) for x in args.indices.split(","))]
+    else:
+        success = np.asarray(d.success, dtype=bool)
+        fail = np.asarray(d.fail, dtype=bool)
+        term_idx = np.asarray(d.terminalTimeIndex, dtype=int)
+        u = np.asarray(d.controlAction)
+        param = d.param
+        acc2ms = float(param.xc) * 1e3 / float(param.tc)
+        freqGNC = float(param.freqGNC)
+        n = success.size
+        dv = np.zeros(n)
+        for i in range(n):
+            k = term_idx[i] if term_idx[i] > 0 else u.shape[0] - 1
+            dv[i] = np.sum(np.linalg.norm(u[: k + 1, :, i], axis=1)) * (1.0 / freqGNC) * acc2ms
+
+        succ_idx = np.where(success)[0]
+        fail_idx = np.where(fail)[0]
+        oot_idx = np.where(~(success | fail))[0]
+
+        chosen = []
+        if succ_idx.size:
+            order = succ_idx[np.argsort(dv[succ_idx])]
+            chosen.append(("best_dV", order[0]))
+            chosen.append(("median_dV", order[len(order) // 2]))
+            chosen.append(("worst_dV_success", order[-1]))
+        if fail_idx.size:
+            chosen.append(("example_crash", fail_idx[0]))
+        if oot_idx.size:
+            chosen.append(("example_out_of_time", oot_idx[0]))
+        i = 0
+        while len(chosen) < args.n and i < n:
+            if i not in [c[1] for c in chosen]:
+                chosen.append((f"sim_{i}", i))
+            i += 1
+        chosen = chosen[: args.n]
+
+    out = build_output(mat_path, d, chosen, stride)
     with open(out_path, "w") as f:
         json.dump(out, f)
     print(f"Wrote {out_path} ({out_path.stat().st_size/1e3:.1f} KB, {len(out['trajectories'])} trajectories)")
