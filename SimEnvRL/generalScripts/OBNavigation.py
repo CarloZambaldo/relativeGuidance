@@ -75,6 +75,39 @@ def OBNavigation(targetState_S, chaserState_S, navMemory, param, appliedControl_
     return targetState_M, chaserState_M, relativeState_L_est, newNoiseSample, newNavMemory
 
 
+def nav_noise_sigmas(rho_m, v_ms, param):
+    """
+    Current 1-sigma navigation error (dimensional: [m], [m/s]) for a given
+    range and relative speed. Shared by the error injection (OBNavigation)
+    and by the sliding-surface dead-band (OBGuidance), so that the on-board
+    dead-band stays consistent with the injected error model.
+
+    Long range: sigma = p * min(range, plateau), as for optical/lidar
+    relative navigation whose accuracy is a percentage of the range.
+
+    Close range: below param.nav_close_range_m the relative navigation is
+    handed over to a dedicated docking sensor (marker-based vision / lidar),
+    whose relative accuracy improves as the target fills the field of view.
+    This is modelled by scaling the percentage itself with
+        f = clip(range / R_handover, f_floor, 1)
+    (continuous at the handover range; at contact the accuracy percentage is
+    f_floor * p, i.e. mm-level for centimetric ranges). Set
+    nav_close_range_m = 0 to disable the handover and recover the pure
+    percentage-of-range model at all ranges.
+    """
+    val = getattr(param, 'navigation_noise_percent', None)
+    if not val:
+        return 0.0, 0.0
+
+    R_hand = getattr(param, 'nav_close_range_m', 200.0)
+    f_floor = getattr(param, 'nav_close_range_floor', 0.05)
+    f = float(np.clip(rho_m / R_hand, f_floor, 1.0)) if R_hand > 0 else 1.0
+
+    sigma_r = val * f * min(rho_m, getattr(param, 'nav_pos_plateau_m', 10_000.0))
+    sigma_v = val * f * min(v_ms, getattr(param, 'nav_vel_plateau_ms', 5.0))
+    return sigma_r, sigma_v
+
+
 def inject_nav_error(state, param, previous_noise=None):
     """
     Insert noise in the relative state vector, modelling the estimation error
@@ -113,15 +146,14 @@ def inject_nav_error(state, param, previous_noise=None):
     r = state[:3]
     v = state[3:]
 
-    # Plateau thresholds (dimensional) converted to nondimensional units
-    r_max_m = getattr(param, 'nav_pos_plateau_m', 10_000.0)   # 10 km
-    v_max_ms = getattr(param, 'nav_vel_plateau_ms', 5.0)      # 5 m/s
-    r_max_nd = r_max_m / (param.xc * 1e3)                     # xc is in km
-    v_max_nd = v_max_ms / (param.xc * 1e3 / param.tc)         # xc/tc is in km/s
-
-    # stationary standard deviations (isotropic, based on the norms)
-    sigma_r = val * min(np.linalg.norm(r), r_max_nd)
-    sigma_v = val * min(np.linalg.norm(v), v_max_nd)
+    # stationary standard deviations (isotropic, based on the norms), computed
+    # dimensionally by the shared model (incl. close-range sensor handover)
+    # and converted back to nondimensional units
+    rho_m = np.linalg.norm(r) * param.xc * 1e3
+    v_ms = np.linalg.norm(v) * param.xc * 1e3 / param.tc
+    sigma_r_m, sigma_v_ms = nav_noise_sigmas(rho_m, v_ms, param)
+    sigma_r = sigma_r_m / (param.xc * 1e3)
+    sigma_v = sigma_v_ms / (param.xc * 1e3 / param.tc)
 
     # Gauss-Markov propagation coefficient
     dt_s = param.tc / param.freqGNC                            # GNC step [s]

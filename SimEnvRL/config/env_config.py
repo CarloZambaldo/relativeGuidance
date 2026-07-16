@@ -33,6 +33,8 @@ class physParamClass:
     nav_noise_corr_time_s : float = 60.                      # [s] correlation time of the Gauss-Markov navigation error
     nav_pos_plateau_m : float = 10_000.                      # [m] cap on the range used to scale the position noise
     nav_vel_plateau_ms : float = 5.                          # [m/s] cap on the speed used to scale the velocity noise
+    nav_close_range_m : float = 200.                         # [m] docking-sensor handover range: below it the noise percentage is scaled by clip(range/R, floor, 1); 0 = disabled
+    nav_close_range_floor : float = 0.05                     # [-] floor of the close-range accuracy scaling factor (docking sensor ~20x more accurate at contact)
     nav_filter_gain_pos : float = 0.1                        # [-] constant navigation-filter gain on position (per GNC step)
     nav_filter_gain_vel : float = 0.1                        # [-] constant navigation-filter gain on velocity (per GNC step)
     nav_deadband_k : float = 2.                              # [-] sliding-surface dead-band width in units of noise-induced sigma std (0 = off)

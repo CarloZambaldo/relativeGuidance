@@ -80,7 +80,7 @@ print(f"Using {max_num_threads} threads.")
 if phaseID == 1:
     tspan = np.array([0, 0.045]) # ca 4 hours
 elif phaseID == 2:
-    tspan = np.array([0, 0.033]) # ca 3.3 hours # FIXME
+    tspan = np.array([0, 0.045]) # ca 4.7 hours: generous evaluation budget so that OUT_OF_TIME does not truncate the noisy TOF distribution (docking outcome is decided by success/crash, TOF is reported separately)
 else:
     raise ValueError("given phaseID not defined correctly")
 

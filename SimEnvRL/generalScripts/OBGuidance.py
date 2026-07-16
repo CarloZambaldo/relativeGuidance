@@ -1,5 +1,6 @@
 import numpy as np
 from . import dynamicsModel, ReferenceFrames
+from .OBNavigation import nav_noise_sigmas
 from scipy.integrate import solve_ivp
 import time
 
@@ -71,11 +72,11 @@ def computeNoiseDeadband(OBrelativeState, Kpos, Kvel, param):
 
     k_db = getattr(param, 'nav_deadband_k', 2.0)
 
-    # navigation noise 1-sigma in dimensional units (m, m/s)
+    # navigation noise 1-sigma in dimensional units (m, m/s), from the same
+    # model used to inject the error (incl. close-range sensor handover)
     rho_m = np.linalg.norm(OBrelativeState[:3]) * param.xc * 1e3
     v_ms = np.linalg.norm(OBrelativeState[3:6]) * param.xc * 1e3 / param.tc
-    sigma_r = val * min(rho_m, getattr(param, 'nav_pos_plateau_m', 10_000.0))
-    sigma_v = val * min(v_ms, getattr(param, 'nav_vel_plateau_ms', 5.0))
+    sigma_r, sigma_v = nav_noise_sigmas(rho_m, v_ms, param)
 
     return k_db * np.sqrt((Kvel * sigma_v)**2 + (Kpos * sigma_r)**2)
 
