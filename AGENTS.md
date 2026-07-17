@@ -174,3 +174,65 @@ Paper zip repackaged again as `paper_tesi_updated.zip` including `data/`, `gen_p
 `check_refs.py`, `gen_trajectory_plots.py`. These 5 explanatory PNGs are exploratory renders sent directly to
 Carlo for viewing, NOT (yet) inserted as paper figures — ask before adding, they'd need a clean caption
 explaining the bounded-cone-rendering caveat above.
+
+## Session 2026-07-17: full re-simulation with the noise-trained agent + complete paper rewrite
+
+Carlo's explicit instructions (paraphrased): keep Phase 1 as-is (old agent, existing campaign-1 sims), but
+relax the success margin in post-processing (10→30m, no re-simulation) to show the "failures" are noise-scale
+near-misses, not crashes; for Phase 2, **re-simulate everything** (all 4 regions × 5 noise, nominal mode only
+— safe mode is agent-independent, reused unchanged from campaign 2) with the new `Agent_P2-v12-noise2pct`
+agent, delete the superseded old-agent (`v11.5`) P2 .mat files, and rewrite the whole paper accordingly with
+an extremely detailed algorithm walkthrough, action-usage stats (SKIP/COMPUTE/DELETE %), updated plots, and a
+redone NN-comparison appendix.
+
+**Two real bugs found and fixed while extracting the "how many times does it use safe mode" data** (both
+committed, both affect only diagnostic fields, not any previously-reported ΔV/TOF/success number):
+1. `RLEnvironment.py`: the line writing the *actual* chosen action into `AgentActionHistory` was commented
+   out — only the forced <100m override ever wrote to it. Fixed by uncommenting + coercing to a Python scalar
+   (`int(np.asarray(AgentAction).reshape(-1)[0])`), since the value arrives as a numpy array from a VecEnv,
+   not a plain int (crashed on first attempt, don't skip the coercion).
+2. `analyze_MC.py`: SKIP/COMPUTE/DELETE fractions were normalized by a *fixed* max-duration decision count,
+   silently understating every percentage for any episode that terminates early (i.e. every successful one).
+   Fixed with a proper per-episode `n_decisions` field (`decisions.size` from the actual terminal index).
+   Symptom before the fix: percentages summed to ~53% instead of 100%.
+Net result after both fixes: SKIP≈83%, COMPUTE≈0.2% (essentially one ASRE solve per flight), DELETE≈16%
+(**almost entirely the forced <100m override re-firing at every decision point while inside it, not
+independent agent choice** — confirmed because both the "correct" and a "wrong" agent swapped into Phase 2
+show the same ~73 deletes/episode, since the terminal glide is common infrastructure below 100 m regardless
+of which agent supplied the pre-handover reference).
+
+**Campaign 3** (`run_campaign3.sh` on casper, tmux `CAMPAIGN3`, 2026-07-17 09:57→~13:40, ~3.7h): 20 runs =
+4 regions × 5 noise, `Agent_P2-v12-noise2pct`, nominal only, handover ON (production default), seed 1753110,
+n=100. All 20 succeeded. **Headline: 100% docking success in aposelene/leaving/approaching at every noise
+level 0-3% (exceeds Carlo's ≥99% target across all three, not just aposelene)**; periselene stays 0-8%
+(unrelated known computeTOF limitation, confirmed unrelated to noise/agent-version). Also reran both
+swap-agent tests fresh (`SWAP2_P1`, `SWAP2_P2` on melchior) so their action-logging uses the fixed code;
+results archived to `Simulations/agent_swap_v2/` (shared NFS home, visible from any MAGI host).
+
+**Key new finding — region-dependent efficiency, not a uniform crossover**: at aposelene the noise-trained
+agent stays cheaper than safe mode at every noise level (barely crosses at p=3%: 12.22 vs 13.11 m/s). At
+leaving/approaching aposelene, injecting *any* noise collapses the OBoT-usage fraction (time spent tracking
+the optimal reference) from ~83% to 50-66%, i.e. the terminal safe-mode dwell time balloons once the estimated
+range is noisy in these regions — this, not tracking-noise chatter, is what drives an early (p=0.5%) and
+widening cost crossover there (up to +61% at p=3% at approaching aposelene). Compared to the OLD
+(noiseless-trained) agent on the same regions: new agent is 13-37% *more* expensive at low noise (p≤1%,
+more cautious policy) but 12-34% *cheaper* at p=3% in every region — a consistent trade, not a fluke.
+
+Appendix A2 fully rewritten: the pre-retraining "agents are numerically interchangeable" story no longer
+holds now that the P2 agent differs — new-P2-in-P1 costs 3.5x more (13.52 vs 3.86 m/s) via much more frequent
+ASRE recomputation (3.75/episode vs ~1), while P1-in-new-P2 is *cheaper* than the correct agent (1.31 vs 2.59)
+since it reproduces the old noiseless-optimized behavior the retraining traded away. NN weight comparison
+(`compare_agents_nn.py`, local, uses the `custom_objects` PPO.load workaround) redone for P1-vs-new-P2 and
+old-P2-vs-new-P2: both show the same pattern — a moderate (11-25%) fraction of first-hidden-layer neurons
+retain cosine similarity across independently-initialized/trained networks, everything deeper is
+uncorrelated, consistent with shared low-level feature extraction + fully task-specific deeper decision logic.
+
+Cleanup done: old-agent P2 `.mat` files (20, ~32GB) and the old pre-fix `agent_swap/` deleted from casper
+(shared home also removes from melchior/achiral/balthasar view); various scratch/temp analysis dirs removed.
+`Simulations/` down to 130GB. AgentModels for both P2 agents (old v11.5 + new v12) kept (needed for the NN
+appendix and for reproducibility).
+
+Paper is now fully self-consistent top-to-bottom on the new agent (methodology, training, both results
+sections, appendix, abstract, conclusions all rewritten/updated); `check_refs.py` clean. Regenerate everything
+with: `python gen_paper_assets.py data/MC_P1_summary.json data/MC_P2_summary.json data/MC_P2_new_summary.json`
+then `python gen_trajectory_plots.py`, both in `paper_tesi_work/`.
