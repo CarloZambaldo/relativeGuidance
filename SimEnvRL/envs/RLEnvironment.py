@@ -116,7 +116,9 @@ class SimEnv(gym.Env):
                 # hardcoded handover fires); previously commented out, which left AgentActionHistory
                 # all-zero whenever the handover never triggers (e.g. terminal_handover_enabled=False),
                 # making COMPUTE/DELETE counts from saved .mat files silently wrong in that case.
-                self.AgentActionHistory[self.timeIndex] = AgentAction
+                # AgentAction may arrive as a numpy array (e.g. straight from model.predict via a
+                # VecEnv) rather than a plain int, hence the explicit scalar coercion.
+                self.AgentActionHistory[self.timeIndex] = int(np.asarray(AgentAction).reshape(-1)[0])
 
                 # HARDCODED SAFE MODE ACTIVATION (evaluation default, do not disable for MC campaigns!) #
                 # below 100 m from the target the optimal trajectory is deleted and the
