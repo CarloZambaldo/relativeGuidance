@@ -56,9 +56,14 @@ def analyze_file(path):
 
     acc2ms = xc * 1e3 / tc                  # adim velocity -> m/s
 
+    RLGNCratio = int(getattr(param, "RLGNCratio", 100))
+
     dv = np.zeros(n)
     texec_ms = np.zeros(n)
     n_recompute = np.zeros(n, dtype=int)
+    n_compute = np.zeros(n, dtype=int)
+    n_delete = np.zeros(n, dtype=int)
+    n_skip_decisions = np.zeros(n, dtype=int)
     obot_frac = np.zeros(n)
     final_err_m = np.zeros(n)
     min_err_m = np.zeros(n)
@@ -69,6 +74,13 @@ def analyze_file(path):
         texec_ms[i] = 1e3 * (steps[steps > 0].mean() if np.any(steps > 0) else 0.0)
         n_recompute[i] = int(np.sum(agent_act[:k, i] == 1))
         obot_frac[i] = float(np.mean(obot[:k, i])) if k > 0 else 0.0
+        # action decisions happen only every RLGNCratio steps (the other
+        # steps are forced SKIP filler, not real agent choices); requires
+        # the fixed AgentActionHistory logging (post commit 105daf8/bc4be95)
+        decisions = agent_act[:k, i][::RLGNCratio]
+        n_compute[i] = int(np.sum(decisions == 1))
+        n_delete[i] = int(np.sum(decisions == 2))
+        n_skip_decisions[i] = int(np.sum(decisions == 0))
         kk = min(k, true_rel.shape[0] - 1)
         err = np.linalg.norm(true_rel[: kk + 1, :3, i] - aim, axis=1) * xc * 1e3  # [m]
         final_err_m[i] = err[-1]
@@ -86,6 +98,10 @@ def analyze_file(path):
         "tof_min": np.round(tof_min, 3).tolist(),
         "texec_ms": np.round(texec_ms, 4).tolist(),
         "n_recompute": n_recompute.tolist(),
+        "n_compute": n_compute.tolist(),
+        "n_delete": n_delete.tolist(),
+        "n_skip_decisions": n_skip_decisions.tolist(),
+        "n_decisions_total": int(np.ceil(u.shape[0] / RLGNCratio)),
         "obot_frac": np.round(obot_frac, 4).tolist(),
         "final_err_m": np.round(final_err_m, 3).tolist(),
         "min_err_m": np.round(min_err_m, 3).tolist(),
