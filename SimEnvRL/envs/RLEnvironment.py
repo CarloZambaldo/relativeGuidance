@@ -112,7 +112,11 @@ class SimEnv(gym.Env):
             if (self.timeIndex < len(self.timeHistory)-1): # check if the simulation is not over (still space inside the History vectors)
                 # extract parameters for the current time step
                 self.timeNow = self.timeHistory[self.timeIndex]
-                # self.AgentActionHistory[self.timeIndex] = AgentAction
+                # record the action actually in effect this GNC step (overwritten below if the
+                # hardcoded handover fires); previously commented out, which left AgentActionHistory
+                # all-zero whenever the handover never triggers (e.g. terminal_handover_enabled=False),
+                # making COMPUTE/DELETE counts from saved .mat files silently wrong in that case.
+                self.AgentActionHistory[self.timeIndex] = AgentAction
 
                 # HARDCODED SAFE MODE ACTIVATION (evaluation default, do not disable for MC campaigns!) #
                 # below 100 m from the target the optimal trajectory is deleted and the
