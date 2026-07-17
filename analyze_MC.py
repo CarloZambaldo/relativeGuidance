@@ -64,6 +64,7 @@ def analyze_file(path):
     n_compute = np.zeros(n, dtype=int)
     n_delete = np.zeros(n, dtype=int)
     n_skip_decisions = np.zeros(n, dtype=int)
+    n_decisions = np.zeros(n, dtype=int)  # per-episode actual decision count (episode ends early on success/crash)
     obot_frac = np.zeros(n)
     final_err_m = np.zeros(n)
     min_err_m = np.zeros(n)
@@ -81,6 +82,7 @@ def analyze_file(path):
         n_compute[i] = int(np.sum(decisions == 1))
         n_delete[i] = int(np.sum(decisions == 2))
         n_skip_decisions[i] = int(np.sum(decisions == 0))
+        n_decisions[i] = decisions.size  # THIS episode's own decision count (not the max-duration one)
         kk = min(k, true_rel.shape[0] - 1)
         err = np.linalg.norm(true_rel[: kk + 1, :3, i] - aim, axis=1) * xc * 1e3  # [m]
         final_err_m[i] = err[-1]
@@ -101,7 +103,7 @@ def analyze_file(path):
         "n_compute": n_compute.tolist(),
         "n_delete": n_delete.tolist(),
         "n_skip_decisions": n_skip_decisions.tolist(),
-        "n_decisions_total": int(np.ceil(u.shape[0] / RLGNCratio)),
+        "n_decisions": n_decisions.tolist(),  # per-episode actual decision count (use THIS as the denominator, not a fixed max-duration one)
         "obot_frac": np.round(obot_frac, 4).tolist(),
         "final_err_m": np.round(final_err_m, 3).tolist(),
         "min_err_m": np.round(min_err_m, 3).tolist(),
